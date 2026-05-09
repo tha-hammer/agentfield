@@ -55,6 +55,48 @@ func TestWriteSSE_FrameShape(t *testing.T) {
 			wantTyp:    "TEXT_MESSAGE_END",
 			wantFields: []string{`"messageId":"msg-1"`},
 		},
+		{
+			name:       "ToolCallStart",
+			ev:         ToolCallStart{ToolCallID: "tc-1", ToolCallName: "showFlightCard", ParentMessageID: "msg-1"},
+			wantTyp:    "TOOL_CALL_START",
+			wantFields: []string{`"toolCallId":"tc-1"`, `"toolCallName":"showFlightCard"`, `"parentMessageId":"msg-1"`},
+		},
+		{
+			name:       "ToolCallArgs",
+			ev:         ToolCallArgs{ToolCallID: "tc-1", Delta: `{"from":"SFO"}`},
+			wantTyp:    "TOOL_CALL_ARGS",
+			wantFields: []string{`"toolCallId":"tc-1"`, `"delta":"{\"from\":\"SFO\"}"`},
+		},
+		{
+			name:       "ToolCallEnd",
+			ev:         ToolCallEnd{ToolCallID: "tc-1"},
+			wantTyp:    "TOOL_CALL_END",
+			wantFields: []string{`"toolCallId":"tc-1"`},
+		},
+		{
+			name:       "ToolCallResult",
+			ev:         ToolCallResult{MessageID: "msg-2", ToolCallID: "tc-1", Content: "ok", Role: "tool"},
+			wantTyp:    "TOOL_CALL_RESULT",
+			wantFields: []string{`"messageId":"msg-2"`, `"toolCallId":"tc-1"`, `"content":"ok"`, `"role":"tool"`},
+		},
+		{
+			name:       "MessagesSnapshot",
+			ev:         MessagesSnapshot{Messages: []Message{{ID: "m1", Role: "user", Content: "hi"}}},
+			wantTyp:    "MESSAGES_SNAPSHOT",
+			wantFields: []string{`"messages":[`, `"role":"user"`, `"content":"hi"`},
+		},
+		{
+			name:       "StateSnapshot",
+			ev:         StateSnapshot{Snapshot: map[string]any{"counter": 1}},
+			wantTyp:    "STATE_SNAPSHOT",
+			wantFields: []string{`"snapshot":{"counter":1}`},
+		},
+		{
+			name:       "StateDelta",
+			ev:         StateDelta{Delta: []any{map[string]any{"op": "replace", "path": "/counter", "value": 2}}},
+			wantTyp:    "STATE_DELTA",
+			wantFields: []string{`"delta":[`, `"op":"replace"`, `"path":"/counter"`},
+		},
 	}
 
 	for _, tc := range cases {
@@ -114,8 +156,8 @@ func TestWriteSSE_OmitsZeroOptionalFields(t *testing.T) {
 // the marshal-error branch in WriteSSE.
 type unmarshalableEvent struct{}
 
-func (unmarshalableEvent) Type() string                  { return "BAD_EVENT" }
-func (unmarshalableEvent) MarshalJSON() ([]byte, error)  { return nil, errBoom }
+func (unmarshalableEvent) Type() string                 { return "BAD_EVENT" }
+func (unmarshalableEvent) MarshalJSON() ([]byte, error) { return nil, errBoom }
 
 var errBoom = &boomError{}
 

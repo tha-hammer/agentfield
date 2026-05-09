@@ -161,6 +161,137 @@ func (e TextMessageEnd) MarshalJSON() ([]byte, error) {
 	}{Type: e.Type(), alias: alias(e)})
 }
 
+// ToolCallStart opens a tool-call frame. CopilotKit pattern-matches
+// `toolCallName` against `useCopilotAction({name, render})` registrations
+// to drive Generative UI — there is no separate "render" event.
+type ToolCallStart struct {
+	ToolCallID      string `json:"toolCallId"`
+	ToolCallName    string `json:"toolCallName"`
+	ParentMessageID string `json:"parentMessageId,omitempty"`
+	Timestamp       int64  `json:"timestamp,omitempty"`
+}
+
+func (ToolCallStart) Type() string { return "TOOL_CALL_START" }
+
+func (e ToolCallStart) MarshalJSON() ([]byte, error) {
+	type alias ToolCallStart
+	return json.Marshal(struct {
+		Type string `json:"type"`
+		alias
+	}{Type: e.Type(), alias: alias(e)})
+}
+
+// ToolCallArgs streams a chunk of the tool-call arguments JSON. Frontends
+// concatenate deltas to assemble the full arguments object before invoking
+// the action handler.
+type ToolCallArgs struct {
+	ToolCallID string `json:"toolCallId"`
+	Delta      string `json:"delta"`
+	Timestamp  int64  `json:"timestamp,omitempty"`
+}
+
+func (ToolCallArgs) Type() string { return "TOOL_CALL_ARGS" }
+
+func (e ToolCallArgs) MarshalJSON() ([]byte, error) {
+	type alias ToolCallArgs
+	return json.Marshal(struct {
+		Type string `json:"type"`
+		alias
+	}{Type: e.Type(), alias: alias(e)})
+}
+
+// ToolCallEnd closes a tool-call frame.
+type ToolCallEnd struct {
+	ToolCallID string `json:"toolCallId"`
+	Timestamp  int64  `json:"timestamp,omitempty"`
+}
+
+func (ToolCallEnd) Type() string { return "TOOL_CALL_END" }
+
+func (e ToolCallEnd) MarshalJSON() ([]byte, error) {
+	type alias ToolCallEnd
+	return json.Marshal(struct {
+		Type string `json:"type"`
+		alias
+	}{Type: e.Type(), alias: alias(e)})
+}
+
+// ToolCallResult delivers the outcome of a server-side tool call. For
+// frontend-handled tools (via useCopilotAction), the result instead arrives
+// as the next inbound POST's trailing tool-role message — no TOOL_CALL_RESULT
+// event is emitted by the backend in that flow.
+type ToolCallResult struct {
+	MessageID  string `json:"messageId"`
+	ToolCallID string `json:"toolCallId"`
+	Content    string `json:"content"`
+	Role       string `json:"role,omitempty"`
+	Timestamp  int64  `json:"timestamp,omitempty"`
+}
+
+func (ToolCallResult) Type() string { return "TOOL_CALL_RESULT" }
+
+func (e ToolCallResult) MarshalJSON() ([]byte, error) {
+	type alias ToolCallResult
+	return json.Marshal(struct {
+		Type string `json:"type"`
+		alias
+	}{Type: e.Type(), alias: alias(e)})
+}
+
+// MessagesSnapshot publishes the full conversation after a turn so clients
+// can refresh their canonical thread state. CopilotKit's in-memory runtime
+// derives persisted history from the trailing snapshot.
+type MessagesSnapshot struct {
+	Messages  []Message `json:"messages"`
+	Timestamp int64     `json:"timestamp,omitempty"`
+}
+
+func (MessagesSnapshot) Type() string { return "MESSAGES_SNAPSHOT" }
+
+func (e MessagesSnapshot) MarshalJSON() ([]byte, error) {
+	type alias MessagesSnapshot
+	return json.Marshal(struct {
+		Type string `json:"type"`
+		alias
+	}{Type: e.Type(), alias: alias(e)})
+}
+
+// StateSnapshot publishes the agent's full shared state — the value
+// `useCoAgent({ state })` reads on the frontend. Reasoners opt in by
+// returning a top-level `state` field.
+type StateSnapshot struct {
+	Snapshot  any   `json:"snapshot"`
+	Timestamp int64 `json:"timestamp,omitempty"`
+}
+
+func (StateSnapshot) Type() string { return "STATE_SNAPSHOT" }
+
+func (e StateSnapshot) MarshalJSON() ([]byte, error) {
+	type alias StateSnapshot
+	return json.Marshal(struct {
+		Type string `json:"type"`
+		alias
+	}{Type: e.Type(), alias: alias(e)})
+}
+
+// StateDelta carries an RFC 6902 JSON Patch document applied incrementally
+// to the previously-emitted snapshot. Optional alternative to repeatedly
+// emitting full snapshots.
+type StateDelta struct {
+	Delta     []any `json:"delta"`
+	Timestamp int64 `json:"timestamp,omitempty"`
+}
+
+func (StateDelta) Type() string { return "STATE_DELTA" }
+
+func (e StateDelta) MarshalJSON() ([]byte, error) {
+	type alias StateDelta
+	return json.Marshal(struct {
+		Type string `json:"type"`
+		alias
+	}{Type: e.Type(), alias: alias(e)})
+}
+
 // NowMillis returns the current Unix time in milliseconds. Wrapped so tests
 // can replace it. Milliseconds match the JS `Date.now()` convention that
 // AG-UI clients are most likely to interpret correctly.
