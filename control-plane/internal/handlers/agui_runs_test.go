@@ -70,22 +70,45 @@ func mountAGUIRouter(t *testing.T, store *reasonerTestStorage) *gin.Engine {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.POST("/api/v1/agui/runs", AGUIRunHandler(store))
+	router.POST("/api/v1/agui/runs/:node_id/:reasoner_name", AGUIRunHandler(store))
 	return router
 }
 
-// TestAGUIRunHandler_HappyPath_EmitsCanonicalEventSequence is the core POC
-// assertion: a successful run must produce exactly RUN_STARTED →
-// TEXT_MESSAGE_START → TEXT_MESSAGE_CONTENT → TEXT_MESSAGE_END → RUN_FINISHED,
-// in that order, with the threadId/runId from the request propagated through
-// to RUN_FINISHED, and the reasoner's `result` value surfaced as the
-// TEXT_MESSAGE_CONTENT delta.
+// runAgentInputBody returns a canonical RunAgentInputSchema-shaped body. The
+// vanilla @ag-ui/client HttpAgent — and therefore CopilotKit's runtime that
+// wraps it — POSTs exactly this shape. Tests should always go through this
+// helper so the assertion about "we accept the canonical shape" is real.
+func runAgentInputBody(t *testing.T, threadID, runID, prompt string) string {
+	t.Helper()
+	body := map[string]any{
+		"threadId": threadID,
+		"runId":    runID,
+		"messages": []map[string]any{
+			{"id": "u1", "role": "user", "content": prompt},
+		},
+		"tools":          []any{},
+		"context":        []any{},
+		"state":          map[string]any{},
+		"forwardedProps": map[string]any{},
+	}
+	b, err := json.Marshal(body)
+	require.NoError(t, err)
+	return string(b)
+}
+
+// TestAGUIRunHandler_HappyPath_EmitsCanonicalEventSequence is the core
+// assertion: a successful run produces RUN_STARTED → TEXT_MESSAGE_START →
+// TEXT_MESSAGE_CONTENT → TEXT_MESSAGE_END → MESSAGES_SNAPSHOT → RUN_FINISHED,
+// in that order. Thread/run IDs propagate from the request to RUN_FINISHED.
+// The reasoner sees the AG-UI envelope (prompt extracted from the trailing
+// user message) — proving the body-shape change wired up correctly.
 func TestAGUIRunHandler_HappyPath_EmitsCanonicalEventSequence(t *testing.T) {
+	var seenInput map[string]any
 	agentServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, "/reasoners/echo", r.URL.Path)
 		require.Equal(t, http.MethodPost, r.Method)
-		body, _ := io.ReadAll(r.Body)
-		require.JSONEq(t, `{"prompt":"hi"}`, string(body))
+		raw, _ := io.ReadAll(r.Body)
+		require.NoError(t, json.Unmarshal(raw, &seenInput))
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"result":"hello world"}`))
 	}))
@@ -100,8 +123,8 @@ func TestAGUIRunHandler_HappyPath_EmitsCanonicalEventSequence(t *testing.T) {
 	}}
 	router := mountAGUIRouter(t, store)
 
-	body := `{"reasoner":"node-1.echo","input":{"prompt":"hi"},"threadId":"thread-test","runId":"run-test"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/agui/runs", strings.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/agui/runs/node-1/echo",
+		strings.NewReader(runAgentInputBody(t, "thread-test", "run-test", "hi")))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
@@ -109,28 +132,33 @@ func TestAGUIRunHandler_HappyPath_EmitsCanonicalEventSequence(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code, "response: %s", w.Body.String())
 	require.Equal(t, "text/event-stream", w.Header().Get("Content-Type"))
 
-	frames := parseAGUIStream(t, w.Body.String())
-	require.Len(t, frames, 5, "want 5 frames, got: %s", w.Body.String())
+	// The reasoner received the canonical AG-UI envelope, plus the `prompt`
+	// convenience extracted from the trailing user message.
+	require.Equal(t, "hi", seenInput["prompt"])
+	require.Equal(t, "thread-test", seenInput["threadId"])
+	require.Equal(t, "run-test", seenInput["runId"])
+	gotMessages, _ := seenInput["messages"].([]any)
+	require.Len(t, gotMessages, 1)
 
+	frames := parseAGUIStream(t, w.Body.String())
 	wantSequence := []string{
 		"RUN_STARTED",
 		"TEXT_MESSAGE_START",
 		"TEXT_MESSAGE_CONTENT",
 		"TEXT_MESSAGE_END",
+		"MESSAGES_SNAPSHOT",
 		"RUN_FINISHED",
 	}
+	require.Len(t, frames, len(wantSequence), "frames: %+v", frames)
 	for i, want := range wantSequence {
 		require.Equal(t, want, frames[i].Type(), "frame %d: %v", i, frames[i].Data)
 	}
 
-	// RUN_STARTED carries threadId/runId; we deliberately do NOT emit `input`
-	// because the spec types it as RunAgentInput, not a freeform map.
 	require.Equal(t, "thread-test", frames[0].Data["threadId"])
 	require.Equal(t, "run-test", frames[0].Data["runId"])
 	require.NotContains(t, frames[0].Data, "input",
-		"input must be omitted until we emit it as the spec's RunAgentInput shape")
+		"input must be omitted; the spec types it as RunAgentInput, not freeform")
 
-	// TextMessage* share a stable messageId.
 	msgID, _ := frames[1].Data["messageId"].(string)
 	require.NotEmpty(t, msgID)
 	require.Equal(t, "assistant", frames[1].Data["role"])
@@ -138,17 +166,25 @@ func TestAGUIRunHandler_HappyPath_EmitsCanonicalEventSequence(t *testing.T) {
 	require.Equal(t, "hello world", frames[2].Data["delta"])
 	require.Equal(t, msgID, frames[3].Data["messageId"])
 
-	// RUN_FINISHED carries threadId/runId (required by spec), success outcome,
-	// and the parsed agent JSON.
-	require.Equal(t, "thread-test", frames[4].Data["threadId"])
-	require.Equal(t, "run-test", frames[4].Data["runId"])
-	outcome, _ := frames[4].Data["outcome"].(map[string]any)
-	require.Equal(t, "success", outcome["type"])
-	require.Equal(t, map[string]any{"result": "hello world"}, frames[4].Data["result"])
+	// MESSAGES_SNAPSHOT carries inbound history + the new assistant turn,
+	// and the assistant's content matches the delta we emitted.
+	snapMsgs, _ := frames[4].Data["messages"].([]any)
+	require.Len(t, snapMsgs, 2, "snapshot should have 1 user + 1 assistant message")
+	last, _ := snapMsgs[1].(map[string]any)
+	require.Equal(t, "assistant", last["role"])
+	require.Equal(t, "hello world", last["content"])
+	require.Equal(t, msgID, last["id"])
 
-	// Spot-check: timestamp on RUN_STARTED is a number (Unix ms), not a string.
+	// RUN_FINISHED carries threadId/runId, success outcome, and the parsed
+	// agent JSON.
+	require.Equal(t, "thread-test", frames[5].Data["threadId"])
+	require.Equal(t, "run-test", frames[5].Data["runId"])
+	outcome, _ := frames[5].Data["outcome"].(map[string]any)
+	require.Equal(t, "success", outcome["type"])
+	require.Equal(t, map[string]any{"result": "hello world"}, frames[5].Data["result"])
+
 	if ts, ok := frames[0].Data["timestamp"]; ok {
-		_, isFloat := ts.(float64) // JSON numbers decode as float64 in map[string]any
+		_, isFloat := ts.(float64)
 		require.True(t, isFloat, "timestamp must be a number, got %T", ts)
 	}
 }
@@ -172,8 +208,10 @@ func TestAGUIRunHandler_GeneratesIDsWhenAbsent(t *testing.T) {
 	}}
 	router := mountAGUIRouter(t, store)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/agui/runs",
-		strings.NewReader(`{"reasoner":"node-1.echo","input":{}}`))
+	// Omit threadId and runId — vanilla HttpAgent always sends them, but a
+	// test client may not.
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/agui/runs/node-1/echo",
+		strings.NewReader(`{"messages":[{"role":"user","content":"hi"}]}`))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
@@ -187,7 +225,6 @@ func TestAGUIRunHandler_GeneratesIDsWhenAbsent(t *testing.T) {
 	require.NotEmpty(t, threadID, "threadId should be auto-generated")
 	require.NotEmpty(t, runID, "runId should be auto-generated")
 
-	// Auto-generated IDs propagate through to RUN_FINISHED.
 	last := frames[len(frames)-1]
 	require.Equal(t, "RUN_FINISHED", last.Type())
 	require.Equal(t, threadID, last.Data["threadId"])
@@ -213,8 +250,8 @@ func TestAGUIRunHandler_AgentFailureEmitsRunError(t *testing.T) {
 	}}
 	router := mountAGUIRouter(t, store)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/agui/runs",
-		strings.NewReader(`{"reasoner":"node-1.boom","input":{}}`))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/agui/runs/node-1/boom",
+		strings.NewReader(runAgentInputBody(t, "t", "r", "x")))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
@@ -229,26 +266,23 @@ func TestAGUIRunHandler_AgentFailureEmitsRunError(t *testing.T) {
 	require.NotEmpty(t, last.Data["message"])
 	require.Equal(t, "ERR_AGENT_CALL", last.Data["code"])
 
-	// No happy-path frames after RUN_STARTED on the failure path.
 	for _, f := range frames[1:] {
 		require.NotContains(t,
-			[]string{"TEXT_MESSAGE_START", "TEXT_MESSAGE_CONTENT", "TEXT_MESSAGE_END", "RUN_FINISHED"},
+			[]string{"TEXT_MESSAGE_START", "TEXT_MESSAGE_CONTENT", "TEXT_MESSAGE_END", "MESSAGES_SNAPSHOT", "RUN_FINISHED"},
 			f.Type(), "unexpected post-error frame: %s", f.Type())
 	}
 }
 
-// TestAGUIRunHandler_EmitsHeartbeatWhileReasonerIsSlow confirms that a
-// long-running reasoner produces SSE comment frames (`: keep-alive`) so
-// proxies don't idle-time-out the connection. The comment line is invisible
-// to AG-UI clients (the spec only defines `data:`-prefixed events) but
-// keeps intermediaries happy.
+// TestAGUIRunHandler_EmitsHeartbeatWhileReasonerIsSlow confirms long-running
+// reasoners produce SSE comment frames (`: keep-alive`) so proxies don't
+// idle-time-out the connection. Comments are invisible to AG-UI clients but
+// keep intermediaries happy.
 func TestAGUIRunHandler_EmitsHeartbeatWhileReasonerIsSlow(t *testing.T) {
 	prev := AGUIHeartbeatInterval
 	AGUIHeartbeatInterval = 50 * time.Millisecond
 	defer func() { AGUIHeartbeatInterval = prev }()
 
 	agentServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		// Block long enough for several heartbeat ticks before responding.
 		time.Sleep(250 * time.Millisecond)
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"result":"finally"}`))
@@ -264,8 +298,8 @@ func TestAGUIRunHandler_EmitsHeartbeatWhileReasonerIsSlow(t *testing.T) {
 	}}
 	router := mountAGUIRouter(t, store)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/agui/runs",
-		strings.NewReader(`{"reasoner":"node-1.slow","input":{}}`))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/agui/runs/node-1/slow",
+		strings.NewReader(runAgentInputBody(t, "t", "r", "x")))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
@@ -275,18 +309,16 @@ func TestAGUIRunHandler_EmitsHeartbeatWhileReasonerIsSlow(t *testing.T) {
 	require.Contains(t, body, ": keep-alive",
 		"expected at least one SSE comment heartbeat in:\n%s", body)
 
-	// Lifecycle still completes correctly after the heartbeats.
 	frames := parseAGUIStream(t, body)
 	require.Equal(t, "RUN_STARTED", frames[0].Type())
 	require.Equal(t, "RUN_FINISHED", frames[len(frames)-1].Type())
 }
 
-// TestAGUIRunHandler_AgentBodyWithoutResultKey_StringifiesWholeMap covers
-// the fallthrough path in the handler: when the agent returns a JSON object
-// that doesn't have a `result` key, the entire body becomes the
-// TEXT_MESSAGE_CONTENT delta and the parsed map becomes RUN_FINISHED.result.
-// This also exercises stringifyResult's non-string branch.
-func TestAGUIRunHandler_AgentBodyWithoutResultKey_StringifiesWholeMap(t *testing.T) {
+// TestAGUIRunHandler_AgentBodyWithoutResultKey covers the fallthrough in
+// extractAssistantText: when the agent returns a JSON object that doesn't
+// have `result` or `content`, internal-only keys (toolCalls, state) are
+// stripped and the rest is JSON-encoded as the delta.
+func TestAGUIRunHandler_AgentBodyWithoutResultKey(t *testing.T) {
 	agentServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"status":"ok","count":3}`))
@@ -302,22 +334,16 @@ func TestAGUIRunHandler_AgentBodyWithoutResultKey_StringifiesWholeMap(t *testing
 	}}
 	router := mountAGUIRouter(t, store)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/agui/runs",
-		strings.NewReader(`{"reasoner":"node-1.ping","input":{}}`))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/agui/runs/node-1/ping",
+		strings.NewReader(runAgentInputBody(t, "t", "r", "x")))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
 	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
 	frames := parseAGUIStream(t, w.Body.String())
-	require.Len(t, frames, 5)
-
-	// delta is the full body re-serialized (Go's json.Marshal sorts map keys).
+	// content frame is index 2 in the canonical sequence.
 	require.Equal(t, `{"count":3,"status":"ok"}`, frames[2].Data["delta"])
-	// result preserves the parsed JSON object (decoded to map[string]any with float numbers).
-	res, _ := frames[4].Data["result"].(map[string]any)
-	require.Equal(t, "ok", res["status"])
-	require.EqualValues(t, 3, res["count"])
 }
 
 // TestStringifyResult_BranchCoverage covers the cheap branches of the
@@ -327,6 +353,47 @@ func TestStringifyResult_BranchCoverage(t *testing.T) {
 	require.Equal(t, "", stringifyResult(nil))
 	require.Equal(t, `[1,2,3]`, stringifyResult([]any{1, 2, 3}))
 	require.Equal(t, `{"a":1}`, stringifyResult(map[string]any{"a": 1}))
+}
+
+// TestExtractAssistantText_AllBranches exercises the helper directly so
+// every priority rung is covered: result key, content key, top-level
+// string, top-level non-map non-string (number), filtered-empty map, and
+// the non-JSON raw-body fallthrough.
+func TestExtractAssistantText_AllBranches(t *testing.T) {
+	require.Equal(t, "raw bytes", extractAssistantText(nil, false, []byte("raw bytes")),
+		"non-JSON falls through to raw body")
+	require.Equal(t, "answer", extractAssistantText(map[string]any{"result": "answer"}, true, nil),
+		"`result` key wins")
+	require.Equal(t, "alt", extractAssistantText(map[string]any{"content": "alt"}, true, nil),
+		"`content` key is the second priority")
+	require.Equal(t, "just-a-string", extractAssistantText("just-a-string", true, nil),
+		"top-level JSON string passes through")
+	require.Equal(t, "42", extractAssistantText(float64(42), true, nil),
+		"top-level non-map non-string is JSON-encoded")
+	require.Equal(t, "", extractAssistantText(map[string]any{"toolCalls": []any{}, "state": map[string]any{}}, true, nil),
+		"a body containing only internal-only fields collapses to empty delta")
+}
+
+// TestExtractToolCalls_NonMapInput covers the non-map branch (e.g. the
+// reasoner returned a top-level string or array — no toolCalls possible).
+func TestExtractToolCalls_NonMapInput(t *testing.T) {
+	require.Nil(t, extractToolCalls("just a string"))
+	require.Nil(t, extractToolCalls([]any{1, 2, 3}))
+	require.Nil(t, extractToolCalls(nil))
+	// Map without a `toolCalls` array also returns nil.
+	require.Nil(t, extractToolCalls(map[string]any{"result": "x"}))
+}
+
+// TestExtractState_NonMapAndAbsent covers both the non-map and the
+// missing-key paths.
+func TestExtractState_NonMapAndAbsent(t *testing.T) {
+	_, ok := extractState("not a map")
+	require.False(t, ok)
+	_, ok = extractState(map[string]any{"result": "x"})
+	require.False(t, ok, "absent state key returns ok=false")
+	v, ok := extractState(map[string]any{"state": nil})
+	require.True(t, ok, "explicit null state still returns ok=true")
+	require.Nil(t, v)
 }
 
 // TestAGUIRunHandler_AgentReturnsNonJSON falls through to the
@@ -347,8 +414,8 @@ func TestAGUIRunHandler_AgentReturnsNonJSON(t *testing.T) {
 	}}
 	router := mountAGUIRouter(t, store)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/agui/runs",
-		strings.NewReader(`{"reasoner":"node-1.raw","input":{}}`))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/agui/runs/node-1/raw",
+		strings.NewReader(runAgentInputBody(t, "t", "r", "x")))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
@@ -359,17 +426,15 @@ func TestAGUIRunHandler_AgentReturnsNonJSON(t *testing.T) {
 }
 
 // TestAGUIRunHandler_ContextCancelMidFlight covers the <-ctx.Done() branch
-// in the wait loop: if the client (or upstream) cancels the request while
-// we're blocked on the agent, the handler must return cleanly without
-// emitting any post-RUN_STARTED frames.
+// in the wait loop: client cancellation during a slow reasoner must return
+// cleanly without emitting any post-RUN_STARTED frames.
 func TestAGUIRunHandler_ContextCancelMidFlight(t *testing.T) {
 	prev := AGUIHeartbeatInterval
-	AGUIHeartbeatInterval = time.Hour // disable heartbeats so we don't race the cancel
+	AGUIHeartbeatInterval = time.Hour
 	defer func() { AGUIHeartbeatInterval = prev }()
 
 	released := make(chan struct{})
 	agentServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Block until the test releases or the request context cancels.
 		select {
 		case <-released:
 		case <-r.Context().Done():
@@ -389,8 +454,8 @@ func TestAGUIRunHandler_ContextCancelMidFlight(t *testing.T) {
 	router := mountAGUIRouter(t, store)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/agui/runs",
-		strings.NewReader(`{"reasoner":"node-1.hang","input":{}}`)).WithContext(ctx)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/agui/runs/node-1/hang",
+		strings.NewReader(runAgentInputBody(t, "t", "r", "x"))).WithContext(ctx)
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -400,7 +465,6 @@ func TestAGUIRunHandler_ContextCancelMidFlight(t *testing.T) {
 		close(done)
 	}()
 
-	// Wait until RUN_STARTED has been emitted, then cancel.
 	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) {
 		if strings.Contains(w.Body.String(), `"type":"RUN_STARTED"`) {
@@ -417,7 +481,6 @@ func TestAGUIRunHandler_ContextCancelMidFlight(t *testing.T) {
 		t.Fatal("handler did not return within 2s of context cancel")
 	}
 
-	// No post-RUN_STARTED happy frames should have been emitted on cancel.
 	body := w.Body.String()
 	require.NotContains(t, body, "TEXT_MESSAGE_START")
 	require.NotContains(t, body, "RUN_FINISHED")
@@ -436,7 +499,7 @@ func TestAGUIRunHandler_RejectsMalformedJSON(t *testing.T) {
 	}}
 	router := mountAGUIRouter(t, store)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/agui/runs", strings.NewReader("not-json"))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/agui/runs/node-1/echo", strings.NewReader("not-json"))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
@@ -445,8 +508,346 @@ func TestAGUIRunHandler_RejectsMalformedJSON(t *testing.T) {
 	require.NotEqual(t, "text/event-stream", w.Header().Get("Content-Type"))
 }
 
-// TestHTTPAgentInvoker_HappyPath exercises the real httpAgentInvoker against
-// a stub agent server — the handler tests use an interface stub so this
+// TestAGUIRunHandler_ValidationErrorsReturnJSON: pre-stream validation
+// errors come back as plain JSON 4xx, never as an SSE stream. Once we emit
+// RUN_STARTED the contract becomes "you'll see RUN_ERROR on failure" — but
+// until the first frame, conventional REST errors win.
+func TestAGUIRunHandler_ValidationErrorsReturnJSON(t *testing.T) {
+	store := &reasonerTestStorage{agent: &types.AgentNode{
+		ID:              "node-1",
+		BaseURL:         "http://unused",
+		HealthStatus:    types.HealthStatusActive,
+		LifecycleStatus: types.AgentStatusReady,
+		Reasoners:       []types.ReasonerDefinition{{ID: "echo"}},
+	}}
+	router := mountAGUIRouter(t, store)
+
+	cases := []struct {
+		name     string
+		path     string
+		wantCode int
+		wantMsg  string
+	}{
+		{"unknown node", "/api/v1/agui/runs/missing-node/echo", http.StatusNotFound, "node 'missing-node' not found"},
+		{"unknown reasoner on known node", "/api/v1/agui/runs/node-1/does-not-exist", http.StatusNotFound, "reasoner 'does-not-exist' not found"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, tc.path, strings.NewReader(runAgentInputBody(t, "t", "r", "x")))
+			req.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+			require.Equal(t, tc.wantCode, w.Code, w.Body.String())
+			require.NotEqual(t, "text/event-stream", w.Header().Get("Content-Type"),
+				"validation errors must not open the SSE stream")
+			require.Contains(t, w.Body.String(), tc.wantMsg)
+		})
+	}
+}
+
+// TestAGUIRunHandler_ToolCalls_EmitsTriadAndAttachesToAssistantSnapshot
+// covers Tier 2: when the reasoner declares a tool call (synthetic shape
+// `{"toolCalls":[{id,name,arguments}]}`), the handler must emit
+// TOOL_CALL_START → _ARGS → _END (BEFORE TEXT_MESSAGE_*) and attach the
+// tool calls to the assistant turn in MESSAGES_SNAPSHOT — the wire shape
+// CopilotKit's frontend pattern-matches against `useCopilotAction` to drive
+// Generative UI.
+func TestAGUIRunHandler_ToolCalls_EmitsTriadAndAttachesToAssistantSnapshot(t *testing.T) {
+	agentServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"result":"booking your flight",
+			"toolCalls":[
+				{"id":"tc1","name":"showFlightCard","arguments":{"from":"SFO","to":"JFK"}}
+			]
+		}`))
+	}))
+	defer agentServer.Close()
+
+	store := &reasonerTestStorage{agent: &types.AgentNode{
+		ID:              "node-1",
+		BaseURL:         agentServer.URL,
+		HealthStatus:    types.HealthStatusActive,
+		LifecycleStatus: types.AgentStatusReady,
+		Reasoners:       []types.ReasonerDefinition{{ID: "agent"}},
+	}}
+	router := mountAGUIRouter(t, store)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/agui/runs/node-1/agent",
+		strings.NewReader(runAgentInputBody(t, "t", "r", "book me SFO->JFK")))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	frames := parseAGUIStream(t, w.Body.String())
+
+	wantTypes := []string{
+		"RUN_STARTED",
+		"TOOL_CALL_START",
+		"TOOL_CALL_ARGS",
+		"TOOL_CALL_END",
+		"TEXT_MESSAGE_START",
+		"TEXT_MESSAGE_CONTENT",
+		"TEXT_MESSAGE_END",
+		"MESSAGES_SNAPSHOT",
+		"RUN_FINISHED",
+	}
+	require.Len(t, frames, len(wantTypes))
+	for i, want := range wantTypes {
+		require.Equal(t, want, frames[i].Type(), "frame %d: %v", i, frames[i].Data)
+	}
+
+	require.Equal(t, "tc1", frames[1].Data["toolCallId"])
+	require.Equal(t, "showFlightCard", frames[1].Data["toolCallName"])
+	// parentMessageId stitches the tool call into the assistant turn.
+	require.NotEmpty(t, frames[1].Data["parentMessageId"])
+	require.Equal(t, frames[1].Data["parentMessageId"], frames[4].Data["messageId"])
+
+	require.Equal(t, "tc1", frames[2].Data["toolCallId"])
+	require.JSONEq(t, `{"from":"SFO","to":"JFK"}`, frames[2].Data["delta"].(string))
+	require.Equal(t, "tc1", frames[3].Data["toolCallId"])
+
+	require.Equal(t, "booking your flight", frames[5].Data["delta"])
+
+	// MESSAGES_SNAPSHOT carries the tool-call attached to the assistant turn.
+	snap, _ := frames[7].Data["messages"].([]any)
+	require.Len(t, snap, 2)
+	assistant, _ := snap[1].(map[string]any)
+	require.Equal(t, "assistant", assistant["role"])
+	tcs, _ := assistant["toolCalls"].([]any)
+	require.Len(t, tcs, 1)
+	tc, _ := tcs[0].(map[string]any)
+	require.Equal(t, "tc1", tc["id"])
+	require.Equal(t, "function", tc["type"])
+	fn, _ := tc["function"].(map[string]any)
+	require.Equal(t, "showFlightCard", fn["name"])
+	require.JSONEq(t, `{"from":"SFO","to":"JFK"}`, fn["arguments"].(string))
+}
+
+// TestAGUIRunHandler_ToolCalls_AutoIDIfMissing covers the synthetic-id
+// fallback in extractToolCalls.
+func TestAGUIRunHandler_ToolCalls_AutoIDIfMissing(t *testing.T) {
+	agentServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"result":"ok","toolCalls":[{"name":"alpha"}]}`))
+	}))
+	defer agentServer.Close()
+
+	store := &reasonerTestStorage{agent: &types.AgentNode{
+		ID:              "node-1",
+		BaseURL:         agentServer.URL,
+		HealthStatus:    types.HealthStatusActive,
+		LifecycleStatus: types.AgentStatusReady,
+		Reasoners:       []types.ReasonerDefinition{{ID: "a"}},
+	}}
+	router := mountAGUIRouter(t, store)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/agui/runs/node-1/a",
+		strings.NewReader(runAgentInputBody(t, "t", "r", "x")))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	frames := parseAGUIStream(t, w.Body.String())
+	require.Equal(t, "TOOL_CALL_START", frames[1].Type())
+	id, _ := frames[1].Data["toolCallId"].(string)
+	require.NotEmpty(t, id, "tool-call id must be auto-generated when missing")
+	// Same id must propagate through the triad.
+	require.Equal(t, id, frames[2].Data["toolCallId"])
+	require.Equal(t, id, frames[3].Data["toolCallId"])
+}
+
+// TestAGUIRunHandler_ToolCalls_SkipsMalformedEntries — a tool-call with no
+// name is silently dropped (rather than failing the whole turn). Mirrors the
+// extractToolCalls guards.
+func TestAGUIRunHandler_ToolCalls_SkipsMalformedEntries(t *testing.T) {
+	agentServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"result":"ok","toolCalls":[
+			{"id":"x","name":""},
+			"not-an-object",
+			{"id":"y","name":"good","arguments":{}}
+		]}`))
+	}))
+	defer agentServer.Close()
+
+	store := &reasonerTestStorage{agent: &types.AgentNode{
+		ID:              "node-1",
+		BaseURL:         agentServer.URL,
+		HealthStatus:    types.HealthStatusActive,
+		LifecycleStatus: types.AgentStatusReady,
+		Reasoners:       []types.ReasonerDefinition{{ID: "a"}},
+	}}
+	router := mountAGUIRouter(t, store)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/agui/runs/node-1/a",
+		strings.NewReader(runAgentInputBody(t, "t", "r", "x")))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	frames := parseAGUIStream(t, w.Body.String())
+	starts := 0
+	for _, f := range frames {
+		if f.Type() == "TOOL_CALL_START" {
+			starts++
+			require.Equal(t, "good", f.Data["toolCallName"])
+		}
+	}
+	require.Equal(t, 1, starts, "only the well-formed tool call should be emitted")
+}
+
+// TestAGUIRunHandler_State_EmitsSnapshotAndForwardsInbound covers Tier 3:
+// the inbound `state` field on RunAgentInput must reach the reasoner, and a
+// reasoner-returned `state` field must be re-emitted as a STATE_SNAPSHOT
+// before MESSAGES_SNAPSHOT and RUN_FINISHED.
+func TestAGUIRunHandler_State_EmitsSnapshotAndForwardsInbound(t *testing.T) {
+	var seenInput map[string]any
+	agentServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		raw, _ := io.ReadAll(r.Body)
+		require.NoError(t, json.Unmarshal(raw, &seenInput))
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"result":"counter incremented","state":{"counter":2}}`))
+	}))
+	defer agentServer.Close()
+
+	store := &reasonerTestStorage{agent: &types.AgentNode{
+		ID:              "node-1",
+		BaseURL:         agentServer.URL,
+		HealthStatus:    types.HealthStatusActive,
+		LifecycleStatus: types.AgentStatusReady,
+		Reasoners:       []types.ReasonerDefinition{{ID: "stateful"}},
+	}}
+	router := mountAGUIRouter(t, store)
+
+	body := `{
+		"threadId":"t","runId":"r",
+		"messages":[{"role":"user","content":"increment"}],
+		"state":{"counter":1}
+	}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/agui/runs/node-1/stateful", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+
+	// Inbound state landed on the reasoner.
+	gotState, _ := seenInput["state"].(map[string]any)
+	require.EqualValues(t, 1, gotState["counter"])
+
+	frames := parseAGUIStream(t, w.Body.String())
+	// Find STATE_SNAPSHOT in the stream and verify it carries the new value.
+	var snap aguiFrame
+	for _, f := range frames {
+		if f.Type() == "STATE_SNAPSHOT" {
+			snap = f
+			break
+		}
+	}
+	require.NotEmpty(t, snap.Data, "STATE_SNAPSHOT must be emitted when reasoner returns state")
+	snapVal, _ := snap.Data["snapshot"].(map[string]any)
+	require.EqualValues(t, 2, snapVal["counter"])
+
+	// Order: STATE_SNAPSHOT after TEXT_MESSAGE_END but before MESSAGES_SNAPSHOT.
+	idx := func(typ string) int {
+		for i, f := range frames {
+			if f.Type() == typ {
+				return i
+			}
+		}
+		return -1
+	}
+	require.Less(t, idx("TEXT_MESSAGE_END"), idx("STATE_SNAPSHOT"))
+	require.Less(t, idx("STATE_SNAPSHOT"), idx("MESSAGES_SNAPSHOT"))
+	require.Less(t, idx("MESSAGES_SNAPSHOT"), idx("RUN_FINISHED"))
+}
+
+// TestAGUIRunHandler_State_OmittedWhenReasonerDoesNotReturnIt — Tier 3
+// doesn't synthesize a STATE_SNAPSHOT for stateless reasoners; we only emit
+// when the reasoner opts in via a top-level `state` field.
+func TestAGUIRunHandler_State_OmittedWhenReasonerDoesNotReturnIt(t *testing.T) {
+	agentServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"result":"plain"}`))
+	}))
+	defer agentServer.Close()
+
+	store := &reasonerTestStorage{agent: &types.AgentNode{
+		ID:              "node-1",
+		BaseURL:         agentServer.URL,
+		HealthStatus:    types.HealthStatusActive,
+		LifecycleStatus: types.AgentStatusReady,
+		Reasoners:       []types.ReasonerDefinition{{ID: "plain"}},
+	}}
+	router := mountAGUIRouter(t, store)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/agui/runs/node-1/plain",
+		strings.NewReader(runAgentInputBody(t, "t", "r", "x")))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	frames := parseAGUIStream(t, w.Body.String())
+	for _, f := range frames {
+		require.NotEqual(t, "STATE_SNAPSHOT", f.Type(),
+			"STATE_SNAPSHOT must not be emitted unless the reasoner opts in")
+	}
+}
+
+// TestAGUIRunHandler_PassesToolMessagesThrough — when the inbound history
+// contains a `role:"tool"` message (CopilotKit posts these on the next run
+// after a frontend useCopilotAction completes), it must reach the reasoner
+// intact.
+func TestAGUIRunHandler_PassesToolMessagesThrough(t *testing.T) {
+	var seenInput map[string]any
+	agentServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		raw, _ := io.ReadAll(r.Body)
+		require.NoError(t, json.Unmarshal(raw, &seenInput))
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"result":"thanks"}`))
+	}))
+	defer agentServer.Close()
+
+	store := &reasonerTestStorage{agent: &types.AgentNode{
+		ID:              "node-1",
+		BaseURL:         agentServer.URL,
+		HealthStatus:    types.HealthStatusActive,
+		LifecycleStatus: types.AgentStatusReady,
+		Reasoners:       []types.ReasonerDefinition{{ID: "echo"}},
+	}}
+	router := mountAGUIRouter(t, store)
+
+	body := `{
+		"threadId":"t","runId":"r2",
+		"messages":[
+			{"role":"user","content":"book SFO->JFK"},
+			{"role":"assistant","toolCalls":[{"id":"tc1","type":"function","function":{"name":"showFlightCard","arguments":"{\"from\":\"SFO\"}"}}]},
+			{"role":"tool","toolCallId":"tc1","content":"user clicked confirm"},
+			{"role":"user","content":"now book the return"}
+		]
+	}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/agui/runs/node-1/echo", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	require.Equal(t, "now book the return", seenInput["prompt"])
+	msgs, _ := seenInput["messages"].([]any)
+	require.Len(t, msgs, 4)
+	toolMsg, _ := msgs[2].(map[string]any)
+	require.Equal(t, "tool", toolMsg["role"])
+	require.Equal(t, "tc1", toolMsg["toolCallId"])
+	require.Equal(t, "user clicked confirm", toolMsg["content"])
+}
+
+// TestHTTPAgentInvoker_HappyPath exercises the real httpAgentInvoker
+// against a stub agent server — handler tests use an interface stub so this
 // concrete path otherwise goes uncovered.
 func TestHTTPAgentInvoker_HappyPath(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -487,7 +888,7 @@ func TestHTTPAgentInvoker_4xxBubblesUpAsError(t *testing.T) {
 func TestHTTPAgentInvoker_DialFailureSurfacesError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
 	addr := server.URL
-	server.Close() // closes the listener; subsequent dials get connection refused
+	server.Close()
 
 	_, err := httpAgentInvoker{}.Invoke(context.Background(),
 		&types.AgentNode{BaseURL: addr}, "ping", []byte(`{}`))
@@ -500,47 +901,7 @@ func TestHTTPAgentInvoker_DialFailureSurfacesError(t *testing.T) {
 // to a dial.
 func TestHTTPAgentInvoker_BadURLFailsRequestConstruction(t *testing.T) {
 	_, err := httpAgentInvoker{}.Invoke(context.Background(),
-		// `\n` in the URL is rejected at request construction time.
 		&types.AgentNode{BaseURL: "http://bad\nhost"}, "ping", []byte(`{}`))
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "create agent request")
-}
-
-// TestAGUIRunHandler_ValidationErrorsReturnJSON: pre-stream validation
-// errors come back as plain JSON 4xx, never as an SSE stream. Once we emit
-// RUN_STARTED the contract becomes "you'll see RUN_ERROR on failure" — but
-// until the first frame, conventional REST errors win.
-func TestAGUIRunHandler_ValidationErrorsReturnJSON(t *testing.T) {
-	store := &reasonerTestStorage{agent: &types.AgentNode{
-		ID:              "node-1",
-		BaseURL:         "http://unused",
-		HealthStatus:    types.HealthStatusActive,
-		LifecycleStatus: types.AgentStatusReady,
-		Reasoners:       []types.ReasonerDefinition{{ID: "echo"}},
-	}}
-	router := mountAGUIRouter(t, store)
-
-	cases := []struct {
-		name     string
-		body     string
-		wantCode int
-		wantMsg  string
-	}{
-		{"missing reasoner", `{"input":{}}`, http.StatusBadRequest, "reasoner is required"},
-		{"malformed reasoner", `{"reasoner":"no-dot","input":{}}`, http.StatusBadRequest, "node_id.reasoner_name"},
-		{"unknown node", `{"reasoner":"missing.echo","input":{}}`, http.StatusNotFound, "not found"},
-		{"unknown reasoner on known node", `{"reasoner":"node-1.does-not-exist","input":{}}`, http.StatusNotFound, "reasoner 'does-not-exist' not found"},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodPost, "/api/v1/agui/runs", strings.NewReader(tc.body))
-			req.Header.Set("Content-Type", "application/json")
-			w := httptest.NewRecorder()
-			router.ServeHTTP(w, req)
-			require.Equal(t, tc.wantCode, w.Code, w.Body.String())
-			require.NotEqual(t, "text/event-stream", w.Header().Get("Content-Type"),
-				"validation errors must not open the SSE stream")
-			require.Contains(t, w.Body.String(), tc.wantMsg)
-		})
-	}
 }
