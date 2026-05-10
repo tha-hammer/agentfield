@@ -292,6 +292,206 @@ func (e StateDelta) MarshalJSON() ([]byte, error) {
 	}{Type: e.Type(), alias: alias(e)})
 }
 
+// StepStarted / StepFinished mark a named "step" inside a run. CopilotKit's
+// chat UI ignores these (per the upstream GOTCHAS.md) but other AG-UI
+// consumers — agent-trace viewers, debuggers, custom runtimes — render
+// them as a hierarchical activity log. Defining the types lets reasoners
+// surface step boundaries without us inventing a private vocabulary.
+type StepStarted struct {
+	StepName  string `json:"stepName"`
+	Timestamp int64  `json:"timestamp,omitempty"`
+}
+
+func (StepStarted) Type() string { return "STEP_STARTED" }
+
+func (e StepStarted) MarshalJSON() ([]byte, error) {
+	type alias StepStarted
+	return json.Marshal(struct {
+		Type string `json:"type"`
+		alias
+	}{Type: e.Type(), alias: alias(e)})
+}
+
+type StepFinished struct {
+	StepName  string `json:"stepName"`
+	Timestamp int64  `json:"timestamp,omitempty"`
+}
+
+func (StepFinished) Type() string { return "STEP_FINISHED" }
+
+func (e StepFinished) MarshalJSON() ([]byte, error) {
+	type alias StepFinished
+	return json.Marshal(struct {
+		Type string `json:"type"`
+		alias
+	}{Type: e.Type(), alias: alias(e)})
+}
+
+// RawEvent passes a foreign-system event through verbatim. `source` names
+// the originating system (e.g. "openai", "harness", "langchain"); `event`
+// is the original payload, opaque to AG-UI. Frontends can subscribe with
+// onRawEvent for app-specific handling.
+type RawEvent struct {
+	Event     any    `json:"event"`
+	Source    string `json:"source,omitempty"`
+	Timestamp int64  `json:"timestamp,omitempty"`
+}
+
+func (RawEvent) Type() string { return "RAW" }
+
+func (e RawEvent) MarshalJSON() ([]byte, error) {
+	type alias RawEvent
+	return json.Marshal(struct {
+		Type string `json:"type"`
+		alias
+	}{Type: e.Type(), alias: alias(e)})
+}
+
+// CustomEvent carries an application-defined event. `name` is the
+// dispatch key frontends listen on; `value` is freeform JSON.
+type CustomEvent struct {
+	Name      string `json:"name"`
+	Value     any    `json:"value,omitempty"`
+	Timestamp int64  `json:"timestamp,omitempty"`
+}
+
+func (CustomEvent) Type() string { return "CUSTOM" }
+
+func (e CustomEvent) MarshalJSON() ([]byte, error) {
+	type alias CustomEvent
+	return json.Marshal(struct {
+		Type string `json:"type"`
+		alias
+	}{Type: e.Type(), alias: alias(e)})
+}
+
+// ReasoningStart opens a reasoning context — the agent is "thinking"
+// before producing a user-facing response. CopilotKit and similar
+// frontends render REASONING_* sequences in a collapsible "Thinking…"
+// pane, surfacing chain-of-thought from models that support it (Claude
+// extended thinking, OpenAI o-series).
+type ReasoningStart struct {
+	MessageID string `json:"messageId"`
+	Timestamp int64  `json:"timestamp,omitempty"`
+}
+
+func (ReasoningStart) Type() string { return "REASONING_START" }
+
+func (e ReasoningStart) MarshalJSON() ([]byte, error) {
+	type alias ReasoningStart
+	return json.Marshal(struct {
+		Type string `json:"type"`
+		alias
+	}{Type: e.Type(), alias: alias(e)})
+}
+
+// ReasoningMessageStart opens a single reasoning message inside a
+// REASONING_START / END boundary. Role is always "reasoning" per the
+// upstream schema.
+type ReasoningMessageStart struct {
+	MessageID string `json:"messageId"`
+	Role      string `json:"role"`
+	Timestamp int64  `json:"timestamp,omitempty"`
+}
+
+func (ReasoningMessageStart) Type() string { return "REASONING_MESSAGE_START" }
+
+func (e ReasoningMessageStart) MarshalJSON() ([]byte, error) {
+	type alias ReasoningMessageStart
+	return json.Marshal(struct {
+		Type string `json:"type"`
+		alias
+	}{Type: e.Type(), alias: alias(e)})
+}
+
+type ReasoningMessageContent struct {
+	MessageID string `json:"messageId"`
+	Delta     string `json:"delta"`
+	Timestamp int64  `json:"timestamp,omitempty"`
+}
+
+func (ReasoningMessageContent) Type() string { return "REASONING_MESSAGE_CONTENT" }
+
+func (e ReasoningMessageContent) MarshalJSON() ([]byte, error) {
+	type alias ReasoningMessageContent
+	return json.Marshal(struct {
+		Type string `json:"type"`
+		alias
+	}{Type: e.Type(), alias: alias(e)})
+}
+
+type ReasoningMessageEnd struct {
+	MessageID string `json:"messageId"`
+	Timestamp int64  `json:"timestamp,omitempty"`
+}
+
+func (ReasoningMessageEnd) Type() string { return "REASONING_MESSAGE_END" }
+
+func (e ReasoningMessageEnd) MarshalJSON() ([]byte, error) {
+	type alias ReasoningMessageEnd
+	return json.Marshal(struct {
+		Type string `json:"type"`
+		alias
+	}{Type: e.Type(), alias: alias(e)})
+}
+
+type ReasoningEnd struct {
+	MessageID string `json:"messageId"`
+	Timestamp int64  `json:"timestamp,omitempty"`
+}
+
+func (ReasoningEnd) Type() string { return "REASONING_END" }
+
+func (e ReasoningEnd) MarshalJSON() ([]byte, error) {
+	type alias ReasoningEnd
+	return json.Marshal(struct {
+		Type string `json:"type"`
+		alias
+	}{Type: e.Type(), alias: alias(e)})
+}
+
+// TextMessageChunk is the compact form of TEXT_MESSAGE_START → _CONTENT
+// → _END: one event opens an implicit message, attaches a delta, and an
+// empty delta closes it. Useful for streaming over slow links.
+type TextMessageChunk struct {
+	MessageID string `json:"messageId,omitempty"`
+	Role      string `json:"role,omitempty"`
+	Delta     string `json:"delta,omitempty"`
+	Timestamp int64  `json:"timestamp,omitempty"`
+}
+
+func (TextMessageChunk) Type() string { return "TEXT_MESSAGE_CHUNK" }
+
+func (e TextMessageChunk) MarshalJSON() ([]byte, error) {
+	type alias TextMessageChunk
+	return json.Marshal(struct {
+		Type string `json:"type"`
+		alias
+	}{Type: e.Type(), alias: alias(e)})
+}
+
+// ToolCallChunk is the compact form of TOOL_CALL_START → _ARGS → _END:
+// one event per tool-call delta. Either toolCallId+toolCallName open an
+// implicit call, repeated delta-only chunks accumulate args, an empty
+// delta closes it.
+type ToolCallChunk struct {
+	ToolCallID      string `json:"toolCallId,omitempty"`
+	ToolCallName    string `json:"toolCallName,omitempty"`
+	ParentMessageID string `json:"parentMessageId,omitempty"`
+	Delta           string `json:"delta,omitempty"`
+	Timestamp       int64  `json:"timestamp,omitempty"`
+}
+
+func (ToolCallChunk) Type() string { return "TOOL_CALL_CHUNK" }
+
+func (e ToolCallChunk) MarshalJSON() ([]byte, error) {
+	type alias ToolCallChunk
+	return json.Marshal(struct {
+		Type string `json:"type"`
+		alias
+	}{Type: e.Type(), alias: alias(e)})
+}
+
 // NowMillis returns the current Unix time in milliseconds. Wrapped so tests
 // can replace it. Milliseconds match the JS `Date.now()` convention that
 // AG-UI clients are most likely to interpret correctly.

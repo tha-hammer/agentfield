@@ -97,6 +97,72 @@ func TestWriteSSE_FrameShape(t *testing.T) {
 			wantTyp:    "STATE_DELTA",
 			wantFields: []string{`"delta":[`, `"op":"replace"`, `"path":"/counter"`},
 		},
+		{
+			name:       "StepStarted",
+			ev:         StepStarted{StepName: "plan"},
+			wantTyp:    "STEP_STARTED",
+			wantFields: []string{`"stepName":"plan"`},
+		},
+		{
+			name:       "StepFinished",
+			ev:         StepFinished{StepName: "plan"},
+			wantTyp:    "STEP_FINISHED",
+			wantFields: []string{`"stepName":"plan"`},
+		},
+		{
+			name:       "RawEvent",
+			ev:         RawEvent{Event: map[string]any{"foo": 1}, Source: "harness"},
+			wantTyp:    "RAW",
+			wantFields: []string{`"event":{"foo":1}`, `"source":"harness"`},
+		},
+		{
+			name:       "CustomEvent",
+			ev:         CustomEvent{Name: "ack", Value: map[string]any{"ok": true}},
+			wantTyp:    "CUSTOM",
+			wantFields: []string{`"name":"ack"`, `"value":{"ok":true}`},
+		},
+		{
+			name:       "ReasoningStart",
+			ev:         ReasoningStart{MessageID: "r1"},
+			wantTyp:    "REASONING_START",
+			wantFields: []string{`"messageId":"r1"`},
+		},
+		{
+			name:       "ReasoningMessageStart",
+			ev:         ReasoningMessageStart{MessageID: "r1", Role: "reasoning"},
+			wantTyp:    "REASONING_MESSAGE_START",
+			wantFields: []string{`"messageId":"r1"`, `"role":"reasoning"`},
+		},
+		{
+			name:       "ReasoningMessageContent",
+			ev:         ReasoningMessageContent{MessageID: "r1", Delta: "thinking..."},
+			wantTyp:    "REASONING_MESSAGE_CONTENT",
+			wantFields: []string{`"messageId":"r1"`, `"delta":"thinking..."`},
+		},
+		{
+			name:       "ReasoningMessageEnd",
+			ev:         ReasoningMessageEnd{MessageID: "r1"},
+			wantTyp:    "REASONING_MESSAGE_END",
+			wantFields: []string{`"messageId":"r1"`},
+		},
+		{
+			name:       "ReasoningEnd",
+			ev:         ReasoningEnd{MessageID: "r1"},
+			wantTyp:    "REASONING_END",
+			wantFields: []string{`"messageId":"r1"`},
+		},
+		{
+			name:       "TextMessageChunk",
+			ev:         TextMessageChunk{MessageID: "m1", Delta: "tok"},
+			wantTyp:    "TEXT_MESSAGE_CHUNK",
+			wantFields: []string{`"messageId":"m1"`, `"delta":"tok"`},
+		},
+		{
+			name:       "ToolCallChunk",
+			ev:         ToolCallChunk{ToolCallID: "tc1", ToolCallName: "go", Delta: "{\"a\":1}"},
+			wantTyp:    "TOOL_CALL_CHUNK",
+			wantFields: []string{`"toolCallId":"tc1"`, `"toolCallName":"go"`, `"delta":"{\"a\":1}"`},
+		},
 	}
 
 	for _, tc := range cases {
