@@ -69,6 +69,7 @@ from .tool_calling import (
     capability_to_tool_schema,
     capabilities_to_tool_schemas,
 )
+from . import agui
 
 __all__ = [
     "Agent",
@@ -129,6 +130,8 @@ __all__ = [
     "ToolCallTrace",
     "capability_to_tool_schema",
     "capabilities_to_tool_schemas",
+    # AG-UI protocol helpers
+    "agui",
     # Exceptions
     "AgentFieldError",
     "AgentFieldClientError",
