@@ -25,22 +25,45 @@ import (
 // nginx default. Exposed for tests.
 var AGUIHeartbeatInterval = 15 * time.Second
 
+// agentInvocation is the result of calling the agent reasoner endpoint:
+// either a fully buffered body (for traditional reasoners that return a
+// single JSON object) or a live io.ReadCloser carrying NDJSON chunks
+// (for streaming reasoners that yield events as they happen). Exactly
+// one of Body / Stream is non-nil; ContentType disambiguates.
+type agentInvocation struct {
+	Body        []byte
+	Stream      io.ReadCloser
+	ContentType string
+}
+
+// IsStreaming reports whether the reasoner returned an NDJSON stream
+// (Content-Type: application/x-ndjson) the handler should consume
+// chunk-by-chunk and forward as live AG-UI events.
+func (r *agentInvocation) IsStreaming() bool {
+	return r != nil && r.Stream != nil
+}
+
 // agentInvoker abstracts the outbound HTTP call to the agent's reasoner so
 // tests can stub behavior without spinning up a real server. The default
-// implementation (httpAgentInvoker) does a plain POST and reads the full body.
+// implementation (httpAgentInvoker) buffers the body for non-NDJSON
+// responses and hands back the live stream for NDJSON.
 type agentInvoker interface {
-	Invoke(ctx context.Context, agent *types.AgentNode, reasonerName string, input []byte) ([]byte, error)
+	Invoke(ctx context.Context, agent *types.AgentNode, reasonerName string, input []byte) (*agentInvocation, error)
 }
 
 type httpAgentInvoker struct{ client *http.Client }
 
-func (i httpAgentInvoker) Invoke(ctx context.Context, agent *types.AgentNode, reasonerName string, input []byte) ([]byte, error) {
+func (i httpAgentInvoker) Invoke(ctx context.Context, agent *types.AgentNode, reasonerName string, input []byte) (*agentInvocation, error) {
 	url := fmt.Sprintf("%s/reasoners/%s", agent.BaseURL, reasonerName)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(input))
 	if err != nil {
 		return nil, fmt.Errorf("create agent request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
+	// Tell the reasoner we accept either a plain JSON response (buffered
+	// path) or NDJSON (streaming path). Reasoners that opted into
+	// streaming can switch on Accept; reasoners that didn't ignore it.
+	req.Header.Set("Accept", "application/x-ndjson, application/json")
 
 	client := i.client
 	if client == nil {
@@ -50,16 +73,24 @@ func (i httpAgentInvoker) Invoke(ctx context.Context, agent *types.AgentNode, re
 	if err != nil {
 		return nil, fmt.Errorf("agent call failed: %w", err)
 	}
-	defer resp.Body.Close()
 
+	ct := resp.Header.Get("Content-Type")
+	// Streaming response: hand the body straight back. Caller is
+	// responsible for closing it; we don't read it here.
+	if resp.StatusCode < http.StatusBadRequest && strings.HasPrefix(ct, "application/x-ndjson") {
+		return &agentInvocation{Stream: resp.Body, ContentType: ct}, nil
+	}
+
+	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("read agent response: %w", err)
 	}
 	if resp.StatusCode >= http.StatusBadRequest {
-		return body, fmt.Errorf("agent returned %d: %s", resp.StatusCode, truncateForLog(body))
+		return &agentInvocation{Body: body, ContentType: ct},
+			fmt.Errorf("agent returned %d: %s", resp.StatusCode, truncateForLog(body))
 	}
-	return body, nil
+	return &agentInvocation{Body: body, ContentType: ct}, nil
 }
 
 // AGUIRunHandler handles POST /api/v1/agui/runs/:node_id/:reasoner_name.
@@ -171,25 +202,26 @@ func aguiRunHandler(storageProvider storage.StorageProvider, invoker agentInvoke
 		}
 
 		// Run the agent invocation in a goroutine so the main loop can
-		// emit SSE keep-alive comments while we wait. AG-UI has no
-		// heartbeat event, but `:` comment frames are valid SSE that
-		// clients ignore and proxies see as activity.
-		type invokeResult struct {
-			body []byte
-			err  error
+		// emit SSE keep-alive comments while we wait for the first byte.
+		// (Once the body starts streaming, that's its own activity.) AG-UI
+		// has no heartbeat event, but `:` comment frames are valid SSE
+		// that clients ignore and proxies see as activity.
+		type invokeResultT struct {
+			res *agentInvocation
+			err error
 		}
-		resultCh := make(chan invokeResult, 1)
+		resultCh := make(chan invokeResultT, 1)
 		go func() {
-			b, e := invoker.Invoke(ctx, agent, reasonerName, inputJSON)
-			resultCh <- invokeResult{body: b, err: e}
+			r, e := invoker.Invoke(ctx, agent, reasonerName, inputJSON)
+			resultCh <- invokeResultT{res: r, err: e}
 		}()
 
 		ticker := time.NewTicker(AGUIHeartbeatInterval)
 		defer ticker.Stop()
 
 		var (
-			body      []byte
-			invokeErr error
+			invocation *agentInvocation
+			invokeErr  error
 		)
 	waitLoop:
 		for {
@@ -202,7 +234,7 @@ func aguiRunHandler(storageProvider storage.StorageProvider, invoker agentInvoke
 				}
 				flush()
 			case r := <-resultCh:
-				body, invokeErr = r.body, r.err
+				invocation, invokeErr = r.res, r.err
 				break waitLoop
 			}
 		}
@@ -216,12 +248,74 @@ func aguiRunHandler(storageProvider storage.StorageProvider, invoker agentInvoke
 			return
 		}
 
+		messageID := "msg-" + utils.GenerateExecutionID()
+
+		// Streaming reasoner — Content-Type is application/x-ndjson and
+		// the body is a live chunk stream. Drain it here, dispatching
+		// each tagged event to its AG-UI counterpart immediately, then
+		// wrap up with MESSAGES_SNAPSHOT + RUN_FINISHED. This is the
+		// path that makes "Generative UI" feel live instead of stuttery.
+		if invocation.IsStreaming() {
+			runStreamingDispatch(ctx, c, write, invocation.Stream, req, threadID, runID, messageID)
+			return
+		}
+
+		// Buffered reasoner — the rest of this function processes the
+		// fully-buffered JSON body the way it did before streaming
+		// support landed.
+		body := invocation.Body
 		// Decode the agent response so we can surface the structured pieces
 		// CopilotKit understands: tool calls, state, and the assistant text.
 		parsed, parsedOK := decodeReasonerResponse(body)
-		messageID := "msg-" + utils.GenerateExecutionID()
 
-		// Tool calls go FIRST so the frontend can dispatch render handlers
+		// Reasoning segments first — frontends render these in a
+		// collapsible "Thinking…" pane above the user-facing answer, so
+		// emitting them before tool calls / text matches the UX flow.
+		if reasoning := extractReasoning(parsed); len(reasoning) > 0 {
+			reasoningContextID := "reasoning-" + utils.GenerateExecutionID()
+			if !write(agui.ReasoningStart{
+				MessageID: reasoningContextID,
+				Timestamp: agui.NowMillis(),
+			}) {
+				return
+			}
+			for i, seg := range reasoning {
+				segID := seg.ID
+				if segID == "" {
+					segID = fmt.Sprintf("%s-seg-%d", reasoningContextID, i)
+				}
+				if !write(agui.ReasoningMessageStart{
+					MessageID: segID,
+					Role:      "reasoning",
+					Timestamp: agui.NowMillis(),
+				}) {
+					return
+				}
+				for _, chunk := range chunkText(seg.Content, AGUITextChunkSize) {
+					if !write(agui.ReasoningMessageContent{
+						MessageID: segID,
+						Delta:     chunk,
+						Timestamp: agui.NowMillis(),
+					}) {
+						return
+					}
+				}
+				if !write(agui.ReasoningMessageEnd{
+					MessageID: segID,
+					Timestamp: agui.NowMillis(),
+				}) {
+					return
+				}
+			}
+			if !write(agui.ReasoningEnd{
+				MessageID: reasoningContextID,
+				Timestamp: agui.NowMillis(),
+			}) {
+				return
+			}
+		}
+
+		// Tool calls next so the frontend can dispatch render handlers
 		// (useCopilotAction) before the text turn closes. The text turn
 		// then carries any textual answer the reasoner produced.
 		toolCalls := extractToolCalls(parsed)
@@ -448,6 +542,71 @@ func extractToolCalls(parsed any) []reasonerToolCall {
 		})
 	}
 	return out
+}
+
+// extractReasoning reads a chain-of-thought from the reasoner response.
+// Reasoners that want to surface model thinking in CopilotKit's "Thinking…"
+// pane return either:
+//
+//	{"reasoning": "the agent's chain-of-thought as a single string"}
+//
+// or a list of per-step strings:
+//
+//	{"reasoning": ["step 1...", "step 2..."]}
+//
+// In either case the handler emits REASONING_START → one or more
+// REASONING_MESSAGE_START / _CONTENT / _END pairs → REASONING_END.
+// Reasoners that already structured the trace can pass an explicit list
+// of segment dicts:
+//
+//	{"reasoning": [{"id": "r-0", "content": "..."}, ...]}
+func extractReasoning(parsed any) []reasoningSegment {
+	obj, ok := parsed.(map[string]any)
+	if !ok {
+		return nil
+	}
+	raw, has := obj["reasoning"]
+	if !has || raw == nil {
+		return nil
+	}
+	switch v := raw.(type) {
+	case string:
+		if v == "" {
+			return nil
+		}
+		return []reasoningSegment{{Content: v}}
+	case []any:
+		out := make([]reasoningSegment, 0, len(v))
+		for i, entry := range v {
+			switch s := entry.(type) {
+			case string:
+				if s == "" {
+					continue
+				}
+				out = append(out, reasoningSegment{Content: s})
+			case map[string]any:
+				content, _ := s["content"].(string)
+				if content == "" {
+					continue
+				}
+				id, _ := s["id"].(string)
+				if id == "" {
+					id = fmt.Sprintf("r-%d-%s", i, utils.GenerateExecutionID())
+				}
+				out = append(out, reasoningSegment{ID: id, Content: content})
+			}
+		}
+		if len(out) == 0 {
+			return nil
+		}
+		return out
+	}
+	return nil
+}
+
+type reasoningSegment struct {
+	ID      string
+	Content string
 }
 
 // extractStateDelta reads a `stateDelta` array from the reasoner response,

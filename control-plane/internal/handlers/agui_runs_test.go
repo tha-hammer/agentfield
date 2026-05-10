@@ -529,6 +529,136 @@ func TestAGUIRunHandler_StateDelta(t *testing.T) {
 	require.Equal(t, "/counter", op["path"])
 }
 
+// TestAGUIRunHandler_Reasoning_StringForm: a reasoner returning a single
+// reasoning string emits REASONING_START → _MESSAGE_START → _CONTENT →
+// _MESSAGE_END → REASONING_END before the assistant text turn.
+func TestAGUIRunHandler_Reasoning_StringForm(t *testing.T) {
+	agentServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"result":"Booked.",
+			"reasoning":"Checked flights, AA-12 is cheapest."
+		}`))
+	}))
+	defer agentServer.Close()
+
+	store := &reasonerTestStorage{agent: &types.AgentNode{
+		ID:              "n",
+		BaseURL:         agentServer.URL,
+		HealthStatus:    types.HealthStatusActive,
+		LifecycleStatus: types.AgentStatusReady,
+		Reasoners:       []types.ReasonerDefinition{{ID: "think"}},
+	}}
+	router := mountAGUIRouter(t, store)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/agui/runs/n/think",
+		strings.NewReader(runAgentInputBody(t, "t", "r", "x")))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	frames := parseAGUIStream(t, w.Body.String())
+
+	idx := func(typ string) int {
+		for i, f := range frames {
+			if f.Type() == typ {
+				return i
+			}
+		}
+		return -1
+	}
+	for _, want := range []string{"REASONING_START", "REASONING_MESSAGE_START", "REASONING_MESSAGE_CONTENT", "REASONING_MESSAGE_END", "REASONING_END"} {
+		require.NotEqual(t, -1, idx(want), "missing %s in stream", want)
+	}
+	// REASONING_* must come before TEXT_MESSAGE_START.
+	require.Less(t, idx("REASONING_END"), idx("TEXT_MESSAGE_START"))
+	require.Equal(t, "reasoning", frames[idx("REASONING_MESSAGE_START")].Data["role"])
+	require.Equal(t, "Checked flights, AA-12 is cheapest.",
+		frames[idx("REASONING_MESSAGE_CONTENT")].Data["delta"])
+}
+
+// TestAGUIRunHandler_Reasoning_ListForm: a reasoner returning a list of
+// reasoning segments produces one REASONING_MESSAGE_* triad per segment.
+func TestAGUIRunHandler_Reasoning_ListForm(t *testing.T) {
+	agentServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"result":"Done.",
+			"reasoning":[
+				"first thought",
+				{"id":"r-2","content":"second thought"}
+			]
+		}`))
+	}))
+	defer agentServer.Close()
+
+	store := &reasonerTestStorage{agent: &types.AgentNode{
+		ID:              "n",
+		BaseURL:         agentServer.URL,
+		HealthStatus:    types.HealthStatusActive,
+		LifecycleStatus: types.AgentStatusReady,
+		Reasoners:       []types.ReasonerDefinition{{ID: "think"}},
+	}}
+	router := mountAGUIRouter(t, store)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/agui/runs/n/think",
+		strings.NewReader(runAgentInputBody(t, "t", "r", "x")))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	frames := parseAGUIStream(t, w.Body.String())
+	starts, contents, ends := 0, 0, 0
+	var contentDeltas []string
+	for _, f := range frames {
+		switch f.Type() {
+		case "REASONING_MESSAGE_START":
+			starts++
+		case "REASONING_MESSAGE_CONTENT":
+			contents++
+			d, _ := f.Data["delta"].(string)
+			contentDeltas = append(contentDeltas, d)
+		case "REASONING_MESSAGE_END":
+			ends++
+		}
+	}
+	require.Equal(t, 2, starts, "two segments → two STARTs")
+	require.Equal(t, 2, ends, "two segments → two ENDs")
+	require.Equal(t, 2, contents, "each segment fits in one content chunk at default size")
+	require.Equal(t, []string{"first thought", "second thought"}, contentDeltas)
+}
+
+// TestExtractReasoning covers all input shapes the helper accepts plus
+// the reject paths (non-map parsed value, empty content, missing key).
+func TestExtractReasoning(t *testing.T) {
+	require.Nil(t, extractReasoning("not a map"))
+	require.Nil(t, extractReasoning(map[string]any{}), "missing key")
+	require.Nil(t, extractReasoning(map[string]any{"reasoning": nil}), "explicit null")
+	require.Nil(t, extractReasoning(map[string]any{"reasoning": ""}), "empty string")
+	require.Nil(t, extractReasoning(map[string]any{"reasoning": []any{}}), "empty list")
+	require.Nil(t, extractReasoning(map[string]any{"reasoning": 42}), "wrong type")
+
+	one := extractReasoning(map[string]any{"reasoning": "thinking..."})
+	require.Len(t, one, 1)
+	require.Equal(t, "thinking...", one[0].Content)
+
+	mixed := extractReasoning(map[string]any{"reasoning": []any{
+		"first",
+		"", // dropped
+		map[string]any{"id": "r-2", "content": "second"}, // kept
+		map[string]any{"content": ""},                    // dropped (empty content)
+		map[string]any{"content": "no-id"},               // synthesized id
+	}})
+	require.Len(t, mixed, 3)
+	require.Equal(t, "first", mixed[0].Content)
+	require.Equal(t, "r-2", mixed[1].ID)
+	require.Equal(t, "second", mixed[1].Content)
+	require.Equal(t, "no-id", mixed[2].Content)
+	require.NotEmpty(t, mixed[2].ID, "id auto-synthesized when missing")
+}
+
 // TestAGUIRunHandler_ChunkedTextStreaming verifies that long assistant
 // replies are split across multiple TEXT_MESSAGE_CONTENT deltas (so the
 // frontend can paint progressively) while the start/end frames stay
@@ -1050,10 +1180,11 @@ func TestHTTPAgentInvoker_HappyPath(t *testing.T) {
 	}))
 	defer server.Close()
 
-	body, err := httpAgentInvoker{}.Invoke(context.Background(),
+	res, err := httpAgentInvoker{}.Invoke(context.Background(),
 		&types.AgentNode{BaseURL: server.URL}, "ping", []byte(`{"k":1}`))
 	require.NoError(t, err)
-	require.JSONEq(t, `{"ok":true}`, string(body))
+	require.False(t, res.IsStreaming(), "JSON content-type should land in the buffered branch")
+	require.JSONEq(t, `{"ok":true}`, string(res.Body))
 }
 
 // TestHTTPAgentInvoker_4xxBubblesUpAsError covers the resp.StatusCode >= 400
@@ -1066,11 +1197,12 @@ func TestHTTPAgentInvoker_4xxBubblesUpAsError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	body, err := httpAgentInvoker{}.Invoke(context.Background(),
+	res, err := httpAgentInvoker{}.Invoke(context.Background(),
 		&types.AgentNode{BaseURL: server.URL}, "boom", []byte(`{}`))
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "agent returned 500")
-	require.Contains(t, string(body), "oops")
+	require.NotNil(t, res, "response struct returned alongside err so caller can use Body for diagnostics")
+	require.Contains(t, string(res.Body), "oops")
 }
 
 // TestHTTPAgentInvoker_DialFailureSurfacesError covers the client.Do error
