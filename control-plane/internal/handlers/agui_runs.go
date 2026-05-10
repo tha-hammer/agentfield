@@ -250,6 +250,21 @@ func aguiRunHandler(storageProvider storage.StorageProvider, invoker agentInvoke
 			}) {
 				return
 			}
+			// If the reasoner already executed the tool server-side and
+			// gave us a result (e.g. a .ai(tools=...) trace), emit
+			// TOOL_CALL_RESULT so the trace renders in the same place the
+			// frontend would expect a tool message to live.
+			if tc.HasResult {
+				if !write(agui.ToolCallResult{
+					MessageID:  "msg-toolresult-" + tc.ID,
+					ToolCallID: tc.ID,
+					Content:    stringifyResult(tc.Result),
+					Role:       "tool",
+					Timestamp:  agui.NowMillis(),
+				}) {
+					return
+				}
+			}
 			assistantToolCalls = append(assistantToolCalls, agui.ToolCall{
 				ID:   tc.ID,
 				Type: "function",
@@ -261,7 +276,9 @@ func aguiRunHandler(storageProvider storage.StorageProvider, invoker agentInvoke
 		}
 
 		// Text turn. Assembled even when empty so clients see a complete
-		// triad — schema permits empty delta.
+		// triad — schema permits empty delta. Long replies are chunked
+		// across multiple TEXT_MESSAGE_CONTENT frames so frontends can
+		// paint progressively even though the reasoner is synchronous.
 		assistantText := extractAssistantText(parsed, parsedOK, body)
 		if !write(agui.TextMessageStart{
 			MessageID: messageID,
@@ -270,12 +287,14 @@ func aguiRunHandler(storageProvider storage.StorageProvider, invoker agentInvoke
 		}) {
 			return
 		}
-		if !write(agui.TextMessageContent{
-			MessageID: messageID,
-			Delta:     assistantText,
-			Timestamp: agui.NowMillis(),
-		}) {
-			return
+		for _, chunk := range chunkText(assistantText, AGUITextChunkSize) {
+			if !write(agui.TextMessageContent{
+				MessageID: messageID,
+				Delta:     chunk,
+				Timestamp: agui.NowMillis(),
+			}) {
+				return
+			}
 		}
 		if !write(agui.TextMessageEnd{
 			MessageID: messageID,
@@ -284,12 +303,21 @@ func aguiRunHandler(storageProvider storage.StorageProvider, invoker agentInvoke
 			return
 		}
 
-		// State snapshot, if the reasoner returned one. Goes before
-		// MESSAGES_SNAPSHOT so the client can correlate the new state with
-		// the new turn.
+		// State snapshot first (if reasoner returned full state), then
+		// any RFC 6902 patches the reasoner emits via `stateDelta`.
+		// Snapshot before MESSAGES_SNAPSHOT so the client correlates the
+		// new state with the new turn.
 		if state, hasState := extractState(parsed); hasState {
 			if !write(agui.StateSnapshot{
 				Snapshot:  state,
+				Timestamp: agui.NowMillis(),
+			}) {
+				return
+			}
+		}
+		if delta := extractStateDelta(parsed); delta != nil {
+			if !write(agui.StateDelta{
+				Delta:     delta,
 				Timestamp: agui.NowMillis(),
 			}) {
 				return
@@ -363,18 +391,26 @@ func decodeReasonerResponse(body []byte) (any, bool) {
 }
 
 // reasonerToolCall is the synthetic shape AgentField reasoners use to
-// declare tool calls until token-level streaming lands. Reasoners return
-// `{"toolCalls": [{"id", "name", "arguments"}, ...]}` to drive frontend
-// useCopilotAction renders.
+// declare tool calls. Reasoners return
+//
+//	{"toolCalls": [{"id", "name", "arguments", "result"?}, ...]}
+//
+// to drive frontend useCopilotAction renders. The optional `result` field,
+// when present, indicates the call was already executed server-side and
+// causes us to emit TOOL_CALL_RESULT after TOOL_CALL_END — so the trace
+// (e.g. from .ai(tools=...) ToolCallTrace) shows up in the UI alongside
+// the live calls.
 type reasonerToolCall struct {
 	ID        string
 	Name      string
 	Arguments any
+	Result    any
+	HasResult bool
 }
 
 // extractToolCalls reads a `toolCalls` array from the reasoner response,
 // if present. Each entry needs at least a name; id and arguments are
-// optional and synthesized when missing.
+// optional and synthesized when missing. `result` is optional.
 func extractToolCalls(parsed any) []reasonerToolCall {
 	obj, ok := parsed.(map[string]any)
 	if !ok {
@@ -402,7 +438,75 @@ func extractToolCalls(parsed any) []reasonerToolCall {
 		if args == nil {
 			args = map[string]any{}
 		}
-		out = append(out, reasonerToolCall{ID: id, Name: name, Arguments: args})
+		result, hasResult := m["result"]
+		out = append(out, reasonerToolCall{
+			ID:        id,
+			Name:      name,
+			Arguments: args,
+			Result:    result,
+			HasResult: hasResult,
+		})
+	}
+	return out
+}
+
+// extractStateDelta reads a `stateDelta` array from the reasoner response,
+// if present. Reasoners that prefer to emit incremental RFC 6902 patches
+// instead of (or in addition to) full snapshots return:
+//
+//	{"stateDelta": [{"op":"replace","path":"/counter","value":2}, ...]}
+//
+// The handler emits this as a STATE_DELTA event. Both forms can coexist:
+// emit STATE_SNAPSHOT first to establish a baseline, then STATE_DELTA for
+// fine-grained updates.
+func extractStateDelta(parsed any) []any {
+	obj, ok := parsed.(map[string]any)
+	if !ok {
+		return nil
+	}
+	raw, ok := obj["stateDelta"].([]any)
+	if !ok || len(raw) == 0 {
+		return nil
+	}
+	return raw
+}
+
+// AGUITextChunkSize is the maximum size of a single TEXT_MESSAGE_CONTENT
+// delta. Long reasoner responses are split into multiple deltas so the
+// frontend can begin painting before the full reply lands. 256 chars is
+// the sweet spot: small enough that long replies render progressively,
+// large enough that short replies fit in one frame and don't pay extra
+// SSE overhead. Exposed for tests.
+var AGUITextChunkSize = 256
+
+// chunkText splits a string into pieces of up to size bytes. For empty
+// input, returns a single empty chunk so callers always emit one
+// TEXT_MESSAGE_CONTENT delta (the schema permits empty deltas, and a
+// missing content frame would break clients that expect the full triad).
+// Splits on rune boundaries so multi-byte UTF-8 sequences (emoji, CJK)
+// don't get cut mid-byte.
+func chunkText(s string, size int) []string {
+	if size <= 0 {
+		return []string{s}
+	}
+	if s == "" {
+		return []string{""}
+	}
+	out := make([]string, 0, (len(s)/size)+1)
+	current := make([]rune, 0, size)
+	currentBytes := 0
+	for _, r := range s {
+		rb := len(string(r))
+		if currentBytes+rb > size && len(current) > 0 {
+			out = append(out, string(current))
+			current = current[:0]
+			currentBytes = 0
+		}
+		current = append(current, r)
+		currentBytes += rb
+	}
+	if len(current) > 0 {
+		out = append(out, string(current))
 	}
 	return out
 }

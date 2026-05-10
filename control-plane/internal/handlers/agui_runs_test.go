@@ -396,6 +396,196 @@ func TestExtractState_NonMapAndAbsent(t *testing.T) {
 	require.Nil(t, v)
 }
 
+// TestExtractStateDelta covers presence, non-map, and empty cases.
+func TestExtractStateDelta(t *testing.T) {
+	require.Nil(t, extractStateDelta("not a map"))
+	require.Nil(t, extractStateDelta(map[string]any{}), "absent stateDelta key")
+	require.Nil(t, extractStateDelta(map[string]any{"stateDelta": []any{}}),
+		"empty stateDelta is treated as absent")
+	d := extractStateDelta(map[string]any{"stateDelta": []any{
+		map[string]any{"op": "replace", "path": "/x", "value": 1},
+	}})
+	require.Len(t, d, 1)
+}
+
+// TestChunkText covers the token-streaming chunker: rune boundaries,
+// empty input, oversize input, exact boundary.
+func TestChunkText(t *testing.T) {
+	require.Equal(t, []string{""}, chunkText("", 4))
+	require.Equal(t, []string{"abc"}, chunkText("abc", 4))
+	require.Equal(t, []string{"abcd", "ef"}, chunkText("abcdef", 4))
+	require.Equal(t, []string{"hello"}, chunkText("hello", -1), "non-positive size returns input unchanged")
+	// Multi-byte runes (emoji) must split on rune boundaries.
+	emoji := "🤖🤖🤖"
+	chunks := chunkText(emoji, 4)
+	for _, c := range chunks {
+		require.Equal(t, "🤖", c, "each chunk should hold exactly one emoji at size=4")
+	}
+	require.Equal(t, 3, len(chunks))
+}
+
+// TestAGUIRunHandler_ToolCalls_EmitsResultEventForServerSideCalls covers
+// the .ai(tools=...) trace surfacing path: when a reasoner reports a tool
+// call as already-executed by including a `result` field, the handler
+// emits TOOL_CALL_RESULT after TOOL_CALL_END.
+func TestAGUIRunHandler_ToolCalls_EmitsResultEventForServerSideCalls(t *testing.T) {
+	agentServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"result":"queried weather",
+			"toolCalls":[{
+				"id":"tc-w1","name":"getWeather",
+				"arguments":{"city":"SF"},
+				"result":{"temp":62,"summary":"foggy"}
+			}]
+		}`))
+	}))
+	defer agentServer.Close()
+
+	store := &reasonerTestStorage{agent: &types.AgentNode{
+		ID:              "node-1",
+		BaseURL:         agentServer.URL,
+		HealthStatus:    types.HealthStatusActive,
+		LifecycleStatus: types.AgentStatusReady,
+		Reasoners:       []types.ReasonerDefinition{{ID: "weather"}},
+	}}
+	router := mountAGUIRouter(t, store)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/agui/runs/node-1/weather",
+		strings.NewReader(runAgentInputBody(t, "t", "r", "weather in SF?")))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	frames := parseAGUIStream(t, w.Body.String())
+
+	// TOOL_CALL_RESULT must come immediately after TOOL_CALL_END for the
+	// same toolCallId.
+	idx := func(typ string) int {
+		for i, f := range frames {
+			if f.Type() == typ {
+				return i
+			}
+		}
+		return -1
+	}
+	require.Less(t, idx("TOOL_CALL_END"), idx("TOOL_CALL_RESULT"),
+		"TOOL_CALL_RESULT must follow TOOL_CALL_END")
+	resFrame := frames[idx("TOOL_CALL_RESULT")]
+	require.Equal(t, "tc-w1", resFrame.Data["toolCallId"])
+	require.Equal(t, "tool", resFrame.Data["role"])
+	require.JSONEq(t, `{"summary":"foggy","temp":62}`, resFrame.Data["content"].(string))
+}
+
+// TestAGUIRunHandler_StateDelta covers Tier 3's incremental-patch path:
+// when the reasoner returns `stateDelta` (RFC 6902), STATE_DELTA is
+// emitted alongside (or instead of) STATE_SNAPSHOT.
+func TestAGUIRunHandler_StateDelta(t *testing.T) {
+	agentServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"result":"updated",
+			"state":{"counter":1},
+			"stateDelta":[{"op":"replace","path":"/counter","value":2}]
+		}`))
+	}))
+	defer agentServer.Close()
+
+	store := &reasonerTestStorage{agent: &types.AgentNode{
+		ID:              "node-1",
+		BaseURL:         agentServer.URL,
+		HealthStatus:    types.HealthStatusActive,
+		LifecycleStatus: types.AgentStatusReady,
+		Reasoners:       []types.ReasonerDefinition{{ID: "tick"}},
+	}}
+	router := mountAGUIRouter(t, store)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/agui/runs/node-1/tick",
+		strings.NewReader(runAgentInputBody(t, "t", "r", "tick")))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	frames := parseAGUIStream(t, w.Body.String())
+
+	// Both forms emitted, snapshot first.
+	idx := func(typ string) int {
+		for i, f := range frames {
+			if f.Type() == typ {
+				return i
+			}
+		}
+		return -1
+	}
+	require.NotEqual(t, -1, idx("STATE_SNAPSHOT"))
+	require.NotEqual(t, -1, idx("STATE_DELTA"))
+	require.Less(t, idx("STATE_SNAPSHOT"), idx("STATE_DELTA"))
+	delta, _ := frames[idx("STATE_DELTA")].Data["delta"].([]any)
+	require.Len(t, delta, 1)
+	op, _ := delta[0].(map[string]any)
+	require.Equal(t, "replace", op["op"])
+	require.Equal(t, "/counter", op["path"])
+}
+
+// TestAGUIRunHandler_ChunkedTextStreaming verifies that long assistant
+// replies are split across multiple TEXT_MESSAGE_CONTENT deltas (so the
+// frontend can paint progressively) while the start/end frames stay
+// singletons.
+func TestAGUIRunHandler_ChunkedTextStreaming(t *testing.T) {
+	prev := AGUITextChunkSize
+	AGUITextChunkSize = 8 // tiny chunks so we can assert multi-frame easily
+	defer func() { AGUITextChunkSize = prev }()
+
+	long := strings.Repeat("a", 25) // 25 / 8 = 4 chunks (8+8+8+1)
+	agentServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"result":"` + long + `"}`))
+	}))
+	defer agentServer.Close()
+
+	store := &reasonerTestStorage{agent: &types.AgentNode{
+		ID:              "node-1",
+		BaseURL:         agentServer.URL,
+		HealthStatus:    types.HealthStatusActive,
+		LifecycleStatus: types.AgentStatusReady,
+		Reasoners:       []types.ReasonerDefinition{{ID: "long"}},
+	}}
+	router := mountAGUIRouter(t, store)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/agui/runs/node-1/long",
+		strings.NewReader(runAgentInputBody(t, "t", "r", "x")))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	frames := parseAGUIStream(t, w.Body.String())
+
+	starts, contents, ends := 0, 0, 0
+	concatenated := ""
+	var msgID string
+	for _, f := range frames {
+		switch f.Type() {
+		case "TEXT_MESSAGE_START":
+			starts++
+			msgID, _ = f.Data["messageId"].(string)
+		case "TEXT_MESSAGE_CONTENT":
+			contents++
+			require.Equal(t, msgID, f.Data["messageId"], "all content frames must share the same messageId")
+			d, _ := f.Data["delta"].(string)
+			concatenated += d
+		case "TEXT_MESSAGE_END":
+			ends++
+		}
+	}
+	require.Equal(t, 1, starts, "exactly one START frame")
+	require.Equal(t, 1, ends, "exactly one END frame")
+	require.GreaterOrEqual(t, contents, 4, "expected long reply to be split into ≥4 chunks (got %d)", contents)
+	require.Equal(t, long, concatenated, "concatenated deltas must equal the full reply")
+}
+
 // TestAGUIRunHandler_AgentReturnsNonJSON falls through to the
 // `string(body)` branch when the agent's response isn't valid JSON.
 func TestAGUIRunHandler_AgentReturnsNonJSON(t *testing.T) {
