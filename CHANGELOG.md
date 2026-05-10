@@ -6,6 +6,144 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.83-rc.2] - 2026-05-10
+
+
+### Fixed
+
+- Fix(sdk+cp): multi-hop pause propagation (3+-deep chains no longer time out) (#568)
+
+* feat(cp): awaiter-status endpoint for multi-hop pause propagation
+
+Adds POST /api/v1/agents/:node_id/executions/:execution_id/awaiter-status,
+the control-plane half of fixing the case where a 3+-deep call chain (e.g.
+implement_from_issue -> swe-planner.build -> plan -> run_X, where only
+run_X explicitly app.pause()-s) times out at wallclock on the
+great-grandparent because intermediate reasoners stay in RUNNING while
+blocked on awaiting a paused descendant.
+
+The endpoint lets an SDK push a non-terminal RUNNING <-> WAITING
+transition on its OWN execution (separate from the approval flow). The
+SDK uses it inside Agent.call's wait loop: when the awaited child enters
+WAITING, the awaiter posts status=waiting so any ancestor watching it
+sees WAITING and pauses its own clock — and so on transitively up the
+chain.
+
+State-machine guards (pinned by tests):
+
+- RUNNING -> WAITING with status_reason=awaiting_child (so the matching
+  RUNNING flip can be distinguished from one that would resume an
+  approval-driven WAITING)
+- WAITING -> RUNNING only when status_reason matches awaiting_child;
+  approval-driven WAITING is never silently resumed
+- Terminal executions (succeeded/failed/cancelled/timeout) are a no-op,
+  not an error — the cascade can race with the awaiter resolving
+- Idempotent: WAITING -> WAITING and RUNNING -> RUNNING no-op cleanly
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+
+* feat(sdk): on_child_waiting / on_child_running hooks in wait_for_result
+
+The wait loop already pauses a caller-supplied pause_clock when the
+awaited child enters WAITING. Add async callbacks that fire in lockstep
+with the pause-clock toggle so callers can additionally push their OWN
+execution's status upstream — the multi-hop propagation Agent.call needs
+when there's a grandparent watching.
+
+Design notes pinned by tests:
+
+- Callbacks are awaited (not fire-and-forget) so a WAITING + RUNNING
+  pair can't reorder on the network and leave the awaiter stuck in
+  WAITING after the child resumed.
+- _safe_pause_callback bounds the await with a 2s timeout and swallows
+  exceptions — a hung or unreachable control plane must not stall the
+  wait loop. Multi-hop propagation is best-effort: a missed callback
+  falls back to the prior one-hop pause-clock-only behavior.
+- Optional kwargs: callers that don't pass them see no change in
+  behavior, so existing one-hop callers don't break.
+
+Tests pin the contract end-to-end:
+  test_wait_for_result_invokes_callbacks_on_child_waiting_transitions
+  test_wait_for_result_callback_exceptions_dont_break_wait_loop
+  test_wait_for_result_callbacks_optional_for_backward_compat
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+
+* fix(sdk): Agent.call propagates own WAITING upstream so 3+-hop chains don't time out
+
+Wires the on_child_waiting / on_child_running hooks from the previous
+commit into Agent.call. When a parent reasoner is awaiting a child via
+app.call() and the child enters WAITING, the SDK now pushes the parent's
+OWN execution status to WAITING via the new awaiter-status endpoint, and
+flips it back to RUNNING when the child resumes.
+
+This closes the gap the prior pause-clock PRs (#562 / #564) didn't:
+those fixed the ONE-hop case (parent's local clock pauses when its
+direct child waits), but two-or-more hops down a paused descendant still
+left the great-grandparent ticking at wallclock — because intermediate
+reasoners stay in RUNNING while blocked on their own awaited child, so
+no ancestor's wait loop ever saw a WAITING child to pause on.
+
+Repro: run_1778429268006_76e417b7. Chain was
+  github-buddy.implement_from_issue
+    -> swe-planner.build           (RUNNING — awaiting plan)
+       -> plan                     (RUNNING — awaiting run_X)
+          -> run_X                 (WAITING — paused on hax-sdk approval)
+
+Only run_X transitioned to WAITING; build and plan stayed RUNNING. The
+parent reasoner watchdog on implement_from_issue saw build as RUNNING
+the entire time, never paused its own clock, and tripped at exactly
+7200s of wallclock. With this change, plan -> build -> implement_from_issue
+each cascade into WAITING as the descendant pauses, so the entire chain's
+local clocks track active-time correctly to arbitrary depth.
+
+Added:
+- client.notify_awaiter_status(execution_id, status, reason): POSTs
+  the new /awaiter-status endpoint. Distinct from request_approval
+  (no approval ID, no webhook, no human in the loop).
+- Agent.call now constructs on_child_waiting / on_child_running callbacks
+  closing over the parent's execution_id and passes them to
+  wait_for_execution_result. Best-effort; exceptions are swallowed by
+  the wait-loop wrapper.
+
+Pinned by test_call_wires_awaiter_status_callbacks_for_multihop_pause:
+asserts Agent.call passes the callbacks AND that invoking them hits
+notify_awaiter_status targeting the AWAITER's own execution_id (not the
+child's — pushing the child's status would be a no-op).
+
+Known limitation: parallel app.call children (gather) can race on the
+RUNNING flip — one resolving will flip the parent to RUNNING even if
+another's child is still WAITING. Local pause_clock is unaffected; the
+propagated status to control plane is what flaps. Acceptable for v1;
+follow-up can add a server-side counter on awaiter_pause_count.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+
+* test: cover error paths in awaiter-status handler + notify_awaiter_status
+
+Adds coverage for the paths the happy-path tests didn't reach:
+
+control-plane (4 tests):
+- Malformed JSON body -> 400
+- Storage GetWorkflowExecution failure -> 500
+- UpdateExecutionRecord failure -> 500
+- UpdateWorkflowExecution failure -> 500
+
+sdk/python (5 tests for client.notify_awaiter_status):
+- Happy path: status=waiting posts the expected body
+- Happy path: status=running
+- Invalid status raises AgentFieldClientError pre-network
+- 5xx response surfaces AgentFieldClientError so the wait-loop wrapper swallows it
+- Transport failure surfaces AgentFieldClientError likewise
+
+Pushes patch coverage above the 80% gate on the awaiter-status surface.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+
+---------
+
+Co-authored-by: Claude Opus 4.7 (1M context) <noreply@anthropic.com> (7a78bd5)
+
 ## [0.1.83-rc.1] - 2026-05-10
 
 
