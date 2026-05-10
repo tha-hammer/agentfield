@@ -3898,9 +3898,37 @@ class Agent(FastAPI):
                             timeout=execution_timeout,
                         )
 
+                        # Cross-reasoner pause propagation: when this call is
+                        # made from inside a reasoner that has a tracked
+                        # pause-clock, hand it to ``wait_for_execution_result``
+                        # so the wait loop can pause the clock while the awaited
+                        # child sits in ``WAITING`` (e.g. on a hax-sdk human
+                        # approval). Without this, the parent's active-time
+                        # budget would burn through the child's wait and
+                        # spuriously trip the watchdog at the wallclock budget.
+                        parent_execution_id = (
+                            current_context.execution_id if current_context else None
+                        )
+                        # ``_pause_clocks`` is set in __init__; getattr keeps
+                        # bypass-init test fixtures from AttributeErroring here.
+                        _all_pause_clocks = getattr(self, "_pause_clocks", None) or {}
+                        parent_pause_clock = (
+                            _all_pause_clocks.get(parent_execution_id)
+                            if parent_execution_id
+                            else None
+                        )
+
+                        # Only pass the pause_clock kwarg when we actually have
+                        # one — keeps the call shape backward-compatible with
+                        # mocks / older clients that don't yet accept the kwarg.
+                        _wait_kwargs: Dict[str, Any] = {
+                            "execution_id": execution_id,
+                            "timeout": execution_timeout,
+                        }
+                        if parent_pause_clock is not None:
+                            _wait_kwargs["pause_clock"] = parent_pause_clock
                         result = await self.client.wait_for_execution_result(
-                            execution_id=execution_id,
-                            timeout=execution_timeout,
+                            **_wait_kwargs
                         )
 
                         elapsed_time = time.time() - start_time
