@@ -113,8 +113,23 @@ func (s *AgentFieldServer) registerCoreRoutes(agentAPI *gin.RouterGroup) {
 	// HttpAgent (and the CopilotKit runtime that wraps it) can target
 	// AgentField reasoners with no custom adapter. The reasoner is
 	// addressed via URL params; one HttpAgent.url per reasoner is the
-	// canonical CopilotKit topology.
-	agentAPI.POST("/agui/runs/:node_id/:reasoner_name", handlers.AGUIRunHandler(s.storage))
+	// canonical CopilotKit topology. Permission middleware mirrors
+	// /execute so reasoners reachable via AG-UI honor the same DID/VC
+	// authorization gates as direct invocations.
+	aguiGroup := agentAPI.Group("/agui")
+	{
+		if s.config.Features.DID.Authorization.Enabled && s.accessPolicyService != nil && s.didWebService != nil {
+			aguiGroup.Use(middleware.PermissionCheckMiddleware(
+				s.accessPolicyService,
+				s.tagVCVerifier,
+				s.storage,
+				s.didWebService,
+				middleware.PermissionConfig{Enabled: true},
+			))
+			logger.Logger.Info().Msg("🔒 Permission checking enabled on AG-UI endpoints")
+		}
+		aguiGroup.POST("/runs/:node_id/:reasoner_name", handlers.AGUIRunHandler(s.storage))
+	}
 	agentAPI.GET("/executions/:execution_id", handlers.GetExecutionStatusHandler(s.storage))
 	agentAPI.POST("/executions/batch-status", handlers.BatchExecutionStatusHandler(s.storage))
 	agentAPI.POST("/executions/:execution_id/status", handlers.UpdateExecutionStatusHandler(s.storage, s.payloadStore, s.webhookDispatcher, s.config.AgentField.ExecutionQueue.AgentCallTimeout))
