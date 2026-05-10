@@ -149,6 +149,32 @@ return map[string]any{
 }, nil
 ```
 
+### TypeScript example
+
+```ts
+import { Agent, agui } from '@agentfield/sdk';
+
+const a = new Agent({ nodeId: 'my-app' });
+
+a.reasoner('book_flight', async (ctx) => ({
+  result: 'Pulling up flight options.',
+  toolCalls: [
+    agui.toolCall('showFlightCard', { from: 'SFO', to: 'JFK' }, { id: 'tc-1' }),
+  ],
+  state: { lastBooking: 'AA-12' },
+}));
+```
+
+For a TypeScript reasoner using the AI tool-call loop:
+
+```ts
+const { text, trace } = await ctx.aiWithTools(ctx.input.question, { tools: 'discover' });
+return {
+  result: text,
+  toolCalls: agui.toolCallsFromTrace(trace),
+};
+```
+
 ## Frontend wiring
 
 Standard CopilotKit App Router setup, with one `HttpAgent` per reasoner:
@@ -298,6 +324,39 @@ func chat(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
+### TypeScript streaming reasoner
+
+```ts
+import express from 'express';
+import { agui } from '@agentfield/sdk';
+
+const app = express();
+app.use(express.json());
+
+app.post('/reasoners/chat', async (req, res) => {
+  res.setHeader('Content-Type', agui.STREAMING_CONTENT_TYPE);
+  res.flushHeaders?.();
+
+  async function* chunks() {
+    yield agui.reasoningChunk('Looking up flights...');
+    yield agui.reasoningEndChunk();
+    for await (const tok of llm.stream(req.body.prompt)) yield agui.textChunk(tok);
+    yield agui.toolCallStartChunk('tc-1', 'showFlightCard', {
+      arguments: { from: 'SFO', to: 'JFK' },
+    });
+    yield agui.toolCallEndChunk('tc-1');
+    yield agui.stateChunk({ counter: 1 });
+  }
+
+  for await (const buf of agui.serializeStream(chunks())) res.write(buf);
+  res.end();
+});
+```
+
+`serializeStream` accepts both async generators and plain iterables. The
+same chunks plug into Hono / Fastify / a Web `Response` built from a
+`ReadableStream`.
+
 ### `.harness()` relay
 
 The Anthropic Claude harness already produces a streaming async iterator
@@ -322,10 +381,33 @@ right AG-UI chunks: `text` blocks → `TEXT_MESSAGE_CONTENT`,
 per-message, not per-token, so this path delivers message-level
 streaming. True per-token streaming requires the raw Anthropic API.
 
+The TypeScript SDK exposes the same translation as
+`agui.relayHarnessStream(query(...))` (consuming the
+`@anthropic-ai/claude-agent-sdk` async iterator). The Go SDK's harness
+is buffered, so `agui.RelayHarnessResult(*harness.Result)` returns the
+equivalent chunk slice in one shot — feed it into a channel and through
+`agui.SerializeStream` for live emission.
+
+### SDK parity
+
+Every helper above exists in all three SDKs with matching names:
+
+| Concept | Python | Go | TypeScript |
+|---|---|---|---|
+| Streaming content type | `agui.STREAMING_CONTENT_TYPE` | `agui.StreamingContentType` | `agui.STREAMING_CONTENT_TYPE` |
+| Text chunk | `agui.text_chunk(...)` | `agui.TextChunk(...)` | `agui.textChunk(...)` |
+| Tool call (buffered) | `agui.tool_call(...)` | `agui.ToolCall(...)` | `agui.toolCall(...)` |
+| Tool calls from AI trace | `tool_calls_from_trace(trace)` | `ToolCallsFromTrace(trace)` | `toolCallsFromTrace(trace)` |
+| State delta replace | `state_delta_replace(p, v)` | `StateDeltaReplace(p, v)` | `stateDeltaReplace(p, v)` |
+| Reasoning segment / list | `reasoning_segment / reasoning` | `ReasoningSegment / Reasoning` | `reasoningSegment / reasoning` |
+| Stream serializer | `serialize_stream(gen)` | `SerializeStream(ctx, w, ch)` | `serializeStream(iter)` |
+| Harness relay | `relay_harness_stream(iter)` | `RelayHarnessResult(*Result)` | `relayHarnessStream(iter)` |
+
 ## Reasoner contract — full chunk reference
 
 When using the streaming path, each NDJSON line is one of these tagged
-chunks (built by helpers in `agentfield.agui` / `sdk/go/agent/agui`):
+chunks (built by the helpers in `agentfield.agui` /
+`sdk/go/agent/agui` / `@agentfield/sdk` `agui` namespace):
 
 | Chunk `type` | Maps to | Notes |
 |---|---|---|
