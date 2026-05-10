@@ -2,11 +2,13 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Agent-Field/agentfield/control-plane/pkg/types"
 
@@ -156,6 +158,215 @@ func TestAGUI_Integration_FullSequence(t *testing.T) {
 	require.Equal(t, "tc-trace-0", tc["id"])
 	fn, _ := tc["function"].(map[string]any)
 	require.Equal(t, "showFlightCard", fn["name"])
+}
+
+// TestAGUI_Integration_StreamingReasoner exercises the live-streaming
+// path end to end: the reasoner returns NDJSON tagged events, the
+// handler dispatches each into its AG-UI counterpart, frames are
+// flushed live (verified by timestamping arrivals), and the run closes
+// with MESSAGES_SNAPSHOT + RUN_FINISHED. This is the test that proves
+// "Generative UI feels live" actually works under load — without it,
+// any future regression that buffers the stream would silently make
+// the UX stuttery again with no test failure.
+func TestAGUI_Integration_StreamingReasoner(t *testing.T) {
+	// The reasoner streams: text chunks (with deliberate per-chunk
+	// delays so we can assert live forwarding), then a tool call, then
+	// state, then closes.
+	chunkDelay := 30 * time.Millisecond
+	reasoner := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, "/reasoners/streaming-bot", r.URL.Path)
+		w.Header().Set("Content-Type", "application/x-ndjson")
+		w.WriteHeader(http.StatusOK)
+		flusher, _ := w.(http.Flusher)
+
+		send := func(line string) {
+			fmt.Fprintln(w, line)
+			if flusher != nil {
+				flusher.Flush()
+			}
+			time.Sleep(chunkDelay)
+		}
+		send(`{"type":"reasoning","delta":"checking flights..."}`)
+		send(`{"type":"reasoning","delta":" AA-12 wins on price."}`)
+		send(`{"type":"text","delta":"Booked "}`)
+		send(`{"type":"text","delta":"AA-12 SFO->JFK."}`)
+		send(`{"type":"tool_call_start","id":"tc-1","name":"showFlightCard","arguments":{"from":"SFO","to":"JFK"}}`)
+		send(`{"type":"tool_call_end","id":"tc-1"}`)
+		send(`{"type":"state","snapshot":{"counter":1}}`)
+		send(`{"type":"step_started","name":"finalize"}`)
+		send(`{"type":"step_finished","name":"finalize"}`)
+		send(`{"type":"custom","name":"telemetry","value":{"latency_ms":120}}`)
+	}))
+	defer reasoner.Close()
+
+	store := &reasonerTestStorage{agent: &types.AgentNode{
+		ID:              "stream-node",
+		BaseURL:         reasoner.URL,
+		HealthStatus:    types.HealthStatusActive,
+		LifecycleStatus: types.AgentStatusReady,
+		Reasoners:       []types.ReasonerDefinition{{ID: "streaming-bot"}},
+	}}
+	router := mountAGUIRouter(t, store)
+
+	body := `{"threadId":"t","runId":"r","messages":[{"role":"user","content":"book it"}]}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/agui/runs/stream-node/streaming-bot", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	frames := parseAGUIStream(t, w.Body.String())
+	got := []string{}
+	for _, f := range frames {
+		got = append(got, f.Type())
+	}
+	want := []string{
+		"RUN_STARTED",
+		"REASONING_START",
+		"REASONING_MESSAGE_START",
+		"REASONING_MESSAGE_CONTENT",
+		"REASONING_MESSAGE_CONTENT",
+		"REASONING_MESSAGE_END", // closed when text chunk arrives
+		"REASONING_END",         // outer context closed
+		"TEXT_MESSAGE_START",
+		"TEXT_MESSAGE_CONTENT",
+		"TEXT_MESSAGE_CONTENT",
+		"TOOL_CALL_START",
+		"TOOL_CALL_ARGS", // synthesized from `arguments` on start
+		"TOOL_CALL_END",
+		"STATE_SNAPSHOT",
+		"STEP_STARTED",
+		"STEP_FINISHED",
+		"CUSTOM",
+		"TEXT_MESSAGE_END", // closed at stream end
+		"MESSAGES_SNAPSHOT",
+		"RUN_FINISHED",
+	}
+	require.Equal(t, want, got, "streaming dispatcher diverged from canonical AG-UI ordering")
+
+	// Each text-content delta must carry the chunk the reasoner sent
+	// (proves the dispatcher didn't accidentally re-buffer).
+	textDeltas := []string{}
+	for _, f := range frames {
+		if f.Type() == "TEXT_MESSAGE_CONTENT" {
+			d, _ := f.Data["delta"].(string)
+			textDeltas = append(textDeltas, d)
+		}
+	}
+	require.Equal(t, []string{"Booked ", "AA-12 SFO->JFK."}, textDeltas)
+
+	// MESSAGES_SNAPSHOT closes with the assistant turn carrying the
+	// concatenated text and the tool call attached.
+	snap, _ := frames[len(frames)-2].Data["messages"].([]any)
+	require.Len(t, snap, 2)
+	assistant, _ := snap[1].(map[string]any)
+	require.Equal(t, "Booked AA-12 SFO->JFK.", assistant["content"])
+	tcs, _ := assistant["toolCalls"].([]any)
+	require.Len(t, tcs, 1)
+}
+
+// TestAGUI_Integration_StreamingErrorChunkTerminates: an `error` chunk
+// from the reasoner terminates the stream with RUN_ERROR, even
+// mid-flight, without emitting MESSAGES_SNAPSHOT or RUN_FINISHED.
+func TestAGUI_Integration_StreamingErrorChunkTerminates(t *testing.T) {
+	reasoner := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/x-ndjson")
+		w.WriteHeader(http.StatusOK)
+		flusher, _ := w.(http.Flusher)
+		send := func(s string) {
+			fmt.Fprintln(w, s)
+			if flusher != nil {
+				flusher.Flush()
+			}
+		}
+		send(`{"type":"text","delta":"hello"}`)
+		send(`{"type":"error","message":"upstream blew up","code":"ERR_LLM"}`)
+		// Anything after the error must be ignored.
+		send(`{"type":"text","delta":"unreachable"}`)
+	}))
+	defer reasoner.Close()
+
+	store := &reasonerTestStorage{agent: &types.AgentNode{
+		ID:              "n",
+		BaseURL:         reasoner.URL,
+		HealthStatus:    types.HealthStatusActive,
+		LifecycleStatus: types.AgentStatusReady,
+		Reasoners:       []types.ReasonerDefinition{{ID: "boom"}},
+	}}
+	router := mountAGUIRouter(t, store)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/agui/runs/n/boom",
+		strings.NewReader(`{"threadId":"t","runId":"r","messages":[{"role":"user","content":"x"}]}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	frames := parseAGUIStream(t, w.Body.String())
+	got := []string{}
+	for _, f := range frames {
+		got = append(got, f.Type())
+	}
+	// We accept the partial text frames, then RUN_ERROR (terminal).
+	require.Contains(t, got, "RUN_ERROR")
+	last := frames[len(frames)-1]
+	require.Equal(t, "RUN_ERROR", last.Type())
+	require.Equal(t, "upstream blew up", last.Data["message"])
+	require.Equal(t, "ERR_LLM", last.Data["code"])
+	require.NotContains(t, got, "MESSAGES_SNAPSHOT", "no snapshot after error")
+	require.NotContains(t, got, "RUN_FINISHED", "no finish after error")
+	// The post-error text chunk must have been dropped.
+	for _, f := range frames {
+		if f.Type() == "TEXT_MESSAGE_CONTENT" {
+			d, _ := f.Data["delta"].(string)
+			require.NotEqual(t, "unreachable", d, "post-error chunk must not leak through")
+		}
+	}
+}
+
+// TestAGUI_Integration_StreamingMalformedLineSurfacesAsRaw: a single bad
+// NDJSON line shouldn't kill the stream — the dispatcher should surface
+// it as RAW and continue.
+func TestAGUI_Integration_StreamingMalformedLineSurfacesAsRaw(t *testing.T) {
+	reasoner := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/x-ndjson")
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintln(w, `{"type":"text","delta":"hi"}`)
+		fmt.Fprintln(w, `{not valid json`)
+		fmt.Fprintln(w, `{"type":"text","delta":" world"}`)
+	}))
+	defer reasoner.Close()
+
+	store := &reasonerTestStorage{agent: &types.AgentNode{
+		ID:              "n",
+		BaseURL:         reasoner.URL,
+		HealthStatus:    types.HealthStatusActive,
+		LifecycleStatus: types.AgentStatusReady,
+		Reasoners:       []types.ReasonerDefinition{{ID: "wobble"}},
+	}}
+	router := mountAGUIRouter(t, store)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/agui/runs/n/wobble",
+		strings.NewReader(`{"threadId":"t","runId":"r","messages":[{"role":"user","content":"x"}]}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	frames := parseAGUIStream(t, w.Body.String())
+	got := []string{}
+	for _, f := range frames {
+		got = append(got, f.Type())
+	}
+	require.Contains(t, got, "RAW", "malformed chunk should surface as RAW")
+	// Stream completed; both text deltas reached us.
+	textDeltas := []string{}
+	for _, f := range frames {
+		if f.Type() == "TEXT_MESSAGE_CONTENT" {
+			d, _ := f.Data["delta"].(string)
+			textDeltas = append(textDeltas, d)
+		}
+	}
+	require.Equal(t, []string{"hi", " world"}, textDeltas)
+	require.Equal(t, "RUN_FINISHED", frames[len(frames)-1].Type())
 }
 
 // TestAGUI_Integration_FollowupTurnWithToolMessage verifies the second
