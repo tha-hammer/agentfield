@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Agent-Field/agentfield/sdk/go/ai"
+	"github.com/Agent-Field/agentfield/sdk/go/harness"
 
 	"github.com/stretchr/testify/require"
 )
@@ -141,6 +142,70 @@ func TestSerializeStream(t *testing.T) {
 	var third map[string]any
 	require.NoError(t, json.Unmarshal([]byte(lines[2]), &third))
 	require.Equal(t, "state", third["type"])
+}
+
+func TestReasoningSegment_AndReasoning(t *testing.T) {
+	seg := ReasoningSegment("thinking", "r1")
+	require.Equal(t, map[string]any{"content": "thinking", "id": "r1"}, seg)
+
+	segNoID := ReasoningSegment("thinking", "")
+	require.NotContains(t, segNoID, "id")
+
+	out, err := Reasoning("a", "", seg, "b")
+	require.NoError(t, err)
+	require.Equal(t, []any{"a", map[string]any{"content": "thinking", "id": "r1"}, "b"}, out)
+
+	_, err = Reasoning(42)
+	require.Error(t, err, "non-string non-mapping segments should error")
+}
+
+func TestRelayHarnessResult(t *testing.T) {
+	require.Nil(t, RelayHarnessResult(nil), "nil result yields nil")
+	require.Nil(t, RelayHarnessResult(&harness.Result{}), "empty messages yields nil")
+
+	res := &harness.Result{
+		Messages: []map[string]any{
+			{"type": "system", "subtype": "init"},
+			{"type": "assistant", "message": map[string]any{"content": []any{
+				map[string]any{"type": "text", "text": "hello"},
+				map[string]any{"type": "thinking", "thinking": "hmm"},
+				map[string]any{"type": "tool_use", "id": "tc1", "name": "lookup", "input": map[string]any{"q": "x"}},
+				map[string]any{"type": "mystery", "payload": 1},
+			}}},
+			{"type": "user", "message": map[string]any{"content": []any{
+				map[string]any{"type": "tool_result", "tool_use_id": "tc1", "content": "ok"},
+			}}},
+			{"type": "user", "message": map[string]any{"content": []any{
+				map[string]any{"type": "tool_result", "tool_use_id": "tc2", "content": []any{
+					map[string]any{"type": "text", "text": "a"},
+					map[string]any{"type": "text", "text": "b"},
+				}},
+			}}},
+			{"type": "result", "subtype": "success", "result": "done"},
+			{"type": "no-such-thing"},
+		},
+	}
+	chunks := RelayHarnessResult(res)
+
+	types := make([]string, 0, len(chunks))
+	for _, c := range chunks {
+		types = append(types, c["type"].(string))
+	}
+	require.Equal(t, []string{
+		"raw",              // system
+		"text",             // hello
+		"reasoning",        // hmm
+		"tool_call_start",  // tool_use start
+		"tool_call_end",    // tool_use end
+		"raw",              // mystery block
+		"tool_call_result", // ok
+		"tool_call_result", // a+b stitched
+		"raw",              // unknown top-level
+	}, types)
+
+	stitched := chunks[7]
+	require.Equal(t, "tc2", stitched["id"])
+	require.Equal(t, "ab", stitched["content"])
 }
 
 func TestSerializeStream_RespectsContext(t *testing.T) {

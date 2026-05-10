@@ -27,6 +27,7 @@ import (
 	"io"
 
 	"github.com/Agent-Field/agentfield/sdk/go/ai"
+	"github.com/Agent-Field/agentfield/sdk/go/harness"
 )
 
 // ToolCall builds a single AG-UI tool-call entry. The control plane
@@ -102,6 +103,55 @@ func StateDeltaReplace(path string, value any) (map[string]any, error) {
 		return nil, fmt.Errorf("RFC 6902 paths must start with '/' (got %q)", path)
 	}
 	return map[string]any{"op": "replace", "path": path, "value": value}, nil
+}
+
+// ReasoningSegment builds one REASONING_MESSAGE segment for buffered-mode
+// emission. Reasoners surface chain-of-thought to CopilotKit's
+// "Thinking…" pane by returning a "reasoning" field whose value is a
+// list of segments (or plain strings). Each segment becomes a
+// REASONING_MESSAGE_START / _CONTENT / _END triad inside a
+// REASONING_START / _END boundary.
+//
+//	return map[string]any{
+//	    "result":    "Booked AA-12.",
+//	    "reasoning": []any{
+//	        agui.ReasoningSegment("Looking up flights..."),
+//	        agui.ReasoningSegment("AA-12 is the cheapest non-stop."),
+//	    },
+//	}, nil
+//
+// Pass id="" to let the control plane synthesize one.
+func ReasoningSegment(content, id string) map[string]any {
+	out := map[string]any{"content": content}
+	if id != "" {
+		out["id"] = id
+	}
+	return out
+}
+
+// Reasoning builds a "reasoning" field value from a mix of plain strings
+// and segment maps. Strings are passed through verbatim; mappings are
+// shallow-copied. Returns an []any so it slots straight into the
+// reasoner response map.
+func Reasoning(segments ...any) ([]any, error) {
+	out := make([]any, 0, len(segments))
+	for _, s := range segments {
+		switch v := s.(type) {
+		case string:
+			if v != "" {
+				out = append(out, v)
+			}
+		case map[string]any:
+			cp := make(map[string]any, len(v))
+			for k, val := range v {
+				cp[k] = val
+			}
+			out = append(out, cp)
+		default:
+			return nil, fmt.Errorf("agui.Reasoning: segments must be string or map[string]any (got %T)", s)
+		}
+	}
+	return out, nil
 }
 
 // ----------------------------------------------------------------------------
@@ -224,6 +274,148 @@ func ErrorChunk(message, code string) map[string]any {
 		out["code"] = code
 	}
 	return out
+}
+
+// RelayHarnessResult translates a buffered Claude Agent harness result
+// (the messages slice on harness.Result) into AG-UI streaming chunks,
+// message-by-message. Mirrors the Python SDK's relay_harness_stream.
+//
+// The Go harness is buffered (it returns a Result after the run finishes)
+// so this helper is itself buffered: it walks res.Messages once and
+// returns the equivalent chunk slice. Reasoners that want to stream the
+// chunks live can either feed the slice into a channel and call
+// SerializeStream, or interleave their own custom chunks.
+//
+// Recognized message shapes (matching the dict form of the Python and
+// JS Claude Agent SDK message stream):
+//
+//   - {type:"assistant", message:{content:[{type:"text", text:"..."}]}}
+//     → one TextChunk per text block
+//   - {type:"assistant", message:{content:[{type:"thinking", thinking:"..."}]}}
+//     → one ReasoningChunk per thinking block
+//   - {type:"assistant", message:{content:[{type:"tool_use", id, name, input}]}}
+//     → ToolCallStartChunk + ToolCallEndChunk per tool_use block
+//   - {type:"user", message:{content:[{type:"tool_result", tool_use_id, content}]}}
+//     → ToolCallResultChunk per tool_result block
+//   - {type:"result", ...} → skipped (the dispatcher's stream-end logic
+//     synthesizes MESSAGES_SNAPSHOT + RUN_FINISHED)
+//   - Anything unrecognized is wrapped as a RawChunk.
+//
+// Note: the Claude Agent SDK buffers per-message, not per-token. True
+// per-token streaming requires the raw Anthropic streaming API.
+func RelayHarnessResult(res *harness.Result) []map[string]any {
+	if res == nil || len(res.Messages) == 0 {
+		return nil
+	}
+	out := make([]map[string]any, 0, len(res.Messages)*2)
+	for _, msg := range res.Messages {
+		out = append(out, relayHarnessMessage(msg)...)
+	}
+	return out
+}
+
+func relayHarnessMessage(msg map[string]any) []map[string]any {
+	if msg == nil {
+		return nil
+	}
+	mtype, _ := msg["type"].(string)
+	if mtype == "result" {
+		return nil
+	}
+	if mtype == "system" {
+		return []map[string]any{RawChunk(msg, "harness")}
+	}
+	if mtype != "assistant" && mtype != "user" {
+		return []map[string]any{RawChunk(msg, "harness")}
+	}
+
+	content := harnessMessageContent(msg)
+	if content == nil {
+		return []map[string]any{RawChunk(msg, "harness")}
+	}
+	if s, ok := content.(string); ok {
+		if mtype == "assistant" && s != "" {
+			return []map[string]any{TextChunk(s)}
+		}
+		return nil
+	}
+	blocks, ok := content.([]any)
+	if !ok {
+		return []map[string]any{RawChunk(msg, "harness")}
+	}
+
+	out := make([]map[string]any, 0, len(blocks))
+	for _, raw := range blocks {
+		block, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		btype, _ := block["type"].(string)
+		switch btype {
+		case "text":
+			text, _ := block["text"].(string)
+			if text != "" {
+				out = append(out, TextChunk(text))
+			}
+		case "thinking":
+			thinking, _ := block["thinking"].(string)
+			if thinking != "" {
+				out = append(out, ReasoningChunk(thinking))
+			}
+		case "tool_use":
+			id, _ := block["id"].(string)
+			name, _ := block["name"].(string)
+			if id == "" || name == "" {
+				continue
+			}
+			input, _ := block["input"].(map[string]any)
+			out = append(out, ToolCallStartChunk(id, name, input, ""))
+			out = append(out, ToolCallEndChunk(id))
+		case "tool_result":
+			id, _ := block["tool_use_id"].(string)
+			if id == "" {
+				continue
+			}
+			inner := harnessToolResultContent(block["content"])
+			out = append(out, ToolCallResultChunk(id, inner, "tool"))
+		default:
+			out = append(out, RawChunk(block, "harness"))
+		}
+	}
+	return out
+}
+
+func harnessMessageContent(msg map[string]any) any {
+	if v, ok := msg["content"]; ok {
+		return v
+	}
+	inner, ok := msg["message"].(map[string]any)
+	if !ok {
+		return nil
+	}
+	return inner["content"]
+}
+
+func harnessToolResultContent(v any) string {
+	switch t := v.(type) {
+	case string:
+		return t
+	case []any:
+		var b []byte
+		for _, item := range t {
+			m, ok := item.(map[string]any)
+			if !ok {
+				continue
+			}
+			s, _ := m["text"].(string)
+			b = append(b, s...)
+		}
+		return string(b)
+	case nil:
+		return ""
+	default:
+		return fmt.Sprintf("%v", t)
+	}
 }
 
 // SerializeStream consumes a chunks channel (closed by the producer when
