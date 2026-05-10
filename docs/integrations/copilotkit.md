@@ -223,17 +223,142 @@ The endpoint sits behind the same DID/VC permission middleware as
 callers must include a valid DID-signed request just like for direct
 reasoner invocations.
 
+## Live streaming (per-token + per-tool-arg deltas)
+
+The reasoner contract above buffers a full response and returns it as a
+single dict. For live UX — text appearing token-by-token,
+`TOOL_CALL_ARGS` streaming as the LLM emits them, `REASONING_*` events
+flowing as the model thinks — return an NDJSON stream instead. The
+control plane's streaming dispatcher (see
+`control-plane/internal/handlers/agui_runs_streaming.go`) detects
+`Content-Type: application/x-ndjson` and translates each line into the
+matching AG-UI event in real time.
+
+### Python streaming reasoner
+
+```python
+from fastapi import Request
+from fastapi.responses import StreamingResponse
+from agentfield import Agent, agui
+
+app = Agent(node_id="my-app")
+
+@app.post("/reasoners/chat")
+async def chat(request: Request):
+    body = await request.json()
+    return StreamingResponse(
+        agui.serialize_stream(_chunks(body)),
+        media_type=agui.STREAMING_CONTENT_TYPE,
+    )
+
+async def _chunks(body):
+    # Reasoning shows up in CopilotKit's "Thinking…" pane.
+    yield agui.reasoning_chunk("Looking up flights...")
+    yield agui.reasoning_end_chunk()
+    # Text chunks paint progressively in <CopilotChat>.
+    async for token in llm.stream(body["prompt"]):
+        yield agui.text_chunk(token)
+    # Tool calls drive useCopilotAction renders.
+    yield agui.tool_call_start_chunk("tc-1", "showFlightCard",
+                                     arguments={"from": "SFO", "to": "JFK"})
+    yield agui.tool_call_end_chunk("tc-1")
+    # Shared state lands in useCoAgent.
+    yield agui.state_chunk({"counter": 1})
+```
+
+The control plane wraps the stream with `RUN_STARTED` / `RUN_FINISHED`,
+manages text and reasoning open/close lifecycle automatically, and emits
+`MESSAGES_SNAPSHOT` at stream end.
+
+### Go streaming reasoner
+
+```go
+import (
+    "net/http"
+    "github.com/Agent-Field/agentfield/sdk/go/agent/agui"
+)
+
+func chat(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", agui.StreamingContentType)
+    w.WriteHeader(http.StatusOK)
+
+    chunks := make(chan map[string]any, 8)
+    go func() {
+        defer close(chunks)
+        chunks <- agui.ReasoningChunk("Looking up flights...")
+        chunks <- agui.ReasoningEndChunk()
+        for _, tok := range []string{"Booked ", "AA-12."} {
+            chunks <- agui.TextChunk(tok)
+        }
+        chunks <- agui.ToolCallStartChunk("tc-1", "showFlightCard",
+            map[string]any{"from": "SFO", "to": "JFK"}, "")
+        chunks <- agui.ToolCallEndChunk("tc-1")
+    }()
+    _ = agui.SerializeStream(r.Context(), w, chunks)
+}
+```
+
+### `.harness()` relay
+
+The Anthropic Claude harness already produces a streaming async iterator
+of messages. Pipe it straight to AG-UI:
+
+```python
+from claude_agent_sdk import query, ClaudeAgentOptions
+from agentfield import agui
+
+async def _chunks(body):
+    opts = ClaudeAgentOptions(...)
+    async for chunk in agui.relay_harness_stream(
+        query(prompt=body["prompt"], options=opts)
+    ):
+        yield chunk
+```
+
+`relay_harness_stream` translates Claude SDK message types into the
+right AG-UI chunks: `text` blocks → `TEXT_MESSAGE_CONTENT`,
+`thinking` blocks → `REASONING_*`, `tool_use` blocks → `TOOL_CALL_*`,
+`tool_result` blocks → `TOOL_CALL_RESULT`. Note: the harness streams
+per-message, not per-token, so this path delivers message-level
+streaming. True per-token streaming requires the raw Anthropic API.
+
+## Reasoner contract — full chunk reference
+
+When using the streaming path, each NDJSON line is one of these tagged
+chunks (built by helpers in `agentfield.agui` / `sdk/go/agent/agui`):
+
+| Chunk `type` | Maps to | Notes |
+|---|---|---|
+| `text` | `TEXT_MESSAGE_CONTENT` | `START`/`END` synthesized lazily on first/last text chunk |
+| `reasoning` | `REASONING_MESSAGE_CONTENT` | Outer `REASONING_START`/`END` synthesized; emit `reasoning_end` to start a new segment within the same context |
+| `tool_call_start` | `TOOL_CALL_START` (+ `_ARGS` if `arguments` provided inline) | |
+| `tool_call_args` | `TOOL_CALL_ARGS` | Streamed as the LLM emits arg JSON |
+| `tool_call_end` | `TOOL_CALL_END` | |
+| `tool_call_result` | `TOOL_CALL_RESULT` | For server-side tools |
+| `state` | `STATE_SNAPSHOT` | |
+| `state_delta` | `STATE_DELTA` (RFC 6902 patches) | |
+| `step_started` / `step_finished` | `STEP_STARTED` / `STEP_FINISHED` | CopilotKit ignores; useful for other AG-UI consumers |
+| `raw` | `RAW` | Foreign-system passthrough |
+| `custom` | `CUSTOM` | App-specific event with `name` + `value` |
+| `final` | Applies a buffered-shape envelope | Use to send trailing `toolCalls` / `state` / etc. without re-implementing buffered logic |
+| `error` | `RUN_ERROR` (terminal) | Subsequent chunks are ignored |
+
+## Performance
+
+Load tested at 50× concurrent buffered requests and 25× concurrent
+streaming requests in CI (`internal/handlers/agui_runs_load_test.go`):
+
+- Buffered: 200 reqs in ~90 ms wall, p50 ≈ 4 ms, p95 ≈ 75 ms, p99 ≈ 77 ms
+- Streaming dispatcher: 100 reqs in ~18 ms wall, no goroutine leaks
+- Per-request benchmark (`go test -bench=BenchmarkAGUI`): ~389 µs/op, 26 KB/op
+
 ## What we don't yet do
 
-- **Live token streaming.** The reasoner returns a complete result; we
-  chunk it on emission, but per-token streaming requires reasoner-side
-  streaming, which is the next iteration. The `agentInvoker` interface
-  in the handler is the seam where that will plug in.
-- **Live tool-argument streaming.** `TOOL_CALL_ARGS` carries the full
-  arguments JSON in one delta today, not progressive token chunks.
-- **`STEP_*` / `RAW` / `CUSTOM` events.** CopilotKit ignores `STEP_*`
-  per their `GOTCHAS.md`; the others are app-specific listener territory.
-- **`.harness()` provider relay.** The Anthropic SDK already streams
-  messages from the harness subprocess, but the current provider
-  buffers them. Plumbing those out as nested `TEXT_MESSAGE_*` /
-  `TOOL_CALL_*` is per-provider work.
+- **Per-token streaming via the buffered reasoner contract.** Reasoners
+  using `@app.reasoner()` still buffer; the streaming path requires the
+  separate FastAPI / chunk-channel pattern shown above. We auto-chunk
+  buffered responses on emission so the UX is acceptable, but the
+  source of truth is still a synchronous return.
+- **Bidirectional cancellation propagation into the streaming reasoner.**
+  Client disconnect aborts the streaming HTTP read on our end, but the
+  reasoner needs its own context plumbing to actually stop work.
