@@ -6,6 +6,65 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.82-rc.1] - 2026-05-10
+
+
+### Fixed
+
+- Fix(sdk): pause-aware overdue check in async polling task (#564)
+
+* fix(sdk): make ExecutionState.is_overdue pause-aware via attached PauseClock
+
+Add an optional ``_pause_clock`` field to ``ExecutionState`` and have
+``is_overdue`` subtract ``total_paused()`` from wallclock age before
+comparing against the timeout. With no clock attached the property
+behaves identically to before.
+
+This is the data-structure half of the fix for the polling task
+pre-empting the pause-aware ``wait_for_result`` loop in v0.1.81 — the
+caller-side wiring lives in the next commit. Tests pin the new branch
+(clock attached → not overdue), the failure-fallback (broken clock →
+behaves as wallclock), and backward-compat (no clock → unchanged).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+
+* fix(sdk): attach pause_clock to awaited execution so polling honors it
+
+``wait_for_result`` already subtracts the parent's PauseClock from its
+own loop's elapsed time (v0.1.81), but the manager's polling loop runs
+the wallclock-only ``is_overdue`` check on every active execution and
+calls ``timeout_execution()`` independently of the wait loop. After
+``timeout`` seconds of wallclock the polling task flips the awaited
+execution to TIMEOUT — even when most of that wallclock was spent in
+the child's ``waiting`` state — and the next wait iteration surfaces it
+as ``ExecutionTimeoutError("Execution timed out after N seconds")``.
+
+Attach the caller-supplied ``pause_clock`` to the awaited
+``ExecutionState`` so the polling task's overdue check reads the same
+paused total the wait loop is using, and restore the previous value in
+``finally``. With this, github-buddy's ``app.call`` to swe-af.build
+survives the full ``max_execution_timeout`` of *active* time across
+arbitrarily long human-approval pauses, instead of timing out at exactly
+21600s wallclock as observed on Railway run run_1778346573033_dafddc40.
+
+Validation contract for the fix:
+- A paused execution must NOT be flipped TIMEOUT by ``_poll_active_executions``
+  while wallclock > timeout but paused-time > (wallclock - timeout). Pinned
+  by ``test_poll_active_executions_respects_attached_pause_clock``.
+- An execution with NO pause_clock must keep timing out at wallclock — same
+  legacy behaviour. Pinned by
+  ``test_poll_active_executions_still_times_out_without_pause_clock``.
+- The clock must be attached for the duration of the wait and detached on
+  return (success / timeout / exception), so a future wait on the same
+  execution does not consume a stale parent clock. Pinned by
+  ``test_wait_for_result_attaches_pause_clock_to_execution_state``.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+
+---------
+
+Co-authored-by: Claude Opus 4.7 (1M context) <noreply@anthropic.com> (cf5650e)
+
 ## [0.1.81] - 2026-05-09
 
 ## [0.1.81-rc.2] - 2026-05-09
