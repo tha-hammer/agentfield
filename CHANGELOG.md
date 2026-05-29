@@ -6,6 +6,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.85-rc.12] - 2026-05-29
+
+
+### Other
+
+- Harden generated output handling (#581)
+
+* Harden generated output handling
+
+Keep generated output behind the intended trust boundary while preserving the normal safe workflow.
+
+Add regression coverage for the unsafe flow and the expected safe behavior.
+
+* Add coverage for generated tool target handling
+
+* test: avoid parallel port contention in package runner tests
+
+* Stabilize control-plane coverage tests
+
+---------
+
+Co-authored-by: Santosh kumar <29346072+santoshkumarradha@users.noreply.github.com>
+Co-authored-by: Abir Abbas <abirabbas1998@gmail.com> (e96c3fd)
+
 ## [0.1.85-rc.11] - 2026-05-28
 
 
