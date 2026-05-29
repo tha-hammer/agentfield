@@ -6,6 +6,62 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.86-rc.1] - 2026-05-29
+
+
+### Fixed
+
+- Fix(sdk/go): strip credential headers on cross-host redirect (#602)
+
+* fix(sdk/go): strip credential headers on cross-host redirect
+
+The control-plane client attaches X-API-Key (and, when DID auth is
+configured, the X-Caller-DID / X-DID-Signature / X-DID-Timestamp /
+X-DID-Nonce headers) as custom request headers on an http.Client with no
+CheckRedirect. Go's net/http strips Authorization/Cookie on a cross-host
+redirect but not arbitrary application headers, so a redirect from the
+configured baseURL to another host would replay the operator's
+credentials to that host.
+
+Add a CheckRedirect hook that drops every credential header the client
+attaches when a redirect targets a host other than the originally
+configured one (compared against via[0], so credentials only reach the
+operator-configured host across a multi-hop chain). Same-host redirects
+keep the headers, so ordinary redirect following is unaffected. The
+credential list is sourced from the did_auth header constants so it
+cannot drift. Also applied to clients supplied via WithHTTPClient that
+define no redirect policy.
+
+Refs GHSA-jp8j-g39q-qxwx.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+* fix(handlers): stop flaky coverage CI from global-logger race in parallel tests
+
+TestDiscoveryLoggingIncludesOptionalRequestID and
+TestExecutionCleanupService_StartStopBranches both call
+setupExecutionCleanupTestLogger, which swaps the process-global
+logger.Logger, while also calling t.Parallel(). When they ran alongside
+another parallel test, a sibling reassigned the global logger mid-run, so
+the discovery test's captured buffer came back empty and its assertions
+("discovery request failed", `"request_id":"req-123"`, `"format":"compact"`)
+failed. This broke the `coverage (control-plane)` job and cascaded into
+`coverage-summary` (missing control-plane.total.txt).
+
+The non-test build is unaffected, so it slipped past the required gates
+and only showed up in the coverage job's full parallel run.
+
+Drop t.Parallel() from both tests so they run in the serial phase, where
+nothing else mutates the global logger concurrently -- matching the
+existing non-parallel logger-swapping tests in execution_cleanup_test.go.
+Verified by running the previously-failing command 20x clean.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+---------
+
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (6b74c63)
+
 ## [0.1.85] - 2026-05-29
 
 ## [0.1.85-rc.13] - 2026-05-29
