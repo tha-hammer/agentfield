@@ -6,6 +6,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.87-rc.3] - 2026-06-01
+
+
+### Fixed
+
+- Fix(cli): stop af call rejecting valid input for optional reasoner params (#610)
+
+The Python SDK serializes every Optional[...] reasoner parameter (e.g.
+`pr_url: str | None`) as {"type": "object"} in the generated input schema.
+`af call`'s client-side validation enforced that declared type, so passing a
+concrete scalar to an optional field was rejected before the request was ever
+sent:
+
+    $ af call pr-af.review --in '{"pr_url": "https://github.com/o/r/pull/1"}'
+    Error: field "pr_url" must be an object
+
+even though the identical payload over curl worked. Stop enforcing object and
+array types client-side: the control plane validates structured input and is
+the source of truth. Required-field presence and scalar type checks
+(string/integer/number/boolean) are unchanged, so fast feedback for
+properly-typed fields is preserved.
+
+Verified end-to-end against the pr-af agent on a freshly built binary: the
+previously rejected `af call pr-af.review --in '{"pr_url": "..."}'` now reaches
+the reasoner, and a wrong-typed scalar is still caught client-side.
+
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (e34290b)
+
 ## [0.1.87-rc.2] - 2026-06-01
 
 
