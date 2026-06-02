@@ -6,6 +6,72 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.88-rc.2] - 2026-06-02
+
+
+### Added
+
+- Feat(skill): rename to agentfield, fetch live docs from agentfield.ai (#611)
+
+* feat(skill): rename to agentfield, slim SKILL.md, fetch live docs from agentfield.ai
+
+Renames the bundled `agentfield-multi-reasoner-builder` skill to plain
+`agentfield` and rewrites it around three changes:
+
+- **Live docs first**: every invocation now fetches
+  agentfield.ai/llms.txt + llms-full.txt + per-page /llm/docs/<slug>
+  before scaffolding, so the agent gets ground-truth SDK signatures
+  instead of a baked-in snapshot that drifts release to release. The
+  bundled references/primitives-snapshot.md is the offline fallback,
+  explicitly stamped as such.
+
+- **Pattern bias removed**: architecture-patterns.md becomes
+  patterns-emerge.md. Patterns are vocabulary for naming what falls out
+  of the five principles, not a menu to copy from. HUNT->PROVE has
+  equal weight with linear refinement, dynamic router, fan-out/recurse,
+  event-driven, etc. The new examples-map.md indexes
+  code/examples/* so the agent picks the closest real build and greps
+  its actual code instead of paraphrased templates.
+
+- **CLI introspection surface**: new references/cli-toolkit.md
+  documents `af doctor`, `af init`, `af agent {status,discover,query,
+  run,agent-summary,kb,batch,help}`, `af logs`, `af execution`, etc.
+  The skill now prefers `af agent kb guide --goal "..."` and
+  `af agent discover -q "..."` over hand-rolled curl.
+
+Other changes:
+
+- New references/model-selection.md: env -> ask user -> live-pick from
+  openrouter.ai/api/v1/models (open-weight providers) -> frozen
+  fallback. No more hardcoded model string in nine places.
+- SKILL.md adds a dedicated "Reasoners are APIs — design like a service
+  mesh, not a chain" section explaining what no static chain framework
+  (LangChain, CrewAI, AutoGen, LangGraph) can do.
+- scaffold-recipe.md depersonalized: no committee.py / adversarial
+  reviewer / HUNT->PROVE example. Hard invariants only.
+- anti-patterns.md is now a one-line table.
+- All bundled refs trimmed.
+
+Compat:
+
+- Catalog adds an `Aliases` field; "agentfield-multi-reasoner-builder"
+  still resolves to the new skill so existing installs keep working.
+- Version bumped 0.3.0 -> 0.4.0.
+
+Verified:
+- go build ./control-plane/... + go vet ./...
+- go test ./internal/skillkit/... ./internal/cli/... (384 pass)
+- ./scripts/sync-embedded-skills.sh --check (no drift)
+- `af skill catalog` shows agentfield v0.4.0
+- `af skill print agentfield-multi-reasoner-builder` resolves via alias
+
+* chore(install): update install.sh comments/help text to use new skill name
+
+Four cosmetic updates to scripts/install.sh that referenced the legacy
+agentfield-multi-reasoner-builder name. The install logic itself is
+unchanged — it always installed whatever the af binary's catalog
+defaults to. (2d16e73)
+
 ## [0.1.88-rc.1] - 2026-06-02
 
 
