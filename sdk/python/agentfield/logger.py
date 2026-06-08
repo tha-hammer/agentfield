@@ -75,8 +75,9 @@ class AgentFieldLogger:
 
     def set_level(self, level: str):
         """Set log level at runtime (e.g., 'DEBUG', 'INFO', 'WARN', 'ERROR')"""
-
-        self.logger.setLevel(_LEVEL_TO_LOGGING.get(level.upper(), logging.INFO))
+        level_upper = level.upper()
+        self.log_level = level_upper
+        self.logger.setLevel(_LEVEL_TO_LOGGING.get(level_upper, logging.INFO))
 
     def _setup_logger(self):
         """Setup logger with console handler if not already configured"""
@@ -454,28 +455,37 @@ class AgentFieldLogger:
         return self._emit_structured_record(record)
 
 
-# Global logger instance
-_global_logger = None
+# Global logger cache: name -> AgentFieldLogger instance
+_logger_cache: Dict[str, AgentFieldLogger] = {}
+
+# Global log level override (set via set_log_level)
+_global_log_level: Optional[str] = None
 
 
 def get_logger(name: str = "agentfield") -> AgentFieldLogger:
     """Get or create a AgentField SDK logger instance"""
 
-    global _global_logger
-    if _global_logger is None:
-        _global_logger = AgentFieldLogger(name)
-    return _global_logger
+    if name not in _logger_cache:
+        logger = AgentFieldLogger(name)
+        if _global_log_level is not None:
+            logger.set_level(_global_log_level)
+        _logger_cache[name] = logger
+    return _logger_cache[name]
 
 
 def set_log_level(level: str):
-    """Set log level for the global logger at runtime (e.g., 'DEBUG', 'INFO', 'WARN', 'ERROR')"""
+    """Set log level for all logger instances at runtime (e.g., 'DEBUG', 'INFO', 'WARN', 'ERROR')"""
 
-    get_logger().set_level(level)
+    global _global_log_level
+    _global_log_level = level
+    for logger in _logger_cache.values():
+        logger.set_level(level)
 
 
 def set_cp_client(client: Optional["AgentFieldClient"]) -> None:
-    """Attach a control-plane client so structured logs are forwarded."""
-    get_logger()._cp_client = client
+    """Attach a control-plane client so structured logs are forwarded to all loggers."""
+    for logger in _logger_cache.values():
+        logger._cp_client = client
 
 
 # Convenience functions for common logging patterns
