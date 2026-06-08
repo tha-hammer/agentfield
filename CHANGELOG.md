@@ -6,6 +6,42 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.90-rc.3] - 2026-06-08
+
+
+### Fixed
+
+- Fix(sdk/python): bind trigger payload to first non-injected param (#634)
+
+Trigger/webhook-invoked reasoners that declare the documented `trigger`
+(or `webhook`) parameter crashed on every invocation:
+
+    cla_reminder_sweep() got multiple values for argument 'trigger'
+
+On the trigger path, _execute_reasoner_endpoint passed the event payload
+as the first POSITIONAL argument *and* separately injected `trigger=` /
+`webhook=` as a keyword. When the reasoner's first positional parameter
+IS one of those injected names (e.g. `def r(trigger=None)`), both fill the
+same slot -> TypeError. The test harness (_bind_reasoner_args /
+simulate_trigger) already skipped injected params when assigning the
+positional payload, so the bug was invisible to unit tests: runtime and
+harness disagreed.
+
+New _bind_trigger_payload() binds the payload to the first parameter that
+is NOT a framework-injected slot (trigger / webhook / execution_context),
+by keyword for positional-or-keyword params so a leading injected param
+can't shift it onto the wrong slot. This mirrors the harness so the
+runtime and simulate_trigger invoke a reasoner identically. A reasoner
+whose only parameter is an injected slot now receives the context by
+keyword and the payload is dropped, instead of crashing.
+
+Adds tests/test_trigger_param_binding.py: 4 end-to-end tests through the
+real runtime path (HTTP route -> envelope unwrap -> _execute_reasoner_endpoint),
+including the exact cla_reminder_sweep shape that failed in production, plus
+9 unit tests pinning the binding across signature shapes.
+
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (2a93140)
+
 ## [0.1.90-rc.2] - 2026-06-06
 
 
