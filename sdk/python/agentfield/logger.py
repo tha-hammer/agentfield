@@ -114,8 +114,10 @@ class AgentFieldLogger:
 
     @staticmethod
     def _now_iso() -> str:
-        return datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace(
-            "+00:00", "Z"
+        return (
+            datetime.now(timezone.utc)
+            .isoformat(timespec="milliseconds")
+            .replace("+00:00", "Z")
         )
 
     @staticmethod
@@ -175,7 +177,9 @@ class AgentFieldLogger:
         }
 
     def _emit_structured_record(self, record: Dict[str, Any]) -> Dict[str, Any]:
-        line = json.dumps(record, ensure_ascii=False, separators=(",", ":"), default=str)
+        line = json.dumps(
+            record, ensure_ascii=False, separators=(",", ":"), default=str
+        )
         print(line, file=sys.stdout, flush=True)
         self._dispatch_to_cp(record)
         return record
@@ -461,30 +465,41 @@ _logger_cache: Dict[str, AgentFieldLogger] = {}
 # Global log level override (set via set_log_level)
 _global_log_level: Optional[str] = None
 
+# Guards _logger_cache and _global_log_level against concurrent access. Reentrant
+# so a future helper holding the lock can still call get_logger() safely.
+_logger_cache_lock = threading.RLock()
+
 
 def get_logger(name: str = "agentfield") -> AgentFieldLogger:
     """Get or create a AgentField SDK logger instance"""
 
-    if name not in _logger_cache:
-        logger = AgentFieldLogger(name)
-        if _global_log_level is not None:
-            logger.set_level(_global_log_level)
-        _logger_cache[name] = logger
-    return _logger_cache[name]
+    with _logger_cache_lock:
+        if name not in _logger_cache:
+            logger = AgentFieldLogger(name)
+            if _global_log_level is not None:
+                logger.set_level(_global_log_level)
+            _logger_cache[name] = logger
+        return _logger_cache[name]
 
 
 def set_log_level(level: str):
     """Set log level for all logger instances at runtime (e.g., 'DEBUG', 'INFO', 'WARN', 'ERROR')"""
 
     global _global_log_level
-    _global_log_level = level
-    for logger in _logger_cache.values():
+    # Snapshot under the lock so a concurrent get_logger() can't mutate the dict
+    # mid-iteration; apply levels outside the lock to avoid holding it during I/O.
+    with _logger_cache_lock:
+        _global_log_level = level
+        loggers = list(_logger_cache.values())
+    for logger in loggers:
         logger.set_level(level)
 
 
 def set_cp_client(client: Optional["AgentFieldClient"]) -> None:
     """Attach a control-plane client so structured logs are forwarded to all loggers."""
-    for logger in _logger_cache.values():
+    with _logger_cache_lock:
+        loggers = list(_logger_cache.values())
+    for logger in loggers:
         logger._cp_client = client
 
 
