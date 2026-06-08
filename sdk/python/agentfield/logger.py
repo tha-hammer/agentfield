@@ -483,7 +483,13 @@ def get_logger(name: str = "agentfield") -> AgentFieldLogger:
 
 
 def set_log_level(level: str):
-    """Set log level for all logger instances at runtime (e.g., 'DEBUG', 'INFO', 'WARN', 'ERROR')"""
+    """Set log level for all logger instances at runtime (e.g., 'DEBUG', 'INFO', 'WARN', 'ERROR').
+
+    Behavior note: this records the level and applies it to every *cached*
+    logger; it does not create a logger when the cache is empty. Loggers
+    created later via ``get_logger()`` pick up the stored level on creation.
+    (Previously this implicitly created the default logger as a side effect.)
+    """
 
     global _global_log_level
     # Snapshot under the lock so a concurrent get_logger() can't mutate the dict
