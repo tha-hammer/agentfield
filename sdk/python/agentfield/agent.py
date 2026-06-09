@@ -672,6 +672,17 @@ class Agent(FastAPI):
 
         self._pause_clocks: Dict[str, PauseClock] = {}
 
+        # Idle-watchdog progress markers, keyed by execution_id. Each marker is
+        # ``{"at": <last-progress wall-clock>, "paused_at": <pause_clock total
+        # at last progress>}``. The watchdog measures the active-time budget
+        # from ``at`` rather than from the reasoner's start, so a reasoner that
+        # heartbeats while it makes progress runs as long as it keeps
+        # advancing, while a genuinely stalled one is still cancelled. A
+        # reasoner that never heartbeats keeps the marker at its initial value,
+        # which makes the idle computation identical to the old total-active
+        # cap (backward compatible).
+        self._progress_markers: Dict[str, Dict[str, float]] = {}
+
         # Install the /_internal/executions/{execution_id}/cancel route
         # before any user-defined reasoners are registered so the path is
         # always available for the control-plane callback.
@@ -2346,20 +2357,37 @@ class Agent(FastAPI):
         )
 
         start_time = time.time()
+        # Idle-watchdog progress marker. ``at`` is the wall-clock of the last
+        # observed progress (reasoner start, then advanced by ``heartbeat``);
+        # ``paused_at`` snapshots the pause clock at that same instant so the
+        # idle window can subtract pause time accrued *since* the last
+        # heartbeat. For a reasoner that never heartbeats this stays at
+        # ``{at: start_time, paused_at: 0.0}``, making ``idle_active`` exactly
+        # equal to the old ``active_elapsed`` total-active cap.
+        progress_state = {"at": start_time, "paused_at": 0.0}
+        self._progress_markers[execution_id] = progress_state
         reasoner_task = asyncio.create_task(reasoner_coro())
 
         async def _watchdog() -> None:
-            # Poll active-elapsed time and cancel the reasoner if the active
-            # budget is exceeded. ``check_interval`` is a small fraction of
-            # the timeout so we don't oversleep our own deadline by much.
+            # Poll idle (no-progress) active time and cancel the reasoner if it
+            # has made no progress for the active budget window.
+            # ``check_interval`` is a small fraction of the timeout so we don't
+            # oversleep our own deadline by much.
             check_interval = min(5.0, max(0.1, reasoner_timeout / 4.0))
             while not reasoner_task.done():
                 try:
                     await asyncio.sleep(check_interval)
                 except asyncio.CancelledError:
                     return
-                active_elapsed = (time.time() - start_time) - pause_clock.total_paused()
-                if active_elapsed > reasoner_timeout:
+                # Active time elapsed *since the last progress marker*, with
+                # pause time accrued since that marker subtracted out. For a
+                # never-heartbeating reasoner (``at == start_time``,
+                # ``paused_at == 0``) this reduces to the old
+                # ``(now - start_time) - total_paused`` total-active value.
+                idle_active = (time.time() - progress_state["at"]) - (
+                    pause_clock.total_paused() - progress_state["paused_at"]
+                )
+                if idle_active > reasoner_timeout:
                     # Capture pause_clock state at the moment of timeout so
                     # we can tell "watchdog fired with non-zero pause time
                     # (legitimate long-running work)" apart from "watchdog
@@ -2368,10 +2396,10 @@ class Agent(FastAPI):
                     # is the production bug we're hunting.
                     log_error(
                         f"pause_cascade: WATCHDOG_FIRING execution_id={execution_id} "
-                        f"reasoner={reasoner_name} "
+                        f"reasoner={reasoner_name} no progress "
                         f"wall_elapsed={time.time() - start_time:.1f}s "
                         f"total_paused={pause_clock.total_paused():.1f}s "
-                        f"active_elapsed={active_elapsed:.1f}s "
+                        f"idle_active={idle_active:.1f}s "
                         f"budget={reasoner_timeout:.1f}s "
                         f"pause_clock_id={id(pause_clock)}"
                     )
@@ -2398,7 +2426,7 @@ class Agent(FastAPI):
                     "status": "failed",
                     "error": (
                         f"Reasoner '{reasoner_name}' timed out after "
-                        f"{reasoner_timeout}s of active time"
+                        f"{reasoner_timeout}s with no progress"
                     ),
                     "error_details": {"reason": "reasoner_timeout"},
                     "duration_ms": int((time.time() - start_time) * 1000),
@@ -2452,10 +2480,23 @@ class Agent(FastAPI):
             except BaseException:
                 pass
             self._pause_clocks.pop(execution_id, None)
+            self._progress_markers.pop(execution_id, None)
             # Deregister the cancel hook regardless of outcome.
             from .cancel import deregister_execution
             await deregister_execution(self, execution_id)
         await self._post_execution_status(callback_url, payload, execution_id)
+
+    def heartbeat(self, execution_id: str) -> None:
+        """Reset the idle watchdog for a long-running reasoner that is making
+        progress. The active-time budget is measured from the last heartbeat,
+        so a reasoner that heartbeats while it advances runs as long as it keeps
+        progressing; one that stalls past the budget is still cancelled."""
+        marker = self._progress_markers.get(execution_id)
+        if marker is None:
+            return
+        clock = self._pause_clocks.get(execution_id)
+        marker["at"] = time.time()
+        marker["paused_at"] = clock.total_paused() if clock else 0.0
 
     async def _post_execution_status(
         self,
