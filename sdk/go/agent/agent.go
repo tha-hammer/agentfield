@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"runtime"
 	"sync"
@@ -536,8 +537,20 @@ func New(cfg Config) (*Agent, error) {
 		cfg.Logger = log.New(os.Stdout, "[agent] ", log.LstdFlags)
 	}
 
+	// Cross-node calls include LLM reasoners that can run for minutes; a short client
+	// timeout aborts them mid-flight (the 15s default broke the SWE-AF Go node). Default
+	// to 10m, overridable via AGENTFIELD_CALL_TIMEOUT (a Go duration like "600s"/"10m",
+	// or a bare integer interpreted as seconds).
+	callTimeout := 10 * time.Minute
+	if v := os.Getenv("AGENTFIELD_CALL_TIMEOUT"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			callTimeout = d
+		} else if secs, err := strconv.Atoi(v); err == nil && secs > 0 {
+			callTimeout = time.Duration(secs) * time.Second
+		}
+	}
 	httpClient := &http.Client{
-		Timeout: 15 * time.Second,
+		Timeout: callTimeout,
 	}
 
 	// Initialize AI client if config provided
