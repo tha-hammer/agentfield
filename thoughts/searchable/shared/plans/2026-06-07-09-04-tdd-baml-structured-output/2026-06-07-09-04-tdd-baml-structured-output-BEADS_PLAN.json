@@ -1,0 +1,659 @@
+{
+  "epic": {
+    "title": "[Plan Review Epic] 2026-06-07-09-04-tdd-baml-structured-output — 11 critical, 32 warnings",
+    "description": "## Plan Review Epic — 2026-06-07-09-04-tdd-baml-structured-output\n\n**Plan:** /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\n**Review report:** <substituted by CLI post-write>\n**Counts:** 11 critical, 32 warnings across 5 phases\n**Generated:** 2026-06-07T14:16:07.170Z\n\n## How to fix all issues\n\n```bash\nbd ready --label plan:2026-06-07-09-04-tdd-baml-structured-output\nbd show <issue-id>\nbd update <issue-id> --claim\n# ...edit the plan to address the recommendation...\nbd close <issue-id>\n# When all child issues close, this epic auto-unblocks.\n```\n\n## Issue list\n(substituted by CLI post-mint)",
+    "labels": [
+      "plan-review",
+      "plan-review-epic",
+      "plan:2026-06-07-09-04-tdd-baml-structured-output"
+    ]
+  },
+  "issues": [
+    {
+      "phase": "contracts",
+      "severity": "critical",
+      "priority": 0,
+      "title": "[Plan Review §contracts] BAML parser-only API endpoint is never named for Python or …",
+      "description": "## Finding (severity: critical)\nBAML parser-only API endpoint is never named for Python or Go. The plan asserts 'BAML can parse text it did not generate' and 'feed raw text to BAML's tolerant parser' but neither the Python nor Go function/method for parser-only mode is identified anywhere in the spec. Without a named API, the Red step of B-C1 and B-D2 cannot be written — a test cannot assert a call to an unspecified entry point. If BAML's tolerant-parse path requires a fully-generated typed function per schema (rather than a generic entry point accepting arbitrary text + a schema descriptor), the approach is structurally incompatible with the fixture-based strategy and the @@dynamic path.\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §BAML Replacement Mechanics (design notes)  ~line 92\n```\n- **No coexistence layer** — the old parse ladders are deleted, not kept as\n  fallback (per \"replace\" decision).\n- **No new providers/models** — reuse existing API keys via BAML env-var reads.\n\n## BAML Replacement Mechanics (design notes)\n\n- **Static functions** (`baml_src/*.baml`) cover fixed, known schemas.\n- **Dynamic schemas** — `agent.ai(schema=RuntimePydanticModel)` passes a *runtime*\n```\n\n## Impact\nB-C1 and B-D2 are unbuildable as written. Implementors must independently discover the API, risking an approach that is untestable, requires per-schema codegen incompatible with dynamic fixtures, or does not exist in the installed baml-py version.\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\ncontracts\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:e18a1bbe\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:contracts",
+        "severity:critical",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:e18a1bbe"
+      ],
+      "fingerprint": "e18a1bbe"
+    },
+    {
+      "phase": "contracts",
+      "severity": "critical",
+      "priority": 0,
+      "title": "[Plan Review §contracts] TypeBuilder → Pydantic instance cast mechanics are unspecif…",
+      "description": "## Finding (severity: critical)\nTypeBuilder → Pydantic instance cast mechanics are unspecified. BAML's @@dynamic function with TypeBuilder returns a dynamically-typed dict/map, not a Pydantic instance. The plan says agent.ai() 'returns a validated instance produced via BAML' but never specifies: (a) which component calls schema.model_validate(baml_dict) — baml_bridge.py or agent_ai.py, (b) what exception type propagates when the Pydantic cast fails validation, (c) whether the cast happens before or after the BAML call returns. Without this, the output contract of the agent_ai.py replacement branch is undefined, callers may silently receive a raw dict instead of a typed object, and the exception handling has no concrete target type to catch.\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §Test Specification  ~line 125\n```\n---\n\n## Behavior B-A1: Generate Python BAML client\n\n### Test Specification\n**Given**: `baml_src/` containing `generators.baml` (`output_type \"python/pydantic\"`)\nand at least one `function`.\n**When**: `baml-cli generate` runs.\n```\n\n## Impact\nThe boundary between BAML dynamic output and the Pydantic return type expected by agent.ai() callers is unresolved. Implementations will diverge on where construction occurs, what exception surfaces on validation failure, and whether callers receive a dict — all without a test catching the discrepancy, because the integration test only checks 'correct typed values' and would pass either way if the model happens to return valid JSON.\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\ncontracts\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:7197f213\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:contracts",
+        "severity:critical",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:7197f213"
+      ],
+      "fingerprint": "7197f213"
+    },
+    {
+      "phase": "contracts",
+      "severity": "warning",
+      "priority": 2,
+      "title": "[Plan Review §contracts] test_baml_bridge.py oracle is potentially self-referential.…",
+      "description": "## Finding (severity: warning)\ntest_baml_bridge.py oracle is potentially self-referential. 'Asserts the built type shape' of a TypeBuilder produced by the code under test. No independent expected value is named. If the assertion inspects TypeBuilder's own internal representation rather than comparing against a hardcoded expected schema dict, the test passes whether or not the field mapping is correct — it merely confirms the code produced something that looks like itself.\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §Test Specification  ~line 223\n```\nfunction + TypeBuilder maps the runtime Pydantic model), and the old\n`json.loads + regex + 2-retry` path (`agent_ai.py:788-824`, the\n`max_parse_retries` loop) is **deleted**.\n\n**Edge Cases**: nested / optional / `list` Pydantic fields map through TypeBuilder;\nmodel omits a required field → typed BAML validation error surfaced (not a silent\n`None`); enums/literals map to BAML dynamic enums.\n\n```\n\n## Impact\n(warning — non-blocking)\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\ncontracts\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:060b850e\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:contracts",
+        "severity:warning",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:060b850e"
+      ],
+      "fingerprint": "060b850e"
+    },
+    {
+      "phase": "contracts",
+      "severity": "warning",
+      "priority": 2,
+      "title": "[Plan Review §contracts] BAML exception class → existing exception type mapping is u…",
+      "description": "## Finding (severity: warning)\nBAML exception class → existing exception type mapping is unspecified at the _runner.py boundary. _runner.py's retry orchestration and FailureType assignment catch specific Python types (agent_ai.py:792-796 catches json.JSONDecodeError, ValueError, ValidationError). The plan says 'typed BAML validation error surfaced (not silent None)' but never names the exception class BAML raises on parse failure. If BAML raises an unrecognized type, retry logic and FailureType.SCHEMA classification are bypassed silently.\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §Test Specification  ~line 186\n```\n**When**: the Python harness parses it for a target schema **via BAML**.\n**Then**: returns the correct typed object **and** the old `try_parse_from_text` /\nrepair ladder (`_schema.py:209`, `_runner.py` repair tiers) is removed.\n\n**Edge Cases**: recoverable-malformed JSON → parsed; totally unparseable text →\n**typed** parse error (not silent `None`); preserve `FailureType.SCHEMA`\nclassification on unrecoverable input.\n\n```\n\n## Impact\n(warning — non-blocking)\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\ncontracts\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:c9ba88f0\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:contracts",
+        "severity:warning",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:c9ba88f0"
+      ],
+      "fingerprint": "c9ba88f0"
+    },
+    {
+      "phase": "contracts",
+      "severity": "warning",
+      "priority": 2,
+      "title": "[Plan Review §contracts] rate_limiter.py wrapping contract with the BAML call is uns…",
+      "description": "## Finding (severity: warning)\nrate_limiter.py wrapping contract with the BAML call is unspecified. B-B2 Refactor says 'ensure rate-limit retry (rate_limiter.py) still wraps the call' but does not identify what exception class baml-py raises on HTTP 429, whether rate_limiter.py recognizes it, or what the async call-site boundary looks like after the replacement. If BAML surfaces rate-limit as its own exception type, rate_limiter passes it through uncaught.\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §TDD Cycle  ~line 148\n```\n🔴 **Red** — `tests/test_baml_codegen.py`: assert `from baml_client import b` and\n`hasattr(b, \"<Fn>\")`. Fails (no client yet).\n🟢 **Green** — `pip install baml-py`; author minimal `baml_src/`; run\n`baml-cli generate`. Test passes.\n🔵 **Refactor** — split `clients.baml`/`functions.baml`/`generators.baml`; pin\n`version` to the installed `baml-py`.\n\n---\n```\n\n## Impact\n(warning — non-blocking)\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\ncontracts\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:5387802c\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:contracts",
+        "severity:warning",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:5387802c"
+      ],
+      "fingerprint": "5387802c"
+    },
+    {
+      "phase": "contracts",
+      "severity": "warning",
+      "priority": 2,
+      "title": "[Plan Review §contracts] B-A1 property test oracle risks self-reference. 'For every …",
+      "description": "## Finding (severity: warning)\nB-A1 property test oracle risks self-reference. 'For every function name F declared in baml_src/, hasattr(b, F) holds after generate' — if F is discovered at test time by reading baml_src/ files, the test's oracle is derived from the same artifact being generated, not from an independently-asserted set of expected names.\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §Testing Strategy  ~line 118\n```\n- **Real-LLM tests, API-key-gated**: B-B1, B-B2, B-D1 make a **real** model call,\n  skipped when the key env var is absent but a genuine call when present, and\n  assert **known facts** in a fixed input (the independent oracle). A spy/mock is\n  never the passing oracle (Law 1).\n- **Property tests** where an input domain exists (e.g. parser round-trips) via\n  Hypothesis (Python) / table inputs (Go).\n\n---\n```\n\n## Impact\n(warning — non-blocking)\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\ncontracts\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:eeab6920\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:contracts",
+        "severity:warning",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:eeab6920"
+      ],
+      "fingerprint": "eeab6920"
+    },
+    {
+      "phase": "contracts",
+      "severity": "warning",
+      "priority": 2,
+      "title": "[Plan Review §contracts] Large-schema-on-disk behavior (schema.go:15,50) is explicit…",
+      "description": "## Finding (severity: warning)\nLarge-schema-on-disk behavior (schema.go:15,50) is explicitly deferred without resolution. schema.go currently writes .agentfield_schema.json and embeds its path in the prompt suffix when token count > largeSchemaTokenThreshold (4000). Dropping this silently removes a behavioral contract the provider may rely on to locate the schema at runtime; preserving it means the harness runner must still write the file even after BAML takes the parse path. Neither branch is chosen.\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §Test Specification  ~line 315\n```\n**Then**: returns the correct struct **and** the old `sdk/go/harness/schema.go`\npost-hoc parse path is replaced.\n\n**Edge Cases**: unparseable fixture → typed error; large schema previously written\nto `.agentfield_schema.json` (`schema.go:50`) — preserve the prompt-suffix /\non-disk behavior or intentionally drop it (decide & document).\n\n**Property**: for any fixture whose embedded struct JSON validates, parsed struct\n```\n\n## Impact\n(warning — non-blocking)\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\ncontracts\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:9c01794f\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:contracts",
+        "severity:warning",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:9c01794f"
+      ],
+      "fingerprint": "9c01794f"
+    },
+    {
+      "phase": "interfaces",
+      "severity": "critical",
+      "priority": 0,
+      "title": "[Plan Review §interfaces] `baml_bridge.pydantic_to_typebuilder` parameter and return …",
+      "description": "## Finding (severity: critical)\n`baml_bridge.pydantic_to_typebuilder` parameter and return types are not stated anywhere in the plan — the plan names this function and calls it 'the load-bearing piece' but gives no parameter types (model class? instance? field iterator?), no return type (baml_py.TypeBuilder? a partial call?), and no error-return discipline; test_baml_bridge.py cannot be written and agent_ai.py cannot be updated without this interface\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §Test Specification  ~line 233\n```\nsample set).\n\n**Files touched**: `sdk/python/agentfield/agent_ai.py` (replace `:546-557` attach\n+ `:788-824` parse ladder with a BAML dynamic call),\n`sdk/python/agentfield/baml_bridge.py` (new — Pydantic→TypeBuilder mapping),\n`sdk/python/baml_src/functions.baml` (generic `ExtractDynamic` `@@dynamic`),\n`sdk/python/tests/test_agent_ai_baml_integration.py`,\n`sdk/python/tests/test_baml_bridge.py` (unit, deterministic, for the mapper).\n```\n\n## Impact\ntest_baml_bridge.py unit test is unwritable; the agent_ai.py structured branch replacement has no callable target; entire B-B2 milestone blocks\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\ninterfaces\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:09fda200\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:interfaces",
+        "severity:critical",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:09fda200"
+      ],
+      "fingerprint": "09fda200"
+    },
+    {
+      "phase": "interfaces",
+      "severity": "critical",
+      "priority": 0,
+      "title": "[Plan Review §interfaces] Replacement for `try_parse_from_text` in _schema.py has no …",
+      "description": "## Finding (severity: critical)\nReplacement for `try_parse_from_text` in _schema.py has no stated name or signature — plan says 'replace parse_and_validate/try_parse_from_text internals with BAML parser-only' but never names the new function; _runner.py:332 calls the existing function by name and the return type changes from `Optional[Any]` to 'typed parse error' (undefined type); _runner.py cannot be updated and callers cannot handle the new error without this interface\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §Key Discoveries (verified, file:line)  ~line 50\n```\n  strict `response_format: json_schema` from `schema.model_json_schema()`;\n  `:788-810` does `json.loads(...)` → `schema(**data)` with a `r\"\\{.*\\}\"` regex\n  fallback; `:729` `max_parse_retries = 2`; `:816-824` the active retry loop.\n- **Python harness (parser-only target)** —\n  `sdk/python/agentfield/harness/_schema.py:209` `try_parse_from_text` (3-strategy\n  text scrape); `_runner.py:46` `DEFAULT_SCHEMA_RETRIES=2`, `:59` `_ai_schema_repair`,\n  `:332` `_handle_schema_with_retry`, `:496` final schema-failure message.\n  Providers shell out to real CLIs (`harness/providers/opencode.py:152`\n```\n\n## Impact\n_runner.py callers of try_parse_from_text break silently or fail to compile under mypy; the 'typed parse error (not silent None)' type is unknown so no caller can handle it; B-C1 TDD Red step cannot be written\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\ninterfaces\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:b8fc1b85\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:interfaces",
+        "severity:critical",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:b8fc1b85"
+      ],
+      "fingerprint": "b8fc1b85"
+    },
+    {
+      "phase": "interfaces",
+      "severity": "critical",
+      "priority": 0,
+      "title": "[Plan Review §interfaces] Go public functions `WithSchema` and `(*Response).JSON` are…",
+      "description": "## Finding (severity: critical)\nGo public functions `WithSchema` and `(*Response).JSON` are removed with no replacement interface stated — plan says 'remove structToJSONSchema/WithSchema' and 'remove Into/JSON json.Unmarshal path or delegate to BAML'; the 'or delegate' ambiguity leaves the exported interface undefined; any existing Go call site fails to compile after B-D1 with no migration path\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §Key Discoveries (verified, file:line)  ~line 55\n```\n  text scrape); `_runner.py:46` `DEFAULT_SCHEMA_RETRIES=2`, `:59` `_ai_schema_repair`,\n  `:332` `_handle_schema_with_retry`, `:496` final schema-failure message.\n  Providers shell out to real CLIs (`harness/providers/opencode.py:152`\n  `cmd=[self._bin,\"run\"]`), wired in `harness/providers/_factory.py:9`.\n- **Go SDK** — `sdk/go/ai/request.go:258` `WithSchema`, `:390`\n  `structToJSONSchema` (reflection), `:290` `Strict:true`; `sdk/go/ai/response.go:99`\n  `Into()`/`JSON()` via `json.Unmarshal`; `sdk/go/harness/schema.go` writes\n  `.agentfield_schema.json` (`:15`) with a large-schema gate (`:50`).\n```\n\n## Impact\nGo SDK compile breakage with no named replacement; if 'delegate to BAML' is chosen for JSON(), its new internal behavior and unchanged-vs-changed signature are unspecified; integration test cannot be written\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\ninterfaces\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:eaf1cd66\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:interfaces",
+        "severity:critical",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:eaf1cd66"
+      ],
+      "fingerprint": "eaf1cd66"
+    },
+    {
+      "phase": "interfaces",
+      "severity": "warning",
+      "priority": 2,
+      "title": "[Plan Review §interfaces] Go BAML-generated client call expression never shown — afte…",
+      "description": "## Finding (severity: warning)\nGo BAML-generated client call expression never shown — after B-D1 removes WithSchema/structToJSONSchema, callers need a concrete Go API (package, exported function, type arguments); plan says 'route callers through it' without naming the new exported identifier or its signature\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §Test Specification  ~line 294\n```\n**Files touched**: `sdk/go/baml_src/*` (generators/clients/functions),\n`sdk/go/go.mod` (BAML go runtime dep), `sdk/go/ai/request.go` (remove\n`structToJSONSchema`/`WithSchema` reflection), `sdk/go/ai/response.go` (remove\n`Into`/`JSON` json.Unmarshal path or delegate to BAML),\n`sdk/go/ai/baml_structured_integration_test.go` (new).\n\n### TDD Cycle\n🔴 **Red** — `*_integration_test.go` calls the BAML go function on a fixed input,\n```\n\n## Impact\n(warning — non-blocking)\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\ninterfaces\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:92ea4ce3\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:interfaces",
+        "severity:warning",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:92ea4ce3"
+      ],
+      "fingerprint": "92ea4ce3"
+    },
+    {
+      "phase": "interfaces",
+      "severity": "warning",
+      "priority": 2,
+      "title": "[Plan Review §interfaces] agent_ai.py BAML call expression undefined — plan says 'cal…",
+      "description": "## Finding (severity: warning)\nagent_ai.py BAML call expression undefined — plan says 'call the generic @@dynamic BAML function with the TypeBuilder' but does not state the Python call expression (e.g. `b.ExtractDynamic(prompt, output_schema=tb)`) or which arguments the TypeBuilder instance is passed as\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §Key Discoveries (verified, file:line)  ~line 45\n```\nthem (Python inline, Python harness, Go SDK+harness).\n\n### Key Discoveries (verified, file:line)\n\n- **Python inline AI** — `sdk/python/agentfield/agent_ai.py:546-557` attaches a\n  strict `response_format: json_schema` from `schema.model_json_schema()`;\n  `:788-810` does `json.loads(...)` → `schema(**data)` with a `r\"\\{.*\\}\"` regex\n  fallback; `:729` `max_parse_retries = 2`; `:816-824` the active retry loop.\n```\n\n## Impact\n(warning — non-blocking)\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\ninterfaces\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:f730e28a\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:interfaces",
+        "severity:warning",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:f730e28a"
+      ],
+      "fingerprint": "f730e28a"
+    },
+    {
+      "phase": "interfaces",
+      "severity": "warning",
+      "priority": 2,
+      "title": "[Plan Review §interfaces] Exception-type compatibility between BAML parse errors and …",
+      "description": "## Finding (severity: warning)\nException-type compatibility between BAML parse errors and _runner.py catch logic not addressed — plan keeps retry orchestration in _runner.py but replaces the raising code; if BAML raises baml_py.BamlError instead of ValueError, _runner.py:332 _handle_schema_with_retry silently stops catching parse failures\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §Key Discoveries (verified, file:line)  ~line 51\n```\n  `:788-810` does `json.loads(...)` → `schema(**data)` with a `r\"\\{.*\\}\"` regex\n  fallback; `:729` `max_parse_retries = 2`; `:816-824` the active retry loop.\n- **Python harness (parser-only target)** —\n  `sdk/python/agentfield/harness/_schema.py:209` `try_parse_from_text` (3-strategy\n  text scrape); `_runner.py:46` `DEFAULT_SCHEMA_RETRIES=2`, `:59` `_ai_schema_repair`,\n  `:332` `_handle_schema_with_retry`, `:496` final schema-failure message.\n  Providers shell out to real CLIs (`harness/providers/opencode.py:152`\n  `cmd=[self._bin,\"run\"]`), wired in `harness/providers/_factory.py:9`.\n```\n\n## Impact\n(warning — non-blocking)\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\ninterfaces\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:071bb25e\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:interfaces",
+        "severity:warning",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:071bb25e"
+      ],
+      "fingerprint": "071bb25e"
+    },
+    {
+      "phase": "interfaces",
+      "severity": "warning",
+      "priority": 2,
+      "title": "[Plan Review §interfaces] Large-schema-on-disk decision for B-D2 is explicitly deferr…",
+      "description": "## Finding (severity: warning)\nLarge-schema-on-disk decision for B-D2 is explicitly deferred ('decide & document'); until resolved, the public contract of sdk/go/harness/schema.go (schemaFilename constant at :15, largeSchemaTokenThreshold branch at :50) is undefined for callers of the Go harness\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §Key Discoveries (verified, file:line)  ~line 57\n```\n  Providers shell out to real CLIs (`harness/providers/opencode.py:152`\n  `cmd=[self._bin,\"run\"]`), wired in `harness/providers/_factory.py:9`.\n- **Go SDK** — `sdk/go/ai/request.go:258` `WithSchema`, `:390`\n  `structToJSONSchema` (reflection), `:290` `Strict:true`; `sdk/go/ai/response.go:99`\n  `Into()`/`JSON()` via `json.Unmarshal`; `sdk/go/harness/schema.go` writes\n  `.agentfield_schema.json` (`:15`) with a large-schema gate (`:50`).\n- **Deps / tooling** — `sdk/python/pyproject.toml:31-32` `pydantic>=2.0`,\n  `litellm`; pytest markers `unit`/`functional`/`integration` (`:77-81`),\n```\n\n## Impact\n(warning — non-blocking)\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\ninterfaces\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:46878a14\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:interfaces",
+        "severity:warning",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:46878a14"
+      ],
+      "fingerprint": "46878a14"
+    },
+    {
+      "phase": "interfaces",
+      "severity": "warning",
+      "priority": 2,
+      "title": "[Plan Review §interfaces] baml_bridge.py module-level visibility not stated — only py…",
+      "description": "## Finding (severity: warning)\nbaml_bridge.py module-level visibility not stated — only pydantic_to_typebuilder is named; no __all__, no indication of whether other helpers are public; module path (agentfield.baml_bridge vs. agentfield.harness.baml_bridge) not given\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §Test Specification  ~line 233\n```\nsample set).\n\n**Files touched**: `sdk/python/agentfield/agent_ai.py` (replace `:546-557` attach\n+ `:788-824` parse ladder with a BAML dynamic call),\n`sdk/python/agentfield/baml_bridge.py` (new — Pydantic→TypeBuilder mapping),\n`sdk/python/baml_src/functions.baml` (generic `ExtractDynamic` `@@dynamic`),\n`sdk/python/tests/test_agent_ai_baml_integration.py`,\n`sdk/python/tests/test_baml_bridge.py` (unit, deterministic, for the mapper).\n```\n\n## Impact\n(warning — non-blocking)\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\ninterfaces\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:e35413f7\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:interfaces",
+        "severity:warning",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:e35413f7"
+      ],
+      "fingerprint": "e35413f7"
+    },
+    {
+      "phase": "promises",
+      "severity": "critical",
+      "priority": 0,
+      "title": "[Plan Review §promises] Caller-specified timeout is silently dropped after B-B2 mig…",
+      "description": "## Finding (severity: critical)\nCaller-specified timeout is silently dropped after B-B2 migration. agent_ai.py:544 sets litellm_params['timeout'] = effective_timeout. After replacing litellm with a BAML client, that parameter no longer reaches the HTTP call; BAML uses its own client-config timeout from clients.baml. No specification of how effective_timeout is forwarded to the BAML per-call options.\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §Key Discoveries (verified, file:line)  ~line 45\n```\nthem (Python inline, Python harness, Go SDK+harness).\n\n### Key Discoveries (verified, file:line)\n\n- **Python inline AI** — `sdk/python/agentfield/agent_ai.py:546-557` attaches a\n  strict `response_format: json_schema` from `schema.model_json_schema()`;\n  `:788-810` does `json.loads(...)` → `schema(**data)` with a `r\"\\{.*\\}\"` regex\n  fallback; `:729` `max_parse_retries = 2`; `:816-824` the active retry loop.\n```\n\n## Impact\nAny agent.ai() caller passing an explicit timeout= silently receives the wrong timeout after migration, causing either premature cancellation or indefinite hangs depending on which value is smaller. The regression is invisible in tests unless tests exercise the timeout parameter.\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\npromises\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:a2618999\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:promises",
+        "severity:critical",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:a2618999"
+      ],
+      "fingerprint": "a2618999"
+    },
+    {
+      "phase": "promises",
+      "severity": "critical",
+      "priority": 0,
+      "title": "[Plan Review §promises] response.JSON() / Into() disposition in B-D1 is an unresolv…",
+      "description": "## Finding (severity: critical)\nresponse.JSON() / Into() disposition in B-D1 is an unresolved OR: 'remove Into/JSON json.Unmarshal path or delegate to BAML.' Go callers currently using resp.JSON(&dest) (response.go:99) have undefined post-migration behavior. A replace strategy requires a definitive decision before any code is deleted.\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §What We're NOT Doing  ~line 87\n```\n\n## What We're NOT Doing\n\n- **Web UI zod** — runtime-dynamic form validation; no BAML target. Left as-is.\n- **Control plane (Go server)** — makes no LLM calls; untouched.\n- **No coexistence layer** — the old parse ladders are deleted, not kept as\n  fallback (per \"replace\" decision).\n- **No new providers/models** — reuse existing API keys via BAML env-var reads.\n```\n\n## Impact\nGo callers of response.JSON() break or produce wrong results depending on which branch is silently chosen during implementation. Without an explicit decision in the spec, different implementers resolve the ambiguity differently.\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\npromises\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:49338844\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:promises",
+        "severity:critical",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:49338844"
+      ],
+      "fingerprint": "49338844"
+    },
+    {
+      "phase": "promises",
+      "severity": "critical",
+      "priority": 0,
+      "title": "[Plan Review §promises] .gitignore / commit-vs-generate decision deferred in B-A1 i…",
+      "description": "## Finding (severity: critical)\n.gitignore / commit-vs-generate decision deferred in B-A1 is a load-bearing unresolved behavioral promise. Every downstream behavior (B-B1 through B-D2) imports from baml_client. In a clean CI checkout with 'generate-on-build', tests fail unless generate runs before the first import. In 'commit generated client', baml-py is a runtime dependency and the pyproject.toml must reflect that. Neither choice is made, leaving CI ordering and dependency classification both undefined.\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §What We're NOT Doing  ~line 87\n```\n\n## What We're NOT Doing\n\n- **Web UI zod** — runtime-dynamic form validation; no BAML target. Left as-is.\n- **Control plane (Go server)** — makes no LLM calls; untouched.\n- **No coexistence layer** — the old parse ladders are deleted, not kept as\n  fallback (per \"replace\" decision).\n- **No new providers/models** — reuse existing API keys via BAML env-var reads.\n```\n\n## Impact\nCI is broken in a clean checkout until this is resolved. Downstream milestones cannot have correct test-setup or dependency specifications without knowing which strategy is chosen.\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\npromises\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:fc4d5e9d\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:promises",
+        "severity:critical",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:fc4d5e9d"
+      ],
+      "fingerprint": "fc4d5e9d"
+    },
+    {
+      "phase": "promises",
+      "severity": "warning",
+      "priority": 2,
+      "title": "[Plan Review §promises] Retry behavior after BAML parse failure in B-C1 is unspecif…",
+      "description": "## Finding (severity: warning)\nRetry behavior after BAML parse failure in B-C1 is unspecified. _runner.py retains DEFAULT_SCHEMA_RETRIES=2 and 'retry orchestration' but _ai_schema_repair is removed. Whether a BAML parse failure triggers re-invocation of the provider CLI (useful) or merely re-runs the same BAML parse on identical fixed text (a no-op loop producing 3 identical failures) is not stated.\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §Key Discoveries (verified, file:line)  ~line 51\n```\n  `:788-810` does `json.loads(...)` → `schema(**data)` with a `r\"\\{.*\\}\"` regex\n  fallback; `:729` `max_parse_retries = 2`; `:816-824` the active retry loop.\n- **Python harness (parser-only target)** —\n  `sdk/python/agentfield/harness/_schema.py:209` `try_parse_from_text` (3-strategy\n  text scrape); `_runner.py:46` `DEFAULT_SCHEMA_RETRIES=2`, `:59` `_ai_schema_repair`,\n  `:332` `_handle_schema_with_retry`, `:496` final schema-failure message.\n  Providers shell out to real CLIs (`harness/providers/opencode.py:152`\n  `cmd=[self._bin,\"run\"]`), wired in `harness/providers/_factory.py:9`.\n```\n\n## Impact\n(warning — non-blocking)\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\npromises\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:d59530d5\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:promises",
+        "severity:warning",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:d59530d5"
+      ],
+      "fingerprint": "d59530d5"
+    },
+    {
+      "phase": "promises",
+      "severity": "warning",
+      "priority": 2,
+      "title": "[Plan Review §promises] Sync vs. async BAML Python client choice not specified for …",
+      "description": "## Finding (severity: warning)\nSync vs. async BAML Python client choice not specified for B-B2. agent_ai.py:816–826 is inside an async call path. Using the synchronous baml-py client there blocks the event loop.\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §Key Discoveries (verified, file:line)  ~line 45\n```\nthem (Python inline, Python harness, Go SDK+harness).\n\n### Key Discoveries (verified, file:line)\n\n- **Python inline AI** — `sdk/python/agentfield/agent_ai.py:546-557` attaches a\n  strict `response_format: json_schema` from `schema.model_json_schema()`;\n  `:788-810` does `json.loads(...)` → `schema(**data)` with a `r\"\\{.*\\}\"` regex\n  fallback; `:729` `max_parse_retries = 2`; `:816-824` the active retry loop.\n```\n\n## Impact\n(warning — non-blocking)\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\npromises\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:743e8882\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:promises",
+        "severity:warning",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:743e8882"
+      ],
+      "fingerprint": "743e8882"
+    },
+    {
+      "phase": "promises",
+      "severity": "warning",
+      "priority": 2,
+      "title": "[Plan Review §promises] Python exception type emitted on BAML parse/validation fail…",
+      "description": "## Finding (severity: warning)\nPython exception type emitted on BAML parse/validation failure is not declared. Existing callers that catch ValueError (agent_ai.py:808) break silently if BAML raises a different exception type. Plan says 'typed BAML validation error surfaced' but names no concrete Python exception.\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §Key Discoveries (verified, file:line)  ~line 45\n```\nthem (Python inline, Python harness, Go SDK+harness).\n\n### Key Discoveries (verified, file:line)\n\n- **Python inline AI** — `sdk/python/agentfield/agent_ai.py:546-557` attaches a\n  strict `response_format: json_schema` from `schema.model_json_schema()`;\n  `:788-810` does `json.loads(...)` → `schema(**data)` with a `r\"\\{.*\\}\"` regex\n  fallback; `:729` `max_parse_retries = 2`; `:816-824` the active retry loop.\n```\n\n## Impact\n(warning — non-blocking)\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\npromises\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:d65e8e50\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:promises",
+        "severity:warning",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:d65e8e50"
+      ],
+      "fingerprint": "d65e8e50"
+    },
+    {
+      "phase": "promises",
+      "severity": "warning",
+      "priority": 2,
+      "title": "[Plan Review §promises] Idempotency of baml-cli generate not stated. The drift gate…",
+      "description": "## Finding (severity: warning)\nIdempotency of baml-cli generate not stated. The drift gate (B-F1) depends on generate producing byte-identical output on repeated runs. If the generated client embeds timestamps or nondeterministic identifiers, git diff will always be non-empty regardless of source changes.\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §Overview  ~line 22\n```\nReplace the codebase's hand-rolled structured-output generation and parsing with\n**BAML** (\"prompt as function\") across the **Python SDK** (inline AI + harness)\nand the **Go SDK** (`ai` + harness), plus a build/CI codegen gate. BAML defines\nLLM calls as typed functions in `.baml` files, generates a typed client via\n`baml-cli generate`, and parses model output with a tolerant schema parser —\nremoving the existing `json.loads + regex-fallback + retry` ladders.\n\nThis is a **replace**, not a coexistence: the old parse paths are deleted once the\n```\n\n## Impact\n(warning — non-blocking)\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\npromises\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:04c6da6b\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:promises",
+        "severity:warning",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:04c6da6b"
+      ],
+      "fingerprint": "04c6da6b"
+    },
+    {
+      "phase": "promises",
+      "severity": "warning",
+      "priority": 2,
+      "title": "[Plan Review §promises] [VERIFY] BAML Go runtime module path and go 1.21 compatibil…",
+      "description": "## Finding (severity: warning)\n[VERIFY] BAML Go runtime module path and go 1.21 compatibility are never named. Plan says 'add BAML go runtime dep to go.mod' but provides no module path or version. If this module is unresolvable at go 1.21, B-D1 and B-D2 cannot be implemented.\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §What We're NOT Doing  ~line 87\n```\n\n## What We're NOT Doing\n\n- **Web UI zod** — runtime-dynamic form validation; no BAML target. Left as-is.\n- **Control plane (Go server)** — makes no LLM calls; untouched.\n- **No coexistence layer** — the old parse ladders are deleted, not kept as\n  fallback (per \"replace\" decision).\n- **No new providers/models** — reuse existing API keys via BAML env-var reads.\n```\n\n## Impact\n(warning — non-blocking)\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\npromises\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:699ae59a\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:promises",
+        "severity:warning",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:699ae59a"
+      ],
+      "fingerprint": "699ae59a"
+    },
+    {
+      "phase": "promises",
+      "severity": "warning",
+      "priority": 2,
+      "title": "[Plan Review §promises] Go BAML client goroutine-safety not addressed. sdk/go/ai ma…",
+      "description": "## Finding (severity: warning)\nGo BAML client goroutine-safety not addressed. sdk/go/ai may serve concurrent callers. Plan does not state whether the generated BAML Go client is safe for concurrent use.\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §Overview  ~line 21\n```\n\nReplace the codebase's hand-rolled structured-output generation and parsing with\n**BAML** (\"prompt as function\") across the **Python SDK** (inline AI + harness)\nand the **Go SDK** (`ai` + harness), plus a build/CI codegen gate. BAML defines\nLLM calls as typed functions in `.baml` files, generates a typed client via\n`baml-cli generate`, and parses model output with a tolerant schema parser —\nremoving the existing `json.loads + regex-fallback + retry` ladders.\n\n```\n\n## Impact\n(warning — non-blocking)\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\npromises\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:f7ff09d0\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:promises",
+        "severity:warning",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:f7ff09d0"
+      ],
+      "fingerprint": "f7ff09d0"
+    },
+    {
+      "phase": "promises",
+      "severity": "warning",
+      "priority": 2,
+      "title": "[Plan Review §promises] Large-schema token gate (schema.go:50, largeSchemaTokenThre…",
+      "description": "## Finding (severity: warning)\nLarge-schema token gate (schema.go:50, largeSchemaTokenThreshold=4000) disposition in B-D2 is explicitly deferred with no decision recorded. Dropping it silently lets large schemas overflow prompts in production.\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §Key Discoveries (verified, file:line)  ~line 57\n```\n  Providers shell out to real CLIs (`harness/providers/opencode.py:152`\n  `cmd=[self._bin,\"run\"]`), wired in `harness/providers/_factory.py:9`.\n- **Go SDK** — `sdk/go/ai/request.go:258` `WithSchema`, `:390`\n  `structToJSONSchema` (reflection), `:290` `Strict:true`; `sdk/go/ai/response.go:99`\n  `Into()`/`JSON()` via `json.Unmarshal`; `sdk/go/harness/schema.go` writes\n  `.agentfield_schema.json` (`:15`) with a large-schema gate (`:50`).\n- **Deps / tooling** — `sdk/python/pyproject.toml:31-32` `pydantic>=2.0`,\n  `litellm`; pytest markers `unit`/`functional`/`integration` (`:77-81`),\n```\n\n## Impact\n(warning — non-blocking)\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\npromises\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:0a8b3715\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:promises",
+        "severity:warning",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:0a8b3715"
+      ],
+      "fingerprint": "0a8b3715"
+    },
+    {
+      "phase": "promises",
+      "severity": "warning",
+      "priority": 2,
+      "title": "[Plan Review §promises] B-B2 unit test oracle for test_baml_bridge.py is structural…",
+      "description": "## Finding (severity: warning)\nB-B2 unit test oracle for test_baml_bridge.py is structurally self-referential: 'asserts the built type shape' derives the expected shape from the same Pydantic model the mapper processes. Without a hard-coded expected-shape dict as an independent oracle, the test passes even if the mapper silently produces wrong field types.\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §Test Specification  ~line 236\n```\n+ `:788-824` parse ladder with a BAML dynamic call),\n`sdk/python/agentfield/baml_bridge.py` (new — Pydantic→TypeBuilder mapping),\n`sdk/python/baml_src/functions.baml` (generic `ExtractDynamic` `@@dynamic`),\n`sdk/python/tests/test_agent_ai_baml_integration.py`,\n`sdk/python/tests/test_baml_bridge.py` (unit, deterministic, for the mapper).\n\n> Blast-radius note: the Pydantic→TypeBuilder mapping is the riskiest unit — it\n> gets its **own deterministic unit test** (`test_baml_bridge.py`) independent of\n```\n\n## Impact\n(warning — non-blocking)\n\n## Recommendation\nIn test_baml_bridge.py, hard-code a dict literal of the expected TypeBuilder output shape (e.g. {\"name\": FieldType.string(), \"age\": FieldType.int()}) derived independently from the Pydantic model definition, not from the mapper's own output. This ensures the test fails on wrong field types, not just on crashes.\n\n## Phase\npromises\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:3b474c27\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:promises",
+        "severity:warning",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:3b474c27"
+      ],
+      "fingerprint": "3b474c27"
+    },
+    {
+      "phase": "promises",
+      "severity": "warning",
+      "priority": 2,
+      "title": "[Plan Review §promises] Recursive Pydantic models and Union types with >2 variants …",
+      "description": "## Finding (severity: warning)\nRecursive Pydantic models and Union types with >2 variants through TypeBuilder are unspecified. Plan lists nested/optional/list/enum but is silent on these cases. If TypeBuilder does not support them, agent.ai() silently regresses for any caller using such models.\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §BAML Replacement Mechanics (design notes)  ~line 92\n```\n- **No coexistence layer** — the old parse ladders are deleted, not kept as\n  fallback (per \"replace\" decision).\n- **No new providers/models** — reuse existing API keys via BAML env-var reads.\n\n## BAML Replacement Mechanics (design notes)\n\n- **Static functions** (`baml_src/*.baml`) cover fixed, known schemas.\n- **Dynamic schemas** — `agent.ai(schema=RuntimePydanticModel)` passes a *runtime*\n```\n\n## Impact\n(warning — non-blocking)\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\npromises\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:b917482a\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:promises",
+        "severity:warning",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:b917482a"
+      ],
+      "fingerprint": "b917482a"
+    },
+    {
+      "phase": "promises",
+      "severity": "warning",
+      "priority": 2,
+      "title": "[Plan Review §promises] pyproject.toml placement of baml-py (runtime dep vs. build-…",
+      "description": "## Finding (severity: warning)\npyproject.toml placement of baml-py (runtime dep vs. build-only dev dep) is undecided, contingent on the unresolved .gitignore/commit-vs-generate decision deferred from B-A1. The wrong placement causes either an unnecessary production dep or a missing import at runtime.\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §What We're NOT Doing  ~line 87\n```\n\n## What We're NOT Doing\n\n- **Web UI zod** — runtime-dynamic form validation; no BAML target. Left as-is.\n- **Control plane (Go server)** — makes no LLM calls; untouched.\n- **No coexistence layer** — the old parse ladders are deleted, not kept as\n  fallback (per \"replace\" decision).\n- **No new providers/models** — reuse existing API keys via BAML env-var reads.\n```\n\n## Impact\n(warning — non-blocking)\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\npromises\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:54ea9d1c\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:promises",
+        "severity:warning",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:54ea9d1c"
+      ],
+      "fingerprint": "54ea9d1c"
+    },
+    {
+      "phase": "data_models",
+      "severity": "critical",
+      "priority": 0,
+      "title": "[Plan Review §data_models] ExtractDynamic @@dynamic BAML function has no schema — the …",
+      "description": "## Finding (severity: critical)\nExtractDynamic @@dynamic BAML function has no schema — the plan names it as the load-bearing function for all agent.ai(schema=) calls but specifies no input parameters, no output type signature, and no TypeBuilder registration pattern; the function's shape is entirely undefined in the plan\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §Testing Strategy  ~line 107\n```\n- **Provider config** — `clients.baml` references `env.ANTHROPIC_API_KEY` /\n  `env.OPENAI_API_KEY` / `env.OPENROUTER_API_KEY`, reading the same environment\n  the SDK already uses.\n\n## Testing Strategy\n\n- **Framework**: Python `pytest` (markers `unit`/`functional`/`integration`,\n  `pytest-asyncio`); Go `go test` (`*_integration_test.go` for live calls).\n```\n\n## Impact\nbaml_bridge.py cannot be implemented without a concrete function signature to call; agent_ai.py rewrite has no target interface to wire to; B-B2 Red step cannot be written as a failing test because the call site is unknown\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\ndata_models\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:d3fe4a12\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:data_models",
+        "severity:critical",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:d3fe4a12"
+      ],
+      "fingerprint": "d3fe4a12"
+    },
+    {
+      "phase": "data_models",
+      "severity": "critical",
+      "priority": 0,
+      "title": "[Plan Review §data_models] Pydantic→BAML TypeBuilder type mapping rules are unspecifie…",
+      "description": "## Finding (severity: critical)\nPydantic→BAML TypeBuilder type mapping rules are unspecified — the plan labels this 'the riskiest unit' and assigns it a standalone unit test (test_baml_bridge.py), but provides no mapping table specifying which Pydantic field type maps to which BAML TypeBuilder call; without an independent ground-truth table, the test oracle is whatever the implementation produces, making test_baml_bridge.py a self-referential verification (the code and its own test share the same fiction)\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §Test Specification  ~line 132\n```\n**When**: `baml-cli generate` runs.\n**Then**: a real `baml_client/` package exists; `from baml_client import b`\nimports without error and the declared function is an attribute of `b`.\n\n**Edge Cases**: missing `generators.baml` → clear non-zero error; `.baml` syntax\nerror → non-zero exit with message.\n\n**Property**: for every function name `F` declared in `baml_src/`, `hasattr(b, F)`\n```\n\n## Impact\ntest_baml_bridge.py can pass for any arbitrary mapping implementation including one that silently drops optional fields or coerces enums to strings; the type parity property ('accepts exactly the JSON instances M.model_validate accepts') is untestable without a per-type mapping specification as an independent reference\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\ndata_models\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:306d62f6\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:data_models",
+        "severity:critical",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:306d62f6"
+      ],
+      "fingerprint": "306d62f6"
+    },
+    {
+      "phase": "data_models",
+      "severity": "warning",
+      "priority": 2,
+      "title": "[Plan Review §data_models] [VERIFY] FailureType enum — full variant list not shown in …",
+      "description": "## Finding (severity: warning)\n[VERIFY] FailureType enum — full variant list not shown in cited code or plan; B-C1 references FailureType.SCHEMA as a preservation requirement but no other variants are listed\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §Test Specification  ~line 132\n```\n**When**: `baml-cli generate` runs.\n**Then**: a real `baml_client/` package exists; `from baml_client import b`\nimports without error and the declared function is an attribute of `b`.\n\n**Edge Cases**: missing `generators.baml` → clear non-zero error; `.baml` syntax\nerror → non-zero exit with message.\n\n**Property**: for every function name `F` declared in `baml_src/`, `hasattr(b, F)`\n```\n\n## Impact\n(warning — non-blocking)\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\ndata_models\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:fe936ae2\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:data_models",
+        "severity:warning",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:fe936ae2"
+      ],
+      "fingerprint": "fe936ae2"
+    },
+    {
+      "phase": "data_models",
+      "severity": "warning",
+      "priority": 2,
+      "title": "[Plan Review §data_models] Person model — only one field implied (name == 'Ada Lovelac…",
+      "description": "## Finding (severity: warning)\nPerson model — only one field implied (name == 'Ada Lovelace'); full field list, types, and required/optional status not specified anywhere in the plan\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §TDD Cycle  ~line 170\n```\n`sdk/python/tests/test_baml_inline_integration.py`.\n\n### TDD Cycle\n🔴 **Red** — integration test (marker `integration`) calls `b.ExtractPerson(<fixed bio>)`,\nasserts `result.name == \"Ada Lovelace\"` etc. Fails (function absent).\n🟢 **Green** — define `ExtractPerson` + `Person` in `.baml`, regenerate. Real call\nreturns the typed object; assertions pass.\n🔵 **Refactor** — add `@description` hints; confirm provider via `clients.baml`.\n```\n\n## Impact\n(warning — non-blocking)\n\n## Recommendation\nEnumerate all Person fields with types and required/optional status in the B-B1 section (e.g. name: str required, birth_year: int optional); this is needed to author the .baml class definition and to know which integration-test assertions beyond result.name are valid\n\n## Phase\ndata_models\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:754b57bc\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:data_models",
+        "severity:warning",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:754b57bc"
+      ],
+      "fingerprint": "754b57bc"
+    },
+    {
+      "phase": "data_models",
+      "severity": "warning",
+      "priority": 2,
+      "title": "[Plan Review §data_models] messy_cli_output.txt fixture embedded JSON schema not defin…",
+      "description": "## Finding (severity: warning)\nmessy_cli_output.txt fixture embedded JSON schema not defined — B-C1 and B-D2 assert 'the correct typed object' but no field list or schema for the embedded object is given; the oracle is named but unspecified\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §Test Specification  ~line 126\n```\n\n## Behavior B-A1: Generate Python BAML client\n\n### Test Specification\n**Given**: `baml_src/` containing `generators.baml` (`output_type \"python/pydantic\"`)\nand at least one `function`.\n**When**: `baml-cli generate` runs.\n**Then**: a real `baml_client/` package exists; `from baml_client import b`\n```\n\n## Impact\n(warning — non-blocking)\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\ndata_models\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:f02e52d9\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:data_models",
+        "severity:warning",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:f02e52d9"
+      ],
+      "fingerprint": "f02e52d9"
+    },
+    {
+      "phase": "data_models",
+      "severity": "warning",
+      "priority": 2,
+      "title": "[Plan Review §data_models] Go baml_src/ BAML function and model definitions not specif…",
+      "description": "## Finding (severity: warning)\nGo baml_src/ BAML function and model definitions not specified — the plan creates sdk/go/baml_src/ but names no Go-side function or output struct schema, only gestures at 'generators/clients/functions'\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §Test Specification  ~line 138\n```\n\n**Property**: for every function name `F` declared in `baml_src/`, `hasattr(b, F)`\nholds after generate.\n\n**Files touched**: `sdk/python/baml_src/generators.baml`,\n`sdk/python/baml_src/clients.baml`, `sdk/python/baml_src/functions.baml`,\n`sdk/python/pyproject.toml` (add `baml-py`), `sdk/python/tests/test_baml_codegen.py`,\n`.gitignore` (decide: commit generated client vs. generate-on-build).\n```\n\n## Impact\n(warning — non-blocking)\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\ndata_models\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:48509a97\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:data_models",
+        "severity:warning",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:48509a97"
+      ],
+      "fingerprint": "48509a97"
+    },
+    {
+      "phase": "data_models",
+      "severity": "warning",
+      "priority": 2,
+      "title": "[Plan Review §data_models] clients.baml provider/model configuration schema not specif…",
+      "description": "## Finding (severity: warning)\nclients.baml provider/model configuration schema not specified — which provider identifiers, model strings, and timeout fields are required; only env-var names are listed\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §(no enclosing heading)  ~line 7\n```\nauthor: maceo\ngit_commit: fb8559d5d88d42e8b15043ff746611ee482152ba\nbranch: main\nrepository: agentfield\ntopic: \"Replace hand-rolled structured-output parsing with BAML across Python + Go SDKs\"\ntags: [tdd, plan, baml, structured-output, python-sdk, go-sdk, harness]\nstatus: ready\nresearch: thoughts/searchable/shared/research/2026-06-07-08-32-baml-structured-output-integration-surface.md\n```\n\n## Impact\n(warning — non-blocking)\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\ndata_models\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:ea3c634b\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:data_models",
+        "severity:warning",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:ea3c634b"
+      ],
+      "fingerprint": "ea3c634b"
+    },
+    {
+      "phase": "data_models",
+      "severity": "warning",
+      "priority": 2,
+      "title": "[Plan Review §data_models] baml-py initial version pin not specified — plan adds baml-…",
+      "description": "## Finding (severity: warning)\nbaml-py initial version pin not specified — plan adds baml-py to pyproject.toml but gives no version string; drift gate (B-F1) enforces runtime/generator parity but only after first commit\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §Test Specification  ~line 138\n```\n\n**Property**: for every function name `F` declared in `baml_src/`, `hasattr(b, F)`\nholds after generate.\n\n**Files touched**: `sdk/python/baml_src/generators.baml`,\n`sdk/python/baml_src/clients.baml`, `sdk/python/baml_src/functions.baml`,\n`sdk/python/pyproject.toml` (add `baml-py`), `sdk/python/tests/test_baml_codegen.py`,\n`.gitignore` (decide: commit generated client vs. generate-on-build).\n```\n\n## Impact\n(warning — non-blocking)\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\ndata_models\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:48524846\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:data_models",
+        "severity:warning",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:48524846"
+      ],
+      "fingerprint": "48524846"
+    },
+    {
+      "phase": "data_models",
+      "severity": "warning",
+      "priority": 2,
+      "title": "[Plan Review §data_models] Large-schema preserve-or-drop decision deferred with no sch…",
+      "description": "## Finding (severity: warning)\nLarge-schema preserve-or-drop decision deferred with no schema for the resulting behavior — the plan explicitly says 'decide & document' but does not bind the decision to a deliverable schema or field\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §Test Specification  ~line 132\n```\n**When**: `baml-cli generate` runs.\n**Then**: a real `baml_client/` package exists; `from baml_client import b`\nimports without error and the declared function is an attribute of `b`.\n\n**Edge Cases**: missing `generators.baml` → clear non-zero error; `.baml` syntax\nerror → non-zero exit with message.\n\n**Property**: for every function name `F` declared in `baml_src/`, `hasattr(b, F)`\n```\n\n## Impact\n(warning — non-blocking)\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\ndata_models\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:b83ab4f1\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:data_models",
+        "severity:warning",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:b83ab4f1"
+      ],
+      "fingerprint": "b83ab4f1"
+    },
+    {
+      "phase": "apis",
+      "severity": "critical",
+      "priority": 0,
+      "title": "[Plan Review §apis] Go SDK consumer-facing API after B-D1 is unspecified. The p…",
+      "description": "## Finding (severity: critical)\nGo SDK consumer-facing API after B-D1 is unspecified. The plan removes WithSchema (confirmed public at request.go:258) and JSON()/Into() (confirmed public at response.go:99) but never defines the replacement calling convention. 'Route WithSchema callers through it' is a direction, not a spec: callers must know whether WithSchema becomes a wrapper (API preserved) or is deleted outright (breaking change). The plan states 'replace, not coexistence', yet provides no new call-site example for Go consumers.\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §What We're NOT Doing  ~line 87\n```\n\n## What We're NOT Doing\n\n- **Web UI zod** — runtime-dynamic form validation; no BAML target. Left as-is.\n- **Control plane (Go server)** — makes no LLM calls; untouched.\n- **No coexistence layer** — the old parse ladders are deleted, not kept as\n  fallback (per \"replace\" decision).\n- **No new providers/models** — reuse existing API keys via BAML env-var reads.\n```\n\n## Impact\nAny existing Go SDK caller invoking WithSchema(myStruct) or resp.JSON(&dest) has no specified post-migration call site; the plan cannot be implemented unambiguously, and all callers break with no migration path documented\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\napis\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:923c829a\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:apis",
+        "severity:critical",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:923c829a"
+      ],
+      "fingerprint": "923c829a"
+    },
+    {
+      "phase": "apis",
+      "severity": "warning",
+      "priority": 2,
+      "title": "[Plan Review §apis] baml_bridge.pydantic_to_typebuilder return type and full si…",
+      "description": "## Finding (severity: warning)\nbaml_bridge.pydantic_to_typebuilder return type and full signature are not specified; test_baml_bridge.py must 'assert the built type shape' but the shape of the TypeBuilder return value is never defined, making the red step unwritable\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §Test Specification  ~line 233\n```\nsample set).\n\n**Files touched**: `sdk/python/agentfield/agent_ai.py` (replace `:546-557` attach\n+ `:788-824` parse ladder with a BAML dynamic call),\n`sdk/python/agentfield/baml_bridge.py` (new — Pydantic→TypeBuilder mapping),\n`sdk/python/baml_src/functions.baml` (generic `ExtractDynamic` `@@dynamic`),\n`sdk/python/tests/test_agent_ai_baml_integration.py`,\n`sdk/python/tests/test_baml_bridge.py` (unit, deterministic, for the mapper).\n```\n\n## Impact\n(warning — non-blocking)\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\napis\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:7a0f09c0\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:apis",
+        "severity:warning",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:7a0f09c0"
+      ],
+      "fingerprint": "7a0f09c0"
+    },
+    {
+      "phase": "apis",
+      "severity": "warning",
+      "priority": 2,
+      "title": "[Plan Review §apis] ExtractDynamic @@dynamic BAML function input parameter name…",
+      "description": "## Finding (severity: warning)\nExtractDynamic @@dynamic BAML function input parameter name(s) and output class declaration are absent from the plan; the generic dynamic function is the load-bearing piece of B-B2 but its .baml signature is never written down\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §BAML Replacement Mechanics (design notes)  ~line 96\n```\n## BAML Replacement Mechanics (design notes)\n\n- **Static functions** (`baml_src/*.baml`) cover fixed, known schemas.\n- **Dynamic schemas** — `agent.ai(schema=RuntimePydanticModel)` passes a *runtime*\n  Pydantic class. Route it through a **generic `@@dynamic` BAML function** plus\n  **TypeBuilder**, which maps the Pydantic model's fields into BAML's output type\n  at call time. This is the load-bearing piece that lets a single BAML function\n  serve arbitrary caller schemas.\n```\n\n## Impact\n(warning — non-blocking)\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\napis\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:6e31d61d\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:apis",
+        "severity:warning",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:6e31d61d"
+      ],
+      "fingerprint": "6e31d61d"
+    },
+    {
+      "phase": "apis",
+      "severity": "warning",
+      "priority": 2,
+      "title": "[Plan Review §apis] Exception class raised by BAML on parse failure is unspecif…",
+      "description": "## Finding (severity: warning)\nException class raised by BAML on parse failure is unspecified; existing harness callers and agent_ai.py catch ValueError('Could not parse structured response') — if BAML raises a different exception class the FailureType.SCHEMA mapping silently breaks with no test catching it\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §Test Specification  ~line 224\n```\n`json.loads + regex + 2-retry` path (`agent_ai.py:788-824`, the\n`max_parse_retries` loop) is **deleted**.\n\n**Edge Cases**: nested / optional / `list` Pydantic fields map through TypeBuilder;\nmodel omits a required field → typed BAML validation error surfaced (not a silent\n`None`); enums/literals map to BAML dynamic enums.\n\n**Property**: for a Pydantic model `M`, the TypeBuilder-mapped BAML output type\n```\n\n## Impact\n(warning — non-blocking)\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\napis\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:cc330445\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:apis",
+        "severity:warning",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:cc330445"
+      ],
+      "fingerprint": "cc330445"
+    },
+    {
+      "phase": "apis",
+      "severity": "warning",
+      "priority": 2,
+      "title": "[Plan Review §apis] Large-schema-on-disk behavior (schema.go:15 schemaFilename …",
+      "description": "## Finding (severity: warning)\nLarge-schema-on-disk behavior (schema.go:15 schemaFilename / schema.go:50 token-threshold gate writing .agentfield_schema.json) preserve-or-drop decision is explicitly deferred; callers that rely on the schema path being passed as a CLI prompt suffix have no specified post-migration behavior\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §Test Specification  ~line 316\n```\npost-hoc parse path is replaced.\n\n**Edge Cases**: unparseable fixture → typed error; large schema previously written\nto `.agentfield_schema.json` (`schema.go:50`) — preserve the prompt-suffix /\non-disk behavior or intentionally drop it (decide & document).\n\n**Property**: for any fixture whose embedded struct JSON validates, parsed struct\nequals embedded.\n```\n\n## Impact\n(warning — non-blocking)\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\napis\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:5bd83fca\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:apis",
+        "severity:warning",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:5bd83fca"
+      ],
+      "fingerprint": "5bd83fca"
+    },
+    {
+      "phase": "apis",
+      "severity": "warning",
+      "priority": 2,
+      "title": "[Plan Review §apis] How rate_limiter.py wraps BAML async calls is described onl…",
+      "description": "## Finding (severity: warning)\nHow rate_limiter.py wraps BAML async calls is described only as 'ensure rate-limit retry still wraps the call' with no specification of the wrapping point; BAML uses its own async transport and the integration seam is undefined\n\n## Where in the plan\n/home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md  §TDD Cycle  ~line 249\n```\nschema=Person)` returns correct typed values. Both fail.\n🟢 **Green** — implement `baml_bridge.pydantic_to_typebuilder`; rewrite the\n`agent_ai.py` structured branch to call the generic `@@dynamic` BAML function with\nthe TypeBuilder. Tests pass.\n🔵 **Refactor** — delete `:788-824` ladder + `max_parse_retries`; ensure rate-limit\nretry (`rate_limiter.py`) still wraps the call.\n\n---\n```\n\n## Impact\n(warning — non-blocking)\n\n## Recommendation\n(no recommendation supplied — see review report for context)\n\n## Phase\napis\n\n## Traceability\nPlan: /home/maceo/Dev/agentfield/thoughts/searchable/shared/plans/2026-06-07-09-04-tdd-baml-structured-output.md\nReview report: <substituted by CLI post-mint>\nEpic: <substituted by CLI post-mint>\nFingerprint: review-fp:d6324379\n\n## How to fix\n1. Edit the plan section above to address the recommendation.\n2. Re-run PlanReview on the plan; this fingerprint should not reappear.\n3. `bd close <this-id> --reason=\"addressed in plan revision\"`.",
+      "labels": [
+        "plan-review",
+        "phase:apis",
+        "severity:warning",
+        "plan:2026-06-07-09-04-tdd-baml-structured-output",
+        "review-fp:d6324379"
+      ],
+      "fingerprint": "d6324379"
+    }
+  ],
+  "plan_stem": "2026-06-07-09-04-tdd-baml-structured-output"
+}
