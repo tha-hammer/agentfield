@@ -82,6 +82,18 @@ func TestValidateCustomQueryAllowsReadOnlySQL(t *testing.T) {
 	}
 }
 
+func TestRunRejectsBeforeStartingPollLoop(t *testing.T) {
+	err := (&source{}).Run(context.Background(), json.RawMessage(`{`), "pat", func(sources.Event) {})
+	if err == nil {
+		t.Fatal("Run invalid config expected error")
+	}
+
+	err = (&source{}).Run(context.Background(), json.RawMessage(`{"account_url":"https://acct.snowflakecomputing.com"}`), " ", func(sources.Event) {})
+	if err == nil || !strings.Contains(err.Error(), "secret PAT is required") {
+		t.Fatalf("Run blank secret error = %v", err)
+	}
+}
+
 func TestParseConfigTrimsAndDefaults(t *testing.T) {
 	cfg, err := parseConfig([]byte(`{
 		"mode":" custom_query_poll ",
@@ -344,6 +356,20 @@ func TestSQLAPIClientPollsAcceptedStatement(t *testing.T) {
 }
 
 func TestSQLAPIClientExecuteErrors(t *testing.T) {
+	_, err := (&sqlAPIClient{}).Execute(context.Background(), config{
+		AccountURL: "https://metadata.internal", TimeoutSeconds: 1,
+	}, "pat", "SELECT 1")
+	if err == nil || !strings.Contains(err.Error(), "account_url host") {
+		t.Fatalf("Execute invalid account error = %v", err)
+	}
+
+	_, err = (&sqlAPIClient{httpClient: &http.Client{Transport: errorTransport{}}}).Execute(context.Background(), config{
+		AccountURL: "https://acct.snowflakecomputing.com", TimeoutSeconds: 1,
+	}, "pat", "SELECT 1")
+	if err == nil || !strings.Contains(err.Error(), "transport down") {
+		t.Fatalf("Execute transport error = %v", err)
+	}
+
 	tests := []struct {
 		name    string
 		status  int
@@ -397,6 +423,22 @@ func TestSQLAPIClientPollStatementErrors(t *testing.T) {
 	_, err = client.pollStatement(ctx, config{AccountURL: "https://acct.snowflakecomputing.com", TimeoutSeconds: 1}, "pat", statementResponse{StatementHandle: "stmt"})
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("pollStatement canceled error = %v", err)
+	}
+
+	_, err = (&sqlAPIClient{}).pollStatement(context.Background(), config{
+		AccountURL: "https://metadata.internal", TimeoutSeconds: 1,
+	}, "pat", statementResponse{StatementHandle: "stmt"})
+	if err == nil || !strings.Contains(err.Error(), "account_url host") {
+		t.Fatalf("pollStatement invalid account error = %v", err)
+	}
+
+	ctx, cancel = context.WithTimeout(context.Background(), 1500*time.Millisecond)
+	defer cancel()
+	_, err = (&sqlAPIClient{httpClient: &http.Client{Transport: errorTransport{}}}).pollStatement(ctx, config{
+		AccountURL: "https://acct.snowflakecomputing.com", TimeoutSeconds: 1,
+	}, "pat", statementResponse{StatementHandle: "stmt"})
+	if err == nil || !strings.Contains(err.Error(), "transport down") {
+		t.Fatalf("pollStatement transport error = %v", err)
 	}
 }
 
@@ -465,4 +507,10 @@ func snowflakeTestHTTPClient(t *testing.T, server *httptest.Server) *http.Client
 		t.Fatalf("parse test server URL: %v", err)
 	}
 	return &http.Client{Transport: rewriteTransport{target: target}}
+}
+
+type errorTransport struct{}
+
+func (errorTransport) RoundTrip(*http.Request) (*http.Response, error) {
+	return nil, errors.New("transport down")
 }
