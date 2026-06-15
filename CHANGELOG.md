@@ -6,6 +6,41 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.92-rc.6] - 2026-06-13
+
+
+### Fixed
+
+- Fix esbuild dependabot alerts (#660) (ebd7ecb)
+
+## [0.1.92-rc.5] - 2026-06-13
+
+
+### Chores
+
+- Chore(deps): patch remaining esbuild alerts (4647c47)
+
+- Chore(deps-dev): bump esbuild (#657)
+
+Bumps the npm_and_yarn group with 1 update in the /examples/benchmarks/100k-scale/mastra-bench directory: [esbuild](https://github.com/evanw/esbuild).
+
+
+Updates `esbuild` from 0.28.0 to 0.28.1
+- [Release notes](https://github.com/evanw/esbuild/releases)
+- [Changelog](https://github.com/evanw/esbuild/blob/main/CHANGELOG.md)
+- [Commits](https://github.com/evanw/esbuild/compare/v0.28.0...v0.28.1)
+
+---
+updated-dependencies:
+- dependency-name: esbuild
+  dependency-version: 0.28.1
+  dependency-type: indirect
+  dependency-group: npm_and_yarn
+...
+
+Signed-off-by: dependabot[bot] <support@github.com>
+Co-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com> (46a9b70)
+
 ## [0.1.92-rc.4] - 2026-06-11
 
 
