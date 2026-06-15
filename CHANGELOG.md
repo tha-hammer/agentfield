@@ -6,6 +6,43 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.92-rc.7] - 2026-06-15
+
+
+### Chores
+
+- Chore: annotate snowflake SQL API request validation (338a9ae)
+
+
+
+### Fixed
+
+- Fix: harden snowflake trigger polling (2e1be49)
+
+- Fix: avoid tainted snowflake request URLs (35e1e32)
+
+- Fix: constrain snowflake sql api URLs (66069b1)
+
+- Fix: validate snowflake account URLs (d14ebe9)
+
+
+
+### Other
+
+- Add Snowflake integration pack (bbd9968)
+
+
+
+### Testing
+
+- Test: cover snowflake error branches (7214d0c)
+
+- Test: exercise snowflake validation branches (5eec124)
+
+- Test: cover snowflake URL validation (d9ceba8)
+
+- Test: raise snowflake integration coverage (56aa6c0)
+
 ## [0.1.92-rc.6] - 2026-06-13
 
 
