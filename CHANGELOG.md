@@ -6,6 +6,88 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.92-rc.10] - 2026-06-15
+
+
+### Other
+
+- Add Linear and Sentry integrations (#661)
+
+* feat: add linear and sentry integrations
+
+* docs: clarify integration event filters
+
+* test: cover linear and sentry capability runtimes
+
+* fix(linear): bearer prefix for OAuth tokens; hash idempotency fallback
+
+- GraphQL client detects `lin_oauth_` prefix and sends `Authorization:
+  Bearer <token>` for OAuth access tokens. Personal API keys (`lin_api_`
+  and other prefixes) continue sending the token raw per Linear's docs.
+- Webhook idempotency: when `Linear-Delivery` header is absent, fall
+  back to sha256(webhookId || timestamp || type || action) instead of
+  the body's `webhookId` alone — webhookId identifies the subscription,
+  not the delivery, so the old fallback would collapse distinct events.
+
+* fix(sentry): org-scoped issue paths; per_page pagination
+
+- Migrate GetIssue, UpdateIssue, ResolveIssue, AssignIssue from legacy
+  /api/0/issues/{id}/ to documented /api/0/organizations/{org}/issues/{id}/.
+  All four now require Config.Organization, matching the existing pattern
+  in ListIssueEvents and GetEvent.
+- ListIssues: rename undocumented `limit` param to `per_page` so
+  pagination shape matches ListIssueEvents and Sentry's de-facto API.
+  Keep the deprecated project-scoped issues endpoint with a TODO to
+  migrate once we can resolve project slug → id.
+- TODO comments added pointing to Link-header cursor pagination as a
+  follow-up.
+
+* fix(sentry): validate Sentry-Hook-Timestamp against tolerance window
+
+Mirrors the Linear source's replay-protection pattern. Default tolerance
+is 300s (Sentry doesn't document a recommended window, so this matches
+Stripe's). Set `tolerance_seconds: 0` in the trigger config to disable.
+
+Parses Sentry-Hook-Timestamp as RFC3339, unix seconds, or unix
+milliseconds — Sentry's docs only show 'a timestamp', so accept the
+common formats. Missing or unparseable headers fail closed when
+tolerance > 0.
+
+* docs(sentry): document EU/US region base URL requirement
+
+EU-region Sentry orgs MUST use https://de.sentry.io. US-region orgs
+should use https://us.sentry.io. The default https://sentry.io only
+works for legacy US-only orgs and returns 401/403 for everyone else
+with no clear hint about region. Surface this in:
+
+- docs/integrations/sentry.md: new 'Region / Base URL' section with
+  the full table
+- integrations/sentry/README.md: same table for the package readme
+- integrations/sentry/agentfield-package.yaml: SENTRY_BASE_URL
+  description spells out the three valid values
+
+Ref https://docs.sentry.io/organization/data-storage-location/.
+
+* refactor(sdk): extract shared input helpers to sdk/go/inputs
+
+The Linear and Sentry capability runtimes shipped byte-identical
+requiredString/stringInput/intInput/objectInput helpers plus a duplicated
+firstNonBlank in each node's config. Hoist them to a new sdk/go/inputs
+package with capitalized public names and migrate both nodes.
+
+Databricks and Snowflake nodes still have their own copies — they carry
+extra helpers (boolInput, compactJSON) that aren't shared yet. A
+follow-up can pull those in once the helper surface stabilizes.
+
+* test(ui): databricks icon test asserts svg presence, not path count
+
+PR #661 swapped the inline DatabricksGlyph for SiDatabricks from
+react-icons (consistent with how Stripe/GitHub/etc. now render).
+The Databricks UI test hard-coded an expectation of 3 `<path>`
+elements from the old hand-drawn glyph. Relax the assertion to 'at
+least one path' so the test pins icon presence without coupling to
+the exact SVG markup of whichever icon library renders it. (edee822)
+
 ## [0.1.92-rc.9] - 2026-06-15
 
 
