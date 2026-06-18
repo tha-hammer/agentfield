@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.92-rc.15] - 2026-06-18
+
+
+### Fixed
+
+- Fix(security): restrict query API key auth to streaming routes (#423) (#674) (e6e5931)
+
 ## [0.1.92-rc.14] - 2026-06-17
 
 
