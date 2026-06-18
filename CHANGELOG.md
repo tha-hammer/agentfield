@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.92-rc.16] - 2026-06-18
+
+
+### Other
+
+- Add ARD discovery workspace (#675)
+
+* Add ARD discovery workspace
+
+* Complete ARD discovery UX and callable imports
+
+* Fix ARD review blockers
+
+* Add ARD PR screenshots (7336b9b)
+
 ## [0.1.92-rc.15] - 2026-06-18
 
 
