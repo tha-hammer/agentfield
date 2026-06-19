@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.92-rc.17] - 2026-06-19
+
+
+### Other
+
+- Show external ARD boundaries in workflow traces (eacae13)
+
 ## [0.1.92-rc.16] - 2026-06-18
 
 
