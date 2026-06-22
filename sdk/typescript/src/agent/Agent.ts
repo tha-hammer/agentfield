@@ -596,7 +596,10 @@ export class Agent {
         callerDid: parentMetadata?.callerDid,
         targetDid: parentMetadata?.targetDid,
         agentNodeDid: parentMetadata?.agentNodeDid,
-        agentNodeId: this.config.nodeId
+        agentNodeId: this.config.nodeId,
+        replaySourceRunId: parentMetadata?.replaySourceRunId,
+        replayBeforeExecutionId: parentMetadata?.replayBeforeExecutionId,
+        replayMode: parentMetadata?.replayMode
       });
       this.executionLogger.system('agent.call.completed', 'Remote agent call completed', {
         target,
@@ -928,7 +931,12 @@ export class Agent {
       callerDid: overrides?.callerDid ?? normalized['x-caller-did'],
       targetDid: overrides?.targetDid ?? normalized['x-target-did'],
       agentNodeDid:
-        overrides?.agentNodeDid ?? normalized['x-agent-node-did'] ?? normalized['x-agent-did']
+        overrides?.agentNodeDid ?? normalized['x-agent-node-did'] ?? normalized['x-agent-did'],
+      replaySourceRunId:
+        overrides?.replaySourceRunId ?? normalized['x-agentfield-replay-source-run-id'],
+      replayBeforeExecutionId:
+        overrides?.replayBeforeExecutionId ?? normalized['x-agentfield-replay-before-execution-id'],
+      replayMode: overrides?.replayMode ?? normalized['x-agentfield-replay-mode']
     };
   }
 

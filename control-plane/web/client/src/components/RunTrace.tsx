@@ -1,9 +1,10 @@
 import { useMemo, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { cn } from "@/lib/utils";
+import { statusTone } from "@/lib/theme";
 import { getStatusTheme, normalizeExecutionStatus } from "@/utils/status";
 import { StatusDot } from "@/components/ui/status-pill";
-import { Network } from "@/components/ui/icon-bridge";
+import { GitBranch, Network } from "@/components/ui/icon-bridge";
 import type { WorkflowDAGLightweightNode } from "@/types/workflows";
 
 // ─── Tree node type (runtime-constructed) ────────────────────────────────────
@@ -290,6 +291,20 @@ function TraceRow({
             ×{effectiveGroupCount}
           </span>
         )}
+
+        {node.reuse?.hit ? (
+          <span
+            className={cn(
+              "hidden size-3.5 shrink-0 items-center justify-center rounded-sm sm:inline-flex",
+              "text-muted-foreground/70",
+              statusTone.info.bg,
+            )}
+            aria-label="Reused output"
+            title={`Reused from ${node.reuse.source_execution_id}`}
+          >
+            <GitBranch className="size-2.5" aria-hidden />
+          </span>
+        ) : null}
 
         {/* Duration bar */}
         <div className="w-12 flex items-center shrink-0 sm:w-16">
