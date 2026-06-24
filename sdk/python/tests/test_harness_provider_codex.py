@@ -138,7 +138,6 @@ async def test_codex_provider_constructs_command_and_maps_result(
         "hello",
         {
             "cwd": "/tmp/work",
-            "permission_mode": "auto",
             "env": {"A": "1"},
         },
     )
@@ -147,9 +146,11 @@ async def test_codex_provider_constructs_command_and_maps_result(
         "/usr/local/bin/codex",
         "exec",
         "--json",
+        "--sandbox",
+        "workspace-write",
+        "--skip-git-repo-check",
         "-C",
         "/tmp/work",
-        "--full-auto",
         "hello",
     ]
     assert captured["env"] == {"A": "1"}

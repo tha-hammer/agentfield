@@ -22,12 +22,10 @@ class CodexProvider:
         self._bin = bin_path
 
     async def execute(self, prompt: str, options: dict[str, object]) -> RawResult:
-        cmd = [self._bin, "exec", "--json"]
+        cmd = [self._bin, "exec", "--json", "--sandbox", "workspace-write", "--skip-git-repo-check"]
 
         if options.get("cwd"):
             cmd.extend(["-C", str(options["cwd"])])
-        if options.get("permission_mode") == "auto":
-            cmd.append("--full-auto")
 
         cmd.append(prompt)
 
