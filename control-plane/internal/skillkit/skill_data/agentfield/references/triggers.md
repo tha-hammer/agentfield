@@ -19,6 +19,8 @@ If the use case is event-driven, the triggered reasoner IS the entry reasoner. T
 
 The CP verifies signatures before dispatch. Reasoner never runs on an unsigned event.
 
+These six are the sources **implemented in this build** (`control-plane/internal/sources/`). agentfield.ai/docs additionally lists first-class integrations on the roadmap — `linear`, `sentry`, `hubspot`, `calendly`, `pagerduty` — **not yet shipped in this binary**. Until they land, reach those providers through `generic_hmac` (they almost all sign with an HMAC) and peel the envelope with `transform=`. Do not declare `source="pagerduty"` etc. against this build — it will not register.
+
 ---
 
 ## Three ways to declare a trigger
@@ -183,3 +185,9 @@ After `docker compose up`:
 3. Watch the trigger sheet in the UI (`/ui/triggers` → click the row). Events tab should show the delivery with valid signature, dispatch outcome, and the run that executed.
 
 If the run has `trigger_source: "<your-source>"` on `/runs` AND the run-detail page's Webhooks card shows an Inbound section, the chain is healthy.
+
+---
+
+## ROI & vertical fit
+
+Triggers pay off wherever **the business already runs on inbound events** and you'd otherwise stand up a webhook receiver, signature-verification code, and a replay table by hand — Insurance (FNOL/claim webhooks → triage), Travel (airline/PNR change webhooks → rebooking), Financial Services (Stripe/payment events → reconciliation), Retail (order/inventory webhooks → fulfillment). The value is the deleted webhook-plumbing (provisioning, HMAC verification, replay protection, dispatch — all CP-owned) plus unified observability; the cost trap is doing real synthesis inside the thin trigger reasoner. See **`references/capability-playbook.md`** for the full ROI = (value − cost) ÷ cost × 100 treatment across all five verticals.

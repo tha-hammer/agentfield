@@ -2,6 +2,18 @@
 
 The AgentField control plane orchestrates agent workflows, manages verifiable credentials, serves the admin UI, and exposes REST/gRPC APIs consumed by the SDKs.
 
+## Which path is for you?
+
+These are three separate setups for three goals — not competing ways to install the same thing:
+
+| Goal | Use | Where |
+|---|---|---|
+| Build & run agents / try AgentField | the `af` CLI: `curl -fsSL https://agentfield.ai/install.sh \| bash`, then `af init` / `af dev` | root [`README.md`](../README.md) |
+| Run the control plane (ops) | Docker: `docker run -p 8080:8080 agentfield/control-plane:latest`, or `docker compose -f deployments/docker/docker-compose.yml up` | [`deployments/docker/`](../deployments/docker) |
+| Develop the control plane (this guide) | build from source — Quick Start below | this file + [`docs/DEVELOPMENT.md`](../docs/DEVELOPMENT.md) |
+
+> `af` and the Docker image are different layers, not alternatives: `af` is the CLI you use to scaffold and run agents; the control plane is the Go service those agents talk to. Run the control plane via `af dev` (local), Docker, or from source below.
+
 ## Requirements
 
 - Go 1.23+
@@ -14,20 +26,27 @@ The AgentField control plane orchestrates agent workflows, manages verifiable cr
 # From the repository root
 cd control-plane
 go mod download
-cd web/client
-npm install
-npm run build
-cd ../..
 
-# Run database migrations (requires AGENTFIELD_DATABASE_URL)
+# Build the embedded web UI
+( cd web/client && npm install && npm run build )
+
+# Stand up PostgreSQL matching the default DSN below
+# (skip this if you use SQLite mode — see the note after this block)
+docker run -d --name agentfield-pg -p 5432:5432 \
+  -e POSTGRES_USER=agentfield -e POSTGRES_PASSWORD=agentfield -e POSTGRES_DB=agentfield \
+  pgvector/pgvector:pg16
+
+# Run database migrations
+export AGENTFIELD_DATABASE_URL="postgres://agentfield:agentfield@localhost:5432/agentfield?sslmode=disable"
 goose -dir ./migrations postgres "$AGENTFIELD_DATABASE_URL" up
 
 # Start the control plane
-AGENTFIELD_DATABASE_URL=postgres://agentfield:agentfield@localhost:5432/agentfield?sslmode=disable \
-go run ./cmd/server
+go run ./cmd/agentfield-server
 ```
 
 Visit `http://localhost:8080/ui/` to access the embedded admin UI.
+
+> **No PostgreSQL?** Run `./dev.sh` instead for SQLite mode (default — no database to provision, no migrations needed); see [Local Development](#local-development-with-hot-reload) below. The DSN above is the project default and matches the `pgvector` container in `deployments/docker/docker-compose.yml` — it is not a placeholder.
 
 ## Local Development with Hot-Reload
 
@@ -61,8 +80,7 @@ Sample config files live in `config/`.
 cd control-plane/web/client
 npm install
 npm run dev
-# Build production assets embedded in Go binaries
-cd ../..
+# Build production assets embedded in Go binaries (run from web/client)
 npm run build
 ```
 

@@ -229,12 +229,30 @@ class OpenCodeProvider:
             os.environ.get("AGENTFIELD_HARNESS_TIMEOUT_SECONDS", "1800")
         )
 
+        # Idle (no-output) cap for ONE opencode subprocess. Default 600s (10min):
+        # an OpenRouter upstream stream can silently stall — connection stays
+        # ESTABLISHED, zero response bytes, no socket timer — and opencode has
+        # no stream-idle timeout, so the call would otherwise block until the
+        # full wall-clock cap (30-60min) before failing. A *progressing* call
+        # streams JSONL continuously; only a dead stream goes fully silent.
+        # 600s is well above any legit gap (a long tool/test run) yet kills a
+        # hung stream ~3-6x sooner. The raised TimeoutError -> FailureType.TIMEOUT
+        # routes into the runner's transient-retry path. Set to 0 to disable.
+        # Tune via AGENTFIELD_HARNESS_IDLE_TIMEOUT_SECONDS.
+        idle_timeout_seconds = int(
+            os.environ.get("AGENTFIELD_HARNESS_IDLE_TIMEOUT_SECONDS", "600")
+        )
+
         start_api = time.monotonic()
 
         try:
             try:
                 stdout, stderr, returncode = await run_cli(
-                    cmd, env=env, cwd=cwd, timeout=timeout_seconds
+                    cmd,
+                    env=env,
+                    cwd=cwd,
+                    timeout=timeout_seconds,
+                    idle_timeout=idle_timeout_seconds or None,
                 )
             except FileNotFoundError:
                 return RawResult(

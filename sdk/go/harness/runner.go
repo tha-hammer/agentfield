@@ -336,7 +336,16 @@ func (r *Runner) handleSchemaWithRetry(
 			retryPrompt = originalPrompt
 		} else {
 			errorDetail := DiagnoseOutputFailure(outputPath, schema)
-			retryPrompt = BuildFollowupPrompt(errorDetail, outputDir, schema)
+			followup := BuildFollowupPrompt(errorDetail, outputDir, schema)
+			// Keep the original goal/task on non-crash retries (port of Python PR #637).
+			// Without this the agent retries with only the schema-correction text and
+			// loses the goal — e.g. the PM emits a placeholder PRD that poisons the run,
+			// or never writes the output file at all.
+			if originalPrompt != "" {
+				retryPrompt = originalPrompt + "\n\n" + followup
+			} else {
+				retryPrompt = followup
+			}
 		}
 
 		r.Logger.Printf("Schema validation retry %d/%d: %s",

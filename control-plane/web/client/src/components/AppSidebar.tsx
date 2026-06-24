@@ -69,10 +69,10 @@ function SidebarLogo() {
             {!isCollapsed && (
               <div className="flex min-w-0 flex-col gap-0.5 leading-none">
                 <span className="truncate font-semibold tracking-tight text-sidebar-foreground">
-                  AgentField
+                  Dashboard
                 </span>
                 <span className="truncate text-xs font-normal text-sidebar-foreground/65">
-                  Control Plane
+                  Control Center
                 </span>
               </div>
             )}

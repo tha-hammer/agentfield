@@ -73,6 +73,86 @@ async def test_run_cli_timeout():
     process.wait.assert_awaited_once()
 
 
+class _FakeStream:
+    """StreamReader stand-in. ``script`` is a list of (delay, bytes); b"" means
+    EOF. A read returns early with b"" (EOF) if the process is killed mid-delay."""
+
+    def __init__(self, script, killed: asyncio.Event) -> None:
+        self._script = list(script)
+        self._killed = killed
+
+    async def read(self, n: int = -1) -> bytes:
+        if self._killed.is_set() or not self._script:
+            return b""
+        delay, data = self._script.pop(0)
+        if delay:
+            try:
+                await asyncio.wait_for(self._killed.wait(), timeout=delay)
+                return b""  # killed during the wait -> EOF
+            except asyncio.TimeoutError:
+                pass
+        return data
+
+
+class _FakeProc:
+    def __init__(self, stdout_script, stderr_script, returncode: int = 0) -> None:
+        self._killed = asyncio.Event()
+        self._rc_final = returncode
+        self.returncode = None
+        self.stdout = _FakeStream(stdout_script, self._killed)
+        self.stderr = _FakeStream(stderr_script, self._killed)
+        self.killed = False
+
+    def kill(self) -> None:
+        self.killed = True
+        self.returncode = -9
+        self._killed.set()
+
+    async def wait(self) -> int:
+        if self.returncode is None:
+            self.returncode = self._rc_final
+        return self.returncode
+
+
+@pytest.mark.asyncio
+async def test_run_cli_idle_timeout_kills_silent_process():
+    # Emits one chunk, then goes silent while staying alive -> idle stall.
+    proc = _FakeProc(
+        stdout_script=[(0, b"start\n"), (100, b"")],
+        stderr_script=[(100, b"")],
+    )
+    with patch("asyncio.create_subprocess_exec", AsyncMock(return_value=proc)):
+        with pytest.raises(TimeoutError, match="idle stall"):
+            await run_cli(["opencode", "run"], timeout=30, idle_timeout=0.3)
+    assert proc.killed is True
+
+
+@pytest.mark.asyncio
+async def test_run_cli_idle_timeout_allows_steady_stream():
+    # Streams a chunk every 0.1s for 0.8s total (> idle_timeout) but no single
+    # gap exceeds it -> must NOT be killed; full output returned.
+    chunks = [(0.1, f"line{i}\n".encode()) for i in range(8)]
+    proc = _FakeProc(stdout_script=chunks, stderr_script=[(0.8, b"")], returncode=0)
+    with patch("asyncio.create_subprocess_exec", AsyncMock(return_value=proc)):
+        stdout, stderr, returncode = await run_cli(
+            ["opencode", "run"], timeout=30, idle_timeout=0.5
+        )
+    assert proc.killed is False
+    assert returncode == 0
+    assert stdout == "".join(f"line{i}\n" for i in range(8))
+
+
+@pytest.mark.asyncio
+async def test_run_cli_idle_path_total_timeout_still_enforced():
+    # No idle gap (steady trickle) but total runtime exceeds the wall-clock cap.
+    chunks = [(0.05, f"x{i}\n".encode()) for i in range(40)]
+    proc = _FakeProc(stdout_script=chunks, stderr_script=[(5, b"")])
+    with patch("asyncio.create_subprocess_exec", AsyncMock(return_value=proc)):
+        with pytest.raises(TimeoutError, match="total timeout"):
+            await run_cli(["opencode", "run"], timeout=0.3, idle_timeout=5)
+    assert proc.killed is True
+
+
 def test_parse_jsonl_skips_invalid():
     events = parse_jsonl('{"type":"a"}\nnot-json\n{"type":"b"}')
 

@@ -74,10 +74,16 @@ Things that **used to** live in the bundled references but now live live:
 - `Agent(...)` constructor signature → fetch `/llm/docs/build/building-blocks/agents`
 - `app.ai(...)` parameter list → fetch `/llm/docs/build/building-blocks/reasoners`
 - `app.call(...)` semantics + cross-boundary serialization → fetch `/llm/docs/build/coordination/cross-agent-calls`
-- `app.memory` scopes + vector + event surfaces → fetch the memory page
 - `AgentRouter` proxy surface (which attributes proxy) → fetch the routers page
 - `@app.reasoner()` decorator real signature → fetch the reasoners page
-- Trigger envelope shape per source → fetch the triggers page
+
+**Now carried LOCALLY** (no fetch needed — these three coordination guides ship in-skill, verified against the SDK source):
+
+- `app.memory` scopes (global/session/actor/workflow) + KV + vector surface → **`references/shared-memory.md`**
+- `@app.on_change(...)` memory-event subscriptions + the event object → **`references/memory-events.md`**
+- Trigger sources, `@on_event`/`@on_schedule`, `TriggerContext`, envelope `transform=` → **`references/triggers.md`**
+
+Read those local files first for coordination work; only fetch the live page if you suspect the surface drifted (the local guides note their verification basis). For *how to use* these capabilities and their ROI/vertical fit, see **`references/capability-playbook.md`**.
 
 The offline `primitives-snapshot.md` carries a frozen version of this content. **Use it only when `agentfield.ai` is unreachable.** Stamp every snapshot read with a warning in your output: "(offline snapshot from <date> — may be stale)".
 

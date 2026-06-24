@@ -1,0 +1,1968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgentField — Architecture &amp; Specs Viewer</title>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+:root {
+  --bg: #0a0a0f;
+  --surface: #13131a;
+  --surface2: #1a1a24;
+  --border: #252535;
+  --text: #e1e1e8;
+  --text2: #9898a8;
+  --accent: #6c5ce7;
+  --accent2: #a78bfa;
+  --green: #34d399;
+  --yellow: #fbbf24;
+  --red: #f87171;
+  --blue: #60a5fa;
+  --orange: #fb923c;
+  --cyan: #22d3ee;
+  --font: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  --font-ui: system-ui, -apple-system, sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: var(--font-ui);
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  overflow: hidden;
+}
+
+/* Sidebar */
+#sidebar {
+  width: 280px;
+  min-width: 280px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  user-select: none;
+}
+#sidebar-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+#sidebar-header .logo {
+  width: 28px; height: 28px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 900; font-size: 14px; color: #fff;
+}
+#sidebar-header h1 { font-size: 14px; font-weight: 600; letter-spacing: -0.3px; }
+#sidebar-nav { flex: 1; overflow-y: auto; padding: 8px 0; }
+.nav-section { margin-bottom: 4px; }
+.nav-section-title {
+  padding: 8px 20px 4px;
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1.2px; color: var(--text2);
+}
+.nav-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 20px; cursor: pointer; font-size: 13px;
+  color: var(--text2); transition: all 0.15s;
+  border-left: 2px solid transparent;
+}
+.nav-item:hover { color: var(--text); background: var(--surface2); }
+.nav-item.active {
+  color: var(--accent2); background: rgba(108,92,231,0.08);
+  border-left-color: var(--accent);
+}
+.nav-item .icon { width: 16px; text-align: center; font-size: 12px; flex-shrink: 0; }
+.nav-badge {
+  margin-left: auto; font-size: 10px; padding: 2px 6px;
+  border-radius: 4px; background: var(--surface2); color: var(--text2);
+}
+
+/* Tab bar */
+#tab-bar {
+  display: flex; background: var(--surface); border-bottom: 1px solid var(--border);
+  overflow-x: auto; flex-shrink: 0;
+}
+#tab-bar::-webkit-scrollbar { height: 0; }
+.tab {
+  padding: 10px 16px; cursor: pointer; font-size: 12px; font-weight: 500;
+  white-space: nowrap; color: var(--text2);
+  border-bottom: 2px solid transparent; transition: all 0.15s;
+  display: flex; align-items: center; gap: 6px;
+}
+.tab:hover { color: var(--text); background: rgba(255,255,255,0.02); }
+.tab.active { color: var(--accent2); border-bottom-color: var(--accent); }
+.tab-close { font-size: 14px; opacity: 0.4; cursor: pointer; }
+.tab-close:hover { opacity: 1; color: var(--red); }
+
+/* Main */
+#main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+#toolbar {
+  display: flex; align-items: center; gap: 8px; padding: 6px 16px;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+#search {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 6px;
+  padding: 6px 12px; color: var(--text); font-size: 12px; width: 240px;
+  font-family: var(--font-ui); outline: none;
+}
+#search:focus { border-color: var(--accent); }
+.toolbar-btn {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 6px;
+  padding: 6px 12px; color: var(--text2); font-size: 11px; cursor: pointer;
+  font-family: var(--font-ui); transition: all 0.15s;
+}
+.toolbar-btn:hover { color: var(--text); border-color: var(--text2); }
+.toolbar-btn.active { color: var(--accent2); border-color: var(--accent); background: rgba(108,92,231,0.1); }
+
+#content-area {
+  flex: 1; overflow-y: auto; padding: 0;
+  scroll-behavior: smooth;
+}
+#content-area::-webkit-scrollbar { width: 6px; }
+#content-area::-webkit-scrollbar-track { background: transparent; }
+#content-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* Split view */
+#content-area.split {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0; padding: 0;
+}
+#content-area.split .pane {
+  overflow-y: auto; padding: 32px 40px; border-right: 1px solid var(--border);
+}
+#content-area.split .pane:last-child { border-right: none; }
+#content-area.split .pane::-webkit-scrollbar { width: 6px; }
+#content-area.split .pane::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* Single pane */
+#content-area.single { padding: 32px 40px; }
+
+/* Markdown styling */
+.markdown-body { max-width: 860px; }
+.markdown-body h1 { font-size: 26px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.5px; color: #fff; }
+.markdown-body h2 { font-size: 18px; font-weight: 600; margin: 32px 0 12px; color: var(--accent2); letter-spacing: -0.3px; }
+.markdown-body h3 { font-size: 14px; font-weight: 600; margin: 24px 0 8px; color: var(--text); }
+.markdown-body h4 { font-size: 13px; font-weight: 600; margin: 16px 0 6px; color: var(--text2); }
+.markdown-body p { font-size: 13px; line-height: 1.7; margin-bottom: 12px; color: var(--text); }
+.markdown-body ul, .markdown-body ol { margin: 8px 0 16px 20px; }
+.markdown-body li { font-size: 13px; line-height: 1.6; margin-bottom: 4px; color: var(--text); }
+.markdown-body strong { color: #fff; font-weight: 600; }
+.markdown-body code {
+  font-family: var(--font); font-size: 12px;
+  background: var(--surface2); padding: 2px 6px; border-radius: 3px;
+  color: var(--cyan);
+}
+.markdown-body pre {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 16px 20px; overflow-x: auto; margin: 12px 0 20px; font-size: 12px; line-height: 1.5;
+}
+.markdown-body pre code { background: none; padding: 0; color: var(--text); }
+.markdown-body table {
+  width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: 12px;
+}
+.markdown-body th {
+  text-align: left; padding: 8px 12px; background: var(--surface2);
+  border-bottom: 2px solid var(--border); font-weight: 600; color: var(--text2);
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.markdown-body td {
+  padding: 8px 12px; border-bottom: 1px solid var(--border);
+  vertical-align: top; color: var(--text);
+}
+.markdown-body tr:hover td { background: rgba(255,255,255,0.01); }
+.markdown-body blockquote {
+  border-left: 3px solid var(--accent); padding: 8px 16px; margin: 12px 0;
+  background: rgba(108,92,231,0.05); border-radius: 0 6px 6px 0;
+}
+.markdown-body blockquote p { color: var(--text2); margin: 0; }
+.markdown-body a { color: var(--accent2); text-decoration: none; }
+.markdown-body a:hover { text-decoration: underline; }
+.markdown-body hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+
+/* Inline diagram boxes */
+.diagram-box {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 20px; margin: 16px 0; font-family: var(--font); font-size: 11px;
+  line-height: 1.6; white-space: pre; overflow-x: auto; color: var(--cyan);
+}
+.diagram-box.flow { color: var(--green); }
+.diagram-box.arch { color: var(--accent2); }
+.diagram-box.sec  { color: var(--orange); }
+
+/* Data Model Cards */
+.model-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px; margin: 16px 0;
+}
+.model-card {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 16px; transition: border-color 0.15s;
+}
+.model-card:hover { border-color: var(--accent); }
+.model-card h4 { font-size: 12px; font-weight: 700; color: var(--accent2); margin: 0 0 6px; font-family: var(--font); }
+.model-card .file { font-size: 10px; color: var(--text2); font-family: var(--font); margin-bottom: 8px; }
+.model-card .fields { font-size: 11px; color: var(--text); line-height: 1.6; }
+.model-card .fields .field-name { color: var(--cyan); font-family: var(--font); }
+.model-card .fields .field-type { color: var(--text2); font-size: 10px; }
+
+/* Flow steps */
+.flow-steps { margin: 16px 0; }
+.flow-step {
+  display: flex; align-items: flex-start; gap: 12px; padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.flow-step-num {
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--accent); color: #fff; font-size: 11px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.flow-step-content { flex: 1; }
+.flow-step-content strong { font-size: 12px; color: #fff; }
+.flow-step-content p { font-size: 11px; color: var(--text2); margin: 2px 0 0; }
+
+/* Toast */
+#toast {
+  position: fixed; bottom: 20px; right: 20px; z-index: 100;
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 10px 16px; font-size: 12px; color: var(--text);
+  opacity: 0; transform: translateY(10px); transition: all 0.2s;
+  pointer-events: none;
+}
+#toast.show { opacity: 1; transform: translateY(0); }
+
+/* Use-case guide cards */
+.guide-group-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; color: var(--text2); margin: 28px 0 4px;
+}
+.guide-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px; margin: 12px 0 4px;
+}
+.guide-card {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 16px; display: flex; flex-direction: column; gap: 8px;
+  transition: border-color 0.15s, transform 0.15s;
+}
+.guide-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.guide-card .persona {
+  align-self: flex-start; font-size: 10px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.6px;
+  color: var(--accent2); background: rgba(108,92,231,0.12);
+  padding: 3px 8px; border-radius: 99px;
+}
+.guide-card h4 { font-size: 14px; font-weight: 700; color: #fff; margin: 0; }
+.guide-card .problem { font-size: 12px; line-height: 1.55; color: var(--text2); margin: 0; }
+.guide-card .ships { font-size: 12px; line-height: 1.55; color: var(--text); margin: 0; }
+.guide-card .ships b { color: var(--green); font-weight: 600; }
+.guide-card .guide-link {
+  margin-top: auto; font-size: 11px; color: var(--accent2);
+  text-decoration: none; font-family: var(--font);
+}
+.guide-card .guide-link:hover { text-decoration: underline; }
+
+/* Finding the Red — worked example */
+.fr-hero {
+  background: linear-gradient(135deg, rgba(108,92,231,0.10), rgba(248,113,113,0.08));
+  border: 1px solid var(--border); border-radius: 10px;
+  padding: 24px 28px; margin: 16px 0 8px;
+}
+.fr-hero .persona {
+  display: inline-block; font-size: 10px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.6px; color: var(--accent2);
+  background: rgba(108,92,231,0.12); padding: 3px 8px; border-radius: 99px; margin-bottom: 10px;
+}
+.fr-hero h2 { margin: 0 0 6px; color: #fff; font-size: 22px; }
+.fr-hero p { color: var(--text2); margin: 0; font-size: 13px; line-height: 1.65; }
+.fr-quote {
+  border-left: 3px solid var(--red); background: rgba(248,113,113,0.06);
+  padding: 14px 18px; margin: 18px 0; border-radius: 0 6px 6px 0;
+}
+.fr-quote p { color: var(--text); font-style: italic; font-size: 14px; line-height: 1.6; margin: 0; }
+.fr-quote .cite { display: block; margin-top: 8px; font-style: normal; font-size: 11px; color: var(--text2); }
+
+.lever-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 14px 0; }
+.lever {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 14px; text-align: center;
+}
+.lever .name { font-size: 12px; font-weight: 700; color: var(--accent2); }
+.lever .desc { font-size: 11px; color: var(--text2); margin-top: 4px; line-height: 1.5; }
+
+/* Dashboard grid showing "the red" */
+.cell-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 16px 0; font-family: var(--font); }
+.cell {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 6px;
+  padding: 10px 12px; font-size: 11px;
+}
+.cell .label { color: var(--text2); font-size: 10px; }
+.cell .val { color: var(--green); font-size: 14px; font-weight: 700; margin-top: 2px; }
+.cell.red { border-color: var(--red); background: rgba(248,113,113,0.10); animation: redpulse 2.4s ease-in-out infinite; }
+.cell.red .val { color: var(--red); }
+@keyframes redpulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(248,113,113,0.0); }
+  50% { box-shadow: 0 0 0 4px rgba(248,113,113,0.12); }
+}
+
+/* Ritual → capability mapping */
+.map-row {
+  display: grid; grid-template-columns: 1fr 28px 1fr; align-items: center; gap: 12px;
+  padding: 12px 0; border-bottom: 1px solid var(--border);
+}
+.map-row .ritual { font-size: 12px; color: var(--text); line-height: 1.5; }
+.map-row .ritual b { color: #fff; }
+.map-row .arrow { color: var(--accent); text-align: center; font-size: 16px; }
+.map-row .cap { font-size: 12px; }
+.map-row .cap .tag {
+  display: inline-block; font-family: var(--font); font-size: 11px; font-weight: 600;
+  color: var(--accent2); background: rgba(108,92,231,0.10);
+  padding: 2px 8px; border-radius: 4px; margin-bottom: 4px;
+}
+.map-row .cap .why { font-size: 11px; color: var(--text2); line-height: 1.5; }
+
+/* Reusable thinking framework */
+.framework-step {
+  display: flex; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--border);
+}
+.framework-step .num {
+  width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #fff; font-size: 12px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.framework-step .body strong { font-size: 13px; color: #fff; }
+.framework-step .body p { font-size: 12px; color: var(--text2); margin: 3px 0 0; line-height: 1.6; }
+.framework-step .body em { color: var(--accent2); font-style: normal; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  #sidebar { width: 200px; min-width: 200px; }
+  #content-area.single { padding: 20px; }
+  .lever-grid, .cell-grid { grid-template-columns: 1fr 1fr; }
+  .map-row { grid-template-columns: 1fr; }
+  .map-row .arrow { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside id="sidebar">
+  <div id="sidebar-header">
+    <div class="logo">AF</div>
+    <h1>AgentField Specs</h1>
+  </div>
+  <nav id="sidebar-nav">
+    <div class="nav-section">
+      <div class="nav-section-title">Overview</div>
+      <div class="nav-item active" data-doc="README.md">
+        <span class="icon">📋</span> README
+      </div>
+      <div class="nav-item" data-doc="architecture-overview.md">
+        <span class="icon">🏗️</span> Architecture Overview
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">Think In Use Cases</div>
+      <div class="nav-item" data-view="finding-the-red">
+        <span class="icon">🎯</span> Finding the Red
+        <span class="nav-badge">example</span>
+      </div>
+      <div class="nav-item" data-view="quick-guides">
+        <span class="icon">⚡</span> Quick Guides
+        <span class="nav-badge">11</span>
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">Data Model &amp; Flows</div>
+      <div class="nav-item" data-view="data-model">
+        <span class="icon">🗄️</span> Data Model
+        <span class="nav-badge">synthesized</span>
+      </div>
+      <div class="nav-item" data-view="system-map">
+        <span class="icon">🗺️</span> System Map
+        <span class="nav-badge">interactive</span>
+      </div>
+      <div class="nav-item" data-doc="data-flow.md">
+        <span class="icon">↔️</span> Data Flows
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">Components</div>
+      <div class="nav-item" data-doc="control-plane.md">
+        <span class="icon">⚙️</span> Control Plane
+      </div>
+      <div class="nav-item" data-doc="sdk-python.md">
+        <span class="icon">🐍</span> Python SDK
+      </div>
+      <div class="nav-item" data-doc="sdk-go.md">
+        <span class="icon">🔷</span> Go SDK
+      </div>
+      <div class="nav-item" data-doc="web-ui.md">
+        <span class="icon">🖥️</span> Web UI
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">Operations</div>
+      <div class="nav-item" data-doc="security.md">
+        <span class="icon">🔐</span> Security
+      </div>
+      <div class="nav-item" data-doc="deployment.md">
+        <span class="icon">🚀</span> Deployment
+      </div>
+    </div>
+  </nav>
+</aside>
+
+<!-- Main -->
+<div id="main">
+  <div id="tab-bar"></div>
+  <div id="toolbar">
+    <input type="text" id="search" placeholder="Search specs..." oninput="onSearch(this.value)">
+    <button class="toolbar-btn active" onclick="setViewMode('single')" id="btn-single">Single</button>
+    <button class="toolbar-btn" onclick="setViewMode('split')" id="btn-split">Split</button>
+    <span style="font-size:11px;color:var(--text2);margin-left:auto" id="loc-info"></span>
+  </div>
+  <div id="content-area" class="single"></div>
+</div>
+
+<div id="toast"></div>
+
+<!-- ── Local Quick-Guide bodies (rendered in-app, no internet) ───────────────
+     Stored as text/markdown script blocks so real backticks survive.
+     id pattern: guide-md-<slug>, slug = name lowercased, non-alnum → '-'. -->
+
+<script type="text/markdown" id="guide-md-webhook-triggers">
+# 🪝 Webhook Triggers
+
+**Persona:** Integration engineer · **Problem:** external events (GitHub, Stripe, Slack) must wake an agent — securely.
+
+Bind a reasoner to an external event source and the control plane handles the rest: webhook URL provisioning, signature verification, replay protection, and dispatch. The triggered reasoner *is* the entry reasoner — no `app.run()`-then-curl path.
+
+## Built-in sources (this build)
+
+| Source | Auth |
+|---|---|
+| `stripe` | `Stripe-Signature` HMAC |
+| `github` | `X-Hub-Signature-256` HMAC |
+| `slack` | Slack signing-secret HMAC |
+| `generic_hmac` | caller-defined HMAC |
+| `generic_bearer` | static bearer token |
+| `cron` | none (server-side schedule) |
+
+> agentfield.ai also advertises `linear`, `sentry`, `hubspot`, `calendly`, `pagerduty` — **roadmap, not in this binary**. Reach them today via `generic_hmac` + `transform=`.
+
+## Declare it
+
+```python
+from agentfield import Agent, EventTrigger, TriggerContext, on_event, on_schedule
+
+app = Agent(node_id="ops-agent")
+
+# GitHub: fire on pull_request events
+@app.reasoner()
+@on_event(
+    source="github",
+    types=["pull_request"],
+    secret_env="GITHUB_WEBHOOK_SECRET",  # secret lives on the control plane
+)
+async def on_pr(event: dict, trigger: TriggerContext | None = None):
+    pr = event["pull_request"]
+    return {
+        "action": event["action"],
+        "title": pr["title"],
+        "delivery_id": trigger.idempotency_key if trigger else None,
+    }
+
+# Stripe: fire on successful payments, with a transform that flattens the envelope
+def _flatten(evt: dict) -> dict:
+    obj = evt.get("data", {}).get("object", {})
+    return {"id": obj.get("id"), "amount": obj.get("amount"), "customer": obj.get("customer")}
+
+@app.reasoner(triggers=[
+    EventTrigger(
+        source="stripe",
+        types=["payment_intent.succeeded"],
+        secret_env="STRIPE_WEBHOOK_SECRET",
+        transform=_flatten,
+    ),
+])
+async def on_payment(payment: dict, trigger: TriggerContext | None = None):
+    return {"stripe_id": payment["id"], "amount": payment["amount"]}
+
+# Custom webhook with HMAC signing
+@app.reasoner()
+@on_event(source="generic_hmac", secret_env="MY_WEBHOOK_SECRET")
+async def on_custom(payload: dict, trigger: TriggerContext | None = None):
+    return {"event_type": trigger.event_type, "payload": payload}
+
+# Cron: fire every five minutes
+@app.reasoner()
+@on_schedule("*/5 * * * *")
+async def heartbeat(_input, trigger: TriggerContext | None = None):
+    return {"fired_at": trigger.received_at.isoformat()}
+
+app.run()
+```
+
+`transform=` (sync, pure) peels provider envelopes before your reasoner sees them. Keep `trigger` Optional so the function stays callable from tests and curl.
+
+## When to use
+Event-driven systems (a webhook or cron is the entry surface). **Not** for synchronous calls from your own code — use `tags=["entry"]` + a normal reasoner.
+
+## Composes with
+**Memory Triggers** (write to shared memory in the handler, let a watcher react) · **Signed Audit Chain** (every triggered run carries a VC).
+</script>
+
+<script type="text/markdown" id="guide-md-agent-discovery">
+# 🧭 Agent Discovery
+
+**Persona:** Distributed-systems builder · **Problem:** the LLM must choose the right agent at runtime, not at deploy time.
+
+AgentField keeps a **live registry** of every reasoner and its contract. A model (or your orchestrator) queries it and picks the capability to call — MCP-style — instead of a hardcoded call graph baked in at build time.
+
+## Make a reasoner discoverable
+
+```python
+from agentfield import Agent
+from agentfield.tool_calling import ToolCallConfig
+
+app = Agent(node_id="orchestrator")
+
+@app.reasoner()
+async def smart_route(question: str) -> dict:
+    # Inspect the live registry — health-aware
+    caps = app.discover(
+        tags=["public"],
+        health_status="active",
+        include_input_schema=True,
+    )
+    # caps.json.total_agents tells you how many are online right now
+
+    # Hand the registry to the LLM as a tool list. It picks and calls.
+    result = await app.ai(
+        system="Pick the best available agent to answer the user's question.",
+        user=question,
+        tools="discover",
+    )
+
+    # Trace shows exactly which tools the LLM invoked
+    for call in result.trace.calls:
+        print(f"  {call.tool_name} ({call.latency_ms:.0f}ms)")
+
+    return {"answer": result.text}
+
+# Large registries — send names+descriptions first, hydrate full schemas on demand
+@app.reasoner()
+async def lazy_route(question: str) -> dict:
+    return await app.ai(
+        user=question,
+        tools=ToolCallConfig(
+            schema_hydration="lazy",
+            max_candidate_tools=50,    # show 50 tools to the LLM
+            max_hydrated_tools=10,     # full schemas only for the 10 it picks
+        ),
+    )
+
+app.run()
+```
+
+## Find capabilities at runtime
+
+```bash
+# Live capabilities the control plane is advertising
+curl -s http://localhost:8080/api/v1/discovery/capabilities | jq '.capabilities[].agent_id'
+
+# From the CLI
+af agent discover -q "summarize support tickets"
+```
+
+The registry is what lets the call graph **emerge at runtime** — a meta-reasoner can discover which specialist owns a metric and `app.call(...)` it, rather than every edge being declared upfront.
+
+## When to use
+Open-ended routing where the right downstream agent depends on intermediate state. **Not** when the topology is fixed and small — a direct `app.call` is clearer.
+
+## Composes with
+**Access Control** (gate which discovered agents a caller may invoke) · **Memory Triggers** (a watcher discovers and dispatches the agent that owns a drifting metric).
+</script>
+
+<script type="text/markdown" id="guide-md-memory-triggers">
+# 🧠 Memory Triggers
+
+**Persona:** Workflow designer · **Problem:** one agent should react the moment another writes a value.
+
+Subscribe a reasoner to a **memory key pattern**; it fires automatically on any write that matches — no polling, no queue, no direct call between producer and consumer. The edge between them is the key namespace.
+
+## A self-composing pipeline — each stage fires the next
+
+```python
+from agentfield import Agent
+
+app = Agent(node_id="pipeline-coordinator")
+
+# Stage 1: classifier writes the document type
+@app.reasoner()
+async def classify(document: str, doc_id: str) -> dict:
+    classification = await app.ai(system="Classify this document.", user=document)
+    await app.memory.global_scope.set(
+        f"pipeline.classified.{doc_id}",
+        {"type": str(classification), "document": document},
+    )
+    return {"doc_id": doc_id}
+
+# Stage 2: fires automatically when ANY classification lands
+@app.on_change("pipeline.classified.*")
+async def on_classified(event):
+    doc_id = event.key.split(".")[-1]
+    analysis = await app.call(
+        f"{event.data['type']}-analyzer.analyze",
+        document=event.data["document"],
+    )
+    await app.memory.global_scope.set(
+        f"pipeline.analyzed.{doc_id}",
+        analysis,
+    )
+
+# Stage 3: fires when the analyzer finishes
+@app.on_change("pipeline.analyzed.*")
+async def on_analyzed(event):
+    doc_id = event.key.split(".")[-1]
+    await app.call("reporter.generate", doc_id=doc_id, analysis=event.data)
+
+app.run()
+```
+
+The event carries `.key` · `.data` (new value) · `.previous_data` (prior) · `.scope` · `.scope_id`. Orchestration **emerges from subscriptions** — no stage calls the next directly.
+
+## Scope a subscription
+
+```python
+# Only fire on writes inside a specific session
+@app.memory.session("session-123").on_change("conversation.*")
+async def on_conversation(event):
+    print(f"Session conversation updated: {event.key}")
+```
+
+Scopes: `global_scope` (all agents) · `session(id)` · `actor(id)` · `workflow(id)`.
+
+## Rules
+Producer writes and returns — it must not know who listens. Keep handlers thin (route, don't synthesize). Avoid write-loops: subscribe and write to different namespaces, or diff `data` vs `previous_data`. Handlers are at-least-once — stay idempotent.
+
+## When to use
+State-driven reactions ("when X changes, do Y"). **Not** for external webhooks (that's **Webhook Triggers**) or synchronous results (use `app.call`).
+
+## Composes with
+**Shared Memory** (the substrate it watches) · **Webhook Triggers** (a webhook writes the value this reacts to).
+</script>
+
+<script type="text/markdown" id="guide-md-harness-orchestration">
+# 🎛️ Harness Orchestration
+
+**Persona:** Cost-conscious team · **Problem:** you want several models working — without runaway spend.
+
+Use a harness as a step inside a regular reasoner. It spawns Claude Code, Codex, Gemini CLI, or OpenCode, gives it tool access, **enforces a cost cap**, and returns a Pydantic-validated object — not free-form text.
+
+## Typed worker with a hard cost cap
+
+```python
+from pydantic import BaseModel
+from agentfield import Agent, HarnessConfig
+
+app = Agent(
+    node_id="migrator",
+    harness_config=HarnessConfig(provider="claude-code", model="sonnet"),
+)
+
+class MigrationPlan(BaseModel):
+    sql_statements: list[str]
+    rollback_steps: list[str]
+    risk_assessment: str
+
+@app.reasoner()
+async def plan_migration(description: str) -> dict:
+    # Harness reads the schema, writes SQL, validates against the Pydantic model
+    result = await app.harness(
+        f"Analyze the database schema and produce a migration plan for: {description}",
+        schema=MigrationPlan,
+        max_budget_usd=1.00,   # hard cost cap
+        max_turns=20,
+    )
+
+    if result.is_error:
+        return {"error": result.failure_type, "message": result.error_message}
+
+    plan: MigrationPlan = result.parsed
+    return {
+        "sql": plan.sql_statements,
+        "rollback": plan.rollback_steps,
+        "cost_usd": result.cost_usd,
+        "turns": result.num_turns,
+    }
+
+# Swap providers per-call -- Codex for test generation, Gemini for big refactors
+@app.reasoner()
+async def write_tests(module: str) -> dict:
+    result = await app.harness(
+        f"Write a comprehensive test suite for {module}.",
+        provider="codex",
+        model="o4-mini",
+        max_turns=40,
+    )
+    return {"output": result.text, "cost_usd": result.cost_usd}
+
+app.run()
+```
+
+`result` carries `is_error` / `failure_type` / `error_message`, `parsed` (your schema), `text`, `cost_usd`, `num_turns`. `max_budget_usd` and `max_turns` are the hard ceilings.
+
+## When to use
+A step genuinely needs a coding agent to write files / run shell, under a budget. **Not** for ordinary LLM reasoning — that's `app.ai(...)`, which is cheaper and in-process.
+
+## Composes with
+**Durable Human Approval** (sign off before an expensive harness run) · **Cryptographic Receipts** (record what the worker did).
+</script>
+
+<script type="text/markdown" id="guide-md-durable-human-approval">
+# ✋ Durable Human Approval
+
+**Persona:** Operator · **Problem:** a human checkpoint must survive a restart mid-workflow.
+
+Block an agent for a human decision — for hours, days, or across a server restart. `app.pause(...)` writes execution state to the control plane (Postgres) and suspends; a webhook callback resumes it once the human responds.
+
+## Two approval gates in one flow
+
+```python
+from agentfield import Agent
+
+app = Agent(node_id="content-pipeline", version="1.0.0")
+
+@app.reasoner()
+async def publish_with_review(brief: str) -> dict:
+    # Step 1: AI drafts
+    draft = await app.ai(system="You are a senior copywriter.", user=brief)
+
+    # Pause #1 — editor reviews the draft (state is now in Postgres)
+    review = await app.pause(
+        approval_request_id="draft-review",
+        approval_request_url="https://cms.example.com/review/draft",
+        expires_in_hours=24,
+    )
+    if review.decision != "approved":
+        return {"status": review.decision, "feedback": review.feedback}
+
+    # Step 2: AI revises using the editor's feedback
+    final = await app.ai(
+        system="Revise based on editorial feedback.",
+        user=f"Draft: {draft}\nFeedback: {review.feedback}",
+    )
+
+    # Pause #2 — publisher signs off before going live
+    sign_off = await app.pause(
+        approval_request_id="final-approval",
+        approval_request_url="https://cms.example.com/review/final",
+        expires_in_hours=4,
+    )
+    if sign_off.decision == "approved":
+        await app.call("publisher.publish", content=final)
+    return {"status": sign_off.decision}
+
+app.run()
+```
+
+`ApprovalResult` carries `.decision` (`approved` / `rejected` / `request_changes` / `expired`), `.feedback`, and `.approved`.
+
+## Recover after a restart
+
+```python
+result = await app.wait_for_resume(
+    approval_request_id="draft-review",
+    timeout=24 * 3600,
+)
+```
+
+State lives in Postgres, not agent memory — the checkpoint outlives the worker. That's the defining property.
+
+## When to use
+Irreversible or regulated actions (money movement, production changes, clinical decisions). **Not** for low-stakes steps where the latency of a human gate isn't worth it.
+
+## Composes with
+**Access Control** (only certain actors may approve) · **Signed Audit Chain** (the approval becomes a signed credential in the chain).
+</script>
+
+<script type="text/markdown" id="guide-md-a-b-test-deployments">
+# 🧪 A/B Test Deployments
+
+**Persona:** Product team · **Problem:** you need to compare two agent versions on live traffic.
+
+Run two versions of the same agent at once. They share one `node_id`, register with different `version` values and tags, and the control plane splits traffic — callers never change.
+
+## Two variants, same node_id
+
+```python
+# agent_v1.py -- control
+from agentfield import Agent
+
+app = Agent(
+    node_id="summarizer",
+    version="2.0.0",
+    tags=["summarizer", "variant:control"],
+)
+
+@app.reasoner()
+async def summarize(text: str) -> dict:
+    result = await app.ai(system="Summarize concisely.", user=text)
+    return {"variant": "control", "summary": str(result)}
+
+app.run(port=9200)
+```
+
+```python
+# agent_v2.py -- treatment
+from agentfield import Agent
+
+app = Agent(
+    node_id="summarizer",
+    version="3.0.0",
+    tags=["summarizer", "variant:treatment"],
+)
+
+@app.reasoner()
+async def summarize(text: str) -> dict:
+    result = await app.ai(
+        system="Summarize concisely. Lead with the headline finding.",
+        user=text,
+    )
+    return {"variant": "treatment", "summary": str(result)}
+
+app.run(port=9201)
+```
+
+## Call the shared target — the response says which version served it
+
+```bash
+curl -i -X POST http://localhost:8080/api/v1/execute/summarizer.summarize \
+  -H "Content-Type: application/json" \
+  -d '{"input": {"text": "AgentField gives agents backend-shaped deployment controls."}}'
+
+# Look for:
+# X-Routed-Version: 3.0.0
+```
+
+## Set the rollout weights (90/10)
+
+```bash
+curl -X PUT http://localhost:8080/api/v1/connector/reasoners/summarizer/versions/2.0.0/weight \
+  -H "X-Connector-Token: $AGENTFIELD_CONNECTOR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"weight": 90}'
+
+curl -X PUT http://localhost:8080/api/v1/connector/reasoners/summarizer/versions/3.0.0/weight \
+  -H "X-Connector-Token: $AGENTFIELD_CONNECTOR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"weight": 10}'
+```
+
+For rollback, set the treatment weight to `0` or stop the candidate. The target stays the same — no deploy-time switch for callers.
+
+## Request-aware routing (when the split needs logic)
+
+```python
+# router.py -- choose variants with custom logic
+import hashlib
+from agentfield import Agent
+
+app = Agent(node_id="summarizer-router")
+
+@app.reasoner()
+async def route_summarize(request_id: str, text: str) -> dict:
+    # Discover both variants -- health-aware so dead agents drop out automatically.
+    candidates = app.discover(tags=["summarizer"], health_status="active")
+
+    # Stable bucketing on request_id -- same request always hits the same variant.
+    bucket = int(hashlib.sha256(request_id.encode()).hexdigest(), 16) % 100
+    target_tag = "variant:treatment" if bucket < 10 else "variant:control"
+
+    chosen = next(
+        cap for cap in candidates.json.capabilities
+        if target_tag in (cap.tags or [])
+    )
+    target = f"{chosen.agent_id}.summarize"
+
+    result = await app.call(target, text=text)
+    app.note(f"routed {request_id} to {target}", tags=["ab-test", target_tag])
+    return result
+
+app.run()
+```
+
+## When to use
+You have a measurable outcome and enough traffic to tell variants apart. **Not** for changes with no live signal — ship those behind a normal review.
+
+## Composes with
+**Agent Discovery** (variants are discoverable capabilities) · **Cryptographic Receipts** (every variant decision is independently verifiable).
+</script>
+
+<script type="text/markdown" id="guide-md-access-control-between-agents">
+# 🔒 Access Control Between Agents
+
+**Persona:** Security architect · **Problem:** not every agent should be able to call every function.
+
+Gate cross-agent calls **down to the function and the argument**. Every `app.call(...)` traverses the control plane, so the policy engine checks the caller's identity *before* the target reasoner runs. Policies match on **tags**, not agent IDs.
+
+## Tag the target reasoner
+
+```python
+from agentfield import Agent
+
+# Tag the target — policies match on tags, not on agent IDs
+app = Agent(
+    node_id="treasury",
+    version="1.0.0",
+    tags=["finance", "transfers"],
+)
+
+@app.reasoner()
+async def transfer(amount: float, execution_context=None) -> dict:
+    # By the time this runs, the policy engine has already approved the call
+    return {"transferred": amount, "caller": execution_context.caller_did}
+
+app.run()
+```
+
+## Declare policies at the control plane
+
+```bash
+# Allow finance-ops to read and transfer, but only under 10k, and never delete
+curl -X POST http://localhost:8080/api/v1/admin/policies \
+  -H "Content-Type: application/json" -d '{
+    "name": "Finance ops — bounded transfer access",
+    "caller_tags": ["finance-ops"],
+    "target_tags": ["finance"],
+    "allow_functions": ["transfer", "balance_check"],
+    "deny_functions": ["delete_account", "modify_ledger"],
+    "constraints": {
+      "amount": {"operator": "<", "value": 10000}
+    },
+    "action": "allow",
+    "priority": 100
+  }'
+
+# Block analytics from finance entirely
+curl -X POST http://localhost:8080/api/v1/admin/policies \
+  -H "Content-Type: application/json" -d '{
+    "name": "Analytics blocked from finance",
+    "caller_tags": ["analytics"],
+    "target_tags": ["finance"],
+    "deny_functions": ["*"],
+    "action": "deny",
+    "priority": 200
+  }'
+```
+
+`constraints` gate on argument values (`amount < 10000`); `priority` orders overlapping policies. The caller arrives as `execution_context.caller_did` — denied calls never reach your reasoner.
+
+## When to use
+Multi-tenant or least-privilege systems where a compromised or buggy agent must not be able to invoke sensitive capabilities. **Not** needed for a single trusted agent calling its own reasoners.
+
+## Composes with
+**Outbound API Identity** (the identity policies are written against) · **Signed Audit Chain** (every allow/deny is recorded).
+</script>
+
+<script type="text/markdown" id="guide-md-outbound-api-identity">
+# 🪪 Outbound API Identity
+
+**Persona:** API consumer · **Problem:** shared API keys leak and can't be attributed to an actor.
+
+Replace shared API keys with **per-agent cryptographic identity**. Each agent signs outbound requests with its own DID-backed key — every request is attributable, revocable per-agent, and there's no shared secret to leak.
+
+## Sign an outbound request with the agent's own identity
+
+```python
+import json
+import httpx
+from agentfield import Agent, DIDAuthenticator
+
+app = Agent(node_id="outbound-agent", enable_did=True)
+
+@app.reasoner()
+async def call_partner(query: str) -> dict:
+    # Build an authenticator from the agent's own credentials
+    authenticator = DIDAuthenticator(
+        did=app.did_manager.get_agent_did(),
+        private_key_jwk=app.did_manager.identity_package.agent_did.private_key_jwk,
+    )
+
+    body = json.dumps({"query": query}).encode()
+    auth_headers = authenticator.sign_headers(body)
+    # auth_headers contains:
+    #   X-Caller-DID:    did:key:z6Mk...
+    #   X-DID-Signature: <base64 Ed25519 signature>
+    #   X-DID-Timestamp: <unix seconds>
+    #   X-DID-Nonce:     <random hex>
+
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            "https://partner.example.com/api/data",
+            content=body,
+            headers={**auth_headers, "Content-Type": "application/json"},
+        )
+    return resp.json()
+
+app.run()
+```
+
+## The partner resolves your public key
+
+```bash
+# Partner pulls your agent's public key once — did:web is resolvable over plain HTTPS
+curl https://your-platform.com/agents/outbound-agent/did.json
+
+# Or via the control plane registry
+curl http://localhost:8080/api/v1/registered-dids
+```
+
+A leaked shared key is a system-wide, untraceable blast radius. A per-agent DID narrows it to one actor, makes every action attributable, and lets you revoke one agent without rotating a secret everything shares.
+
+## When to use
+Any system where calls cross a trust boundary and you need attribution or per-actor revocation. **Not** strictly needed for a fully local, single-tenant prototype.
+
+## Composes with
+**Access Control** (policies are written against this identity) · **Cryptographic Receipts** (signed by the same identity).
+</script>
+
+<script type="text/markdown" id="guide-md-cryptographic-receipts">
+# 🧾 Cryptographic Receipts
+
+**Persona:** Auditor · **Problem:** you need proof of what a reasoner decided, verifiable later.
+
+Every execution emits a **signed, offline-verifiable record** — a W3C Verifiable Credential describing what the reasoner decided. Not a log line you trust: a credential anyone can verify cryptographically, later, without calling your servers.
+
+## Turn it on at the agent
+
+```python
+from agentfield import Agent
+
+app = Agent(
+    node_id="claims-processor",
+    enable_did=True,    # did:key + Ed25519 keystore
+    vc_enabled=True,    # signed VC per execution
+)
+
+@app.reasoner()
+async def process_claim(claim: dict) -> dict:
+    return await app.ai(
+        system="Assess this insurance claim.",
+        user=str(claim),
+    )
+    # Behind the scenes the control plane writes a VC with:
+    #   - issuer DID  (the agent)
+    #   - input_hash  (SHA-256 of claim)
+    #   - output_hash (SHA-256 of result)
+    #   - Ed25519 signature
+
+app.run()
+```
+
+## Fetch and verify offline
+
+```bash
+# Get the signed VC for one execution
+curl http://localhost:8080/api/ui/v1/executions/<execution_id>/vc
+
+# Verify offline — no network needed
+af vc verify audit.json
+```
+
+No "trust me" dashboards — the receipt stands on its own signature. This is the property no other agent framework ships out of the box.
+
+## When to use
+Regulated or high-stakes decisions (underwriting, clinical, financial) where you must *prove* what happened. **Not** worth the overhead for throwaway internal automation.
+
+## Composes with
+**Signed Audit Chain** (receipts chained across a whole workflow) · **Outbound API Identity** (the identity that signs them) · **Durable Human Approval** (the human decision is itself receipted).
+</script>
+
+<script type="text/markdown" id="guide-md-signed-audit-chain">
+# ⛓️ Signed Audit Chain
+
+**Persona:** Compliance team · **Problem:** a whole multi-agent workflow must be provable end to end.
+
+Turn each step of a workflow into a **signed credential** and chain them, so an entire multi-agent decision — every reasoner, every cross-agent call — is exportable and provable as one verifiable artifact.
+
+## Every cross-agent call becomes a signed node
+
+```python
+from agentfield import Agent
+
+app = Agent(
+    node_id="claims-pipeline",
+    enable_did=True,
+    vc_enabled=True,
+)
+
+@app.reasoner()
+async def regulated_claim(claim: dict) -> dict:
+    # Each cross-agent call becomes a signed VC node in the workflow chain
+    validated = await app.call("validator.check_claim", claim=claim)
+    if not validated.get("valid"):
+        return {"status": "rejected", "reason": validated["reason"]}
+
+    risk = await app.call("risk-engine.assess", claim=claim)
+    decision = await app.call("adjudicator.decide", claim=claim, risk=risk)
+
+    return {"decision": decision, "workflow_id": app.note("decided", ["audit"])}
+
+app.run()
+```
+
+## Export and verify the whole chain
+
+```bash
+# Every step in this workflow, signed and topologically ordered
+curl http://localhost:8080/api/ui/v1/workflows/<workflow_id>/vc-chain
+
+# Verify all of them in one request
+curl -X POST http://localhost:8080/api/ui/v1/workflows/<workflow_id>/verify-vc
+
+# Or download a single VC for offline verification
+curl http://localhost:8080/api/ui/v1/vc/<vc_id>/download > step.json
+af vc verify step.json
+```
+
+```json
+{
+  "workflow_id": "wf_d4e5f6",
+  "vc_count": 5,
+  "verified_count": 5,
+  "failed_count": 0,
+  "chain": [
+    { "execution_id": "exec_1", "vc_id": "vc_001", "issuer_did": "did:key:...", "status": "verified" }
+  ]
+}
+```
+
+Because every edge flows through the control plane (`app.call`, triggers, memory events), the chain captures the *real* execution graph — not a reconstruction. Each link is signed; tampering with any step breaks verification.
+
+## When to use
+Board reviews, regulatory audits, dispute defense — anywhere you must defend a multi-step decision after the fact. **Not** needed for single-shot, low-stakes calls (a single **Cryptographic Receipt** suffices).
+
+## Composes with
+**Cryptographic Receipts** (the per-step links) · **Durable Human Approval** (sign-offs appear in the chain) · **Access Control** (allow/deny decisions are recorded).
+</script>
+
+<script type="text/markdown" id="guide-md-multimodal-agents">
+# 🖼️ Multimodal Agents
+
+**Persona:** Rich-I/O builder · **Problem:** your agent needs to read and produce images, audio, and video.
+
+Take **images and audio in**, generate **images and audio out** — multimodal helpers flow through `app.ai(...)` the same way text does, so one reasoner can read a reference image, generate frames, and synthesize a voice-over without leaving the graph.
+
+## Vision in, image + audio out
+
+```python
+from agentfield import Agent, AIConfig
+from agentfield.multimodal import image_from_url, image_from_file, audio_from_file, text
+
+app = Agent(
+    node_id="creative-agent",
+    ai_config=AIConfig(model="openai/gpt-4o"),
+)
+
+@app.reasoner()
+async def storyboard_from_brief(brief: str, reference_url: str) -> dict:
+    # Vision input — auto-detects the image URL
+    interpretation = await app.ai(
+        text("Describe the visual style of this reference:"),
+        image_from_url(reference_url),
+    )
+
+    # Generate three images matching the brief
+    images = await app.ai_generate_image(
+        f"{brief}. Style: {interpretation}",
+        model="dall-e-3",
+        size="1792x1024",
+        num_images=3,
+    )
+    saved = images.save_all("./output", prefix="frame")
+
+    # Voice-over from the brief
+    audio = await app.ai_generate_audio(
+        f"Storyboard concept: {brief}",
+        model="tts-1-hd",
+        voice="alloy",
+    )
+    audio.audio.save("./output/voiceover.wav")
+
+    return {
+        "interpretation": str(interpretation),
+        "frames": list(saved.values()),
+        "voiceover": "./output/voiceover.wav",
+    }
+
+# Audio input — transcribe and act on a recording
+@app.reasoner()
+async def summarize_meeting(recording_path: str) -> dict:
+    return await app.ai(
+        text("Transcribe this meeting and pull out the action items:"),
+        audio_from_file(recording_path),
+    )
+
+app.run()
+```
+
+Input helpers: `text(...)`, `image_from_url(...)`, `image_from_file(...)`, `audio_from_file(...)`. Generators return objects with `.save_all(dir, prefix=)` (images) and `.audio.save(path)` (audio).
+
+## When to use
+Document understanding (claims, contracts, receipts), screenshot analysis, generated visual/audio output. **Not** when plain text in/out covers the job — multimodal models cost more.
+
+## Composes with
+**Shared Memory** (embed and store document chunks for retrieval) · **Webhook Triggers** (a media upload arrives as an event).
+</script>
+
+<script>
+// State
+const DOCS = [
+  'README.md','architecture-overview.md','control-plane.md',
+  'sdk-python.md','sdk-go.md','web-ui.md',
+  'data-flow.md','security.md','deployment.md'
+];
+let activeDoc = 'README.md';
+let viewMode = 'single';
+let splitDoc = null;
+let openTabs = ['README.md'];
+let searchTerm = '';
+
+// Init
+marked.setOptions({ breaks: true, gfm: true });
+loadDoc('README.md');
+
+// Navigation
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    if (item.dataset.view) {
+      renderSynthesizedView(item.dataset.view);
+      document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+      item.classList.add('active');
+      activeDoc = null;
+      return;
+    }
+    const doc = item.dataset.doc;
+    if (doc) {
+      loadDoc(doc);
+      document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+      item.classList.add('active');
+    }
+  });
+});
+
+// Tab clicks
+document.getElementById('tab-bar').addEventListener('click', (e) => {
+  if (e.target.classList.contains('tab-close')) {
+    const doc = e.target.parentElement.dataset.doc;
+    closeTab(doc);
+    return;
+  }
+  const tab = e.target.closest('.tab');
+  if (tab && tab.dataset.doc) {
+    loadDoc(tab.dataset.doc);
+  }
+});
+
+async function loadDoc(name) {
+  activeDoc = name;
+  if (!openTabs.includes(name)) openTabs.push(name);
+  renderTabs();
+  document.querySelectorAll('.nav-item').forEach(i => {
+    i.classList.toggle('active', i.dataset.doc === name);
+  });
+  document.getElementById('content-area').className = viewMode;
+  document.getElementById('content-area').innerHTML = '<div class="single" style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text2)">Loading...</div>';
+
+  try {
+    const res = await fetch(name);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const md = await res.text();
+    let html = marked.parse(md);
+    html = enhanceCodeBlocks(html);
+    html = enhanceDiagrams(html);
+    document.getElementById('content-area').className = viewMode;
+    document.getElementById('content-area').innerHTML = `<div class="single"><div class="markdown-body">${html}</div></div>`;
+    document.getElementById('loc-info').textContent = `${name} · ${md.split('\n').length} lines`;
+    hlLines();
+  } catch (err) {
+    document.getElementById('content-area').innerHTML = `<div class="single" style="color:var(--red)">Failed to load: ${name} — ${err.message}<br><br>Serve this file from the specs/ directory:<br><code>cd specs && python3 -m http.server 8080</code></div>`;
+  }
+}
+
+function closeTab(name) {
+  const idx = openTabs.indexOf(name);
+  if (idx === -1) return;
+  openTabs.splice(idx, 1);
+  if (openTabs.length === 0) { openTabs = ['README.md']; loadDoc('README.md'); return; }
+  if (activeDoc === name) {
+    const newIdx = Math.min(idx, openTabs.length - 1);
+    loadDoc(openTabs[newIdx]);
+  }
+  renderTabs();
+}
+
+function renderTabs() {
+  const bar = document.getElementById('tab-bar');
+  bar.innerHTML = openTabs.map(d => {
+    const short = d.replace('.md','').replace('architecture-','').replace('control-','');
+    const icon = { 'README.md':'📋','architecture-overview.md':'🏗️','control-plane.md':'⚙️','sdk-python.md':'🐍','sdk-go.md':'🔷','web-ui.md':'🖥️','data-flow.md':'↔️','security.md':'🔐','deployment.md':'🚀' }[d] || '📄';
+    const active = d === activeDoc ? ' active' : '';
+    return `<div class="tab${active}" data-doc="${d}">${icon} ${short}<span class="tab-close">×</span></div>`;
+  }).join('');
+}
+
+// View modes
+function setViewMode(mode) {
+  viewMode = mode;
+  document.getElementById('btn-single').classList.toggle('active', mode === 'single');
+  document.getElementById('btn-split').classList.toggle('active', mode === 'split');
+  if (mode === 'split' && activeDoc) {
+    renderSplitView(activeDoc, splitDoc || DOCS.find(d => d !== activeDoc));
+  } else if (activeDoc) {
+    loadDoc(activeDoc);
+  }
+}
+window.setViewMode = setViewMode;
+
+async function renderSplitView(docA, docB) {
+  splitDoc = docB;
+  const [rA, rB] = await Promise.all([fetch(docA), fetch(docB)]);
+  const [mA, mB] = await Promise.all([rA.text(), rB.text()]);
+  const [hA, hB] = [marked.parse(mA), marked.parse(mB)];
+  document.getElementById('content-area').className = 'split';
+  document.getElementById('content-area').innerHTML = `
+    <div class="pane"><div class="markdown-body">${enhanceCodeBlocks(enhanceDiagrams(hA))}</div></div>
+    <div class="pane"><div class="markdown-body">${enhanceCodeBlocks(enhanceDiagrams(hB))}</div></div>
+  `;
+  document.getElementById('loc-info').textContent = `${docA} ↔ ${docB}`;
+  hlLines();
+}
+
+// Enhancements
+function enhanceCodeBlocks(html) {
+  return html.replace(/<pre><code>([^<]+)<\/code><\/pre>/g, (_, code) => {
+    return `<pre><code>${code}</code></pre>`;
+  });
+}
+function enhanceDiagrams(html) {
+  return html.replace(/<pre><code>((?:┌|└|├|┐|┘|┤|─|│|┼|┬|┴|▶|▼|◀|▲|\s)+\S(?:.|\n)*?)<\/code><\/pre>/g,
+    (_, text) => `<pre class="diagram-box arch"><code>${text}</code></pre>`);
+}
+
+// Search
+function onSearch(term) {
+  searchTerm = term.toLowerCase();
+  if (!term) { if (activeDoc) loadDoc(activeDoc); return; }
+  highlightSearch(term);
+}
+window.onSearch = onSearch;
+
+function highlightSearch(term) {
+  if (!activeDoc) return;
+  fetch(activeDoc).then(r => r.text()).then(md => {
+    let html = marked.parse(md);
+    if (term) {
+      const re = new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+      html = html.replace(/(<[^>]*>)|([^<]+)/g, (m, tag, text) => {
+        if (tag) return tag;
+        return text.replace(re, '<mark style="background:rgba(251,191,36,0.3);color:#fff;border-radius:2px;padding:1px 2px">$1</mark>');
+      });
+    }
+    document.getElementById('content-area').innerHTML = `<div class="single"><div class="markdown-body">${enhanceCodeBlocks(enhanceDiagrams(html))}</div></div>`;
+    document.getElementById('loc-info').textContent = `${activeDoc} · searching: "${term}"`;
+  });
+}
+
+// Synthesized Views
+function renderSynthesizedView(view) {
+  document.getElementById('content-area').className = 'single';
+  if (view === 'data-model') renderDataModel();
+  if (view === 'system-map') renderSystemMap();
+  if (view === 'quick-guides') renderQuickGuides();
+  if (view === 'finding-the-red') renderFindingTheRed();
+}
+
+// ── Quick Guides: 11 capabilities framed by persona + problem ──
+const DOCS_URL = 'https://agentfield.ai/docs/quick-guides';
+const GUIDES = [
+  { group: 'Triggers & Orchestration', items: [
+    { icon: '🪝', name: 'Webhook Triggers', persona: 'Integration engineer',
+      problem: 'External events (GitHub, Stripe, Slack) need to wake an agent — securely.',
+      ships: 'Bind a reasoner to an event source, <b>signed and replay-safe</b>.' },
+    { icon: '🧭', name: 'Agent Discovery', persona: 'Distributed-systems builder',
+      problem: 'The LLM needs to choose the right agent at runtime, not at deploy time.',
+      ships: 'A <b>live registry</b> of agents the model can pick from, MCP-style.' },
+    { icon: '🧠', name: 'Memory Triggers', persona: 'Workflow designer',
+      problem: 'One agent should react the moment another writes a value.',
+      ships: 'Agents <b>fire automatically</b> on memory writes via pattern match.' },
+    { icon: '🎛️', name: 'Harness Orchestration', persona: 'Cost-conscious team',
+      problem: 'You want several models working — without runaway spend.',
+      ships: 'Dispatch models as <b>typed workers with cost caps</b>.' },
+  ]},
+  { group: 'Safety & Deployment', items: [
+    { icon: '✋', name: 'Durable Human Approval', persona: 'Operator',
+      problem: 'A human checkpoint must survive a restart mid-workflow.',
+      ships: 'Multi-step approvals that <b>survive restarts</b>.' },
+    { icon: '🧪', name: 'A/B Test Deployments', persona: 'Product team',
+      problem: 'You need to compare two agent versions on live traffic.',
+      ships: 'Run two versions at once and <b>split traffic</b> between them.' },
+    { icon: '🔒', name: 'Access Control Between Agents', persona: 'Security architect',
+      problem: 'Not every agent should be able to call every function.',
+      ships: 'Gate cross-agent calls <b>down to function and argument</b>.' },
+  ]},
+  { group: 'Identity & Trust', items: [
+    { icon: '🪪', name: 'Outbound API Identity', persona: 'API consumer',
+      problem: 'Shared API keys leak and can\'t be attributed to an actor.',
+      ships: '<b>Replace API keys with agent identity</b>, cryptographically signed.' },
+    { icon: '🧾', name: 'Cryptographic Receipts', persona: 'Auditor',
+      problem: 'You need proof of what a reasoner decided, verifiable later.',
+      ships: 'A <b>signed, offline-verifiable record</b> of every decision.' },
+    { icon: '⛓️', name: 'Signed Audit Chain', persona: 'Compliance team',
+      problem: 'A whole multi-agent workflow must be provable end to end.',
+      ships: 'Turn each step into a <b>signed credential, exportable</b>.' },
+  ]},
+  { group: 'Rich I/O', items: [
+    { icon: '🖼️', name: 'Multimodal Agents', persona: 'Rich-I/O builder',
+      problem: 'Your agent needs to read and produce images, audio, video.',
+      ships: 'Take <b>images in</b>, generate <b>images, audio, or video out</b>.' },
+  ]},
+];
+
+// slug = name lowercased, runs of non-alphanumerics → '-', trimmed.
+function guideSlug(name) {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+function renderQuickGuides() {
+  document.getElementById('content-area').className = 'single';
+  const groups = GUIDES.map(g => `
+    <div class="guide-group-title">${g.group}</div>
+    <div class="guide-grid">
+      ${g.items.map(it => `
+        <div class="guide-card">
+          <span class="persona">${it.persona}</span>
+          <h4>${it.icon} ${it.name}</h4>
+          <p class="problem">${it.problem}</p>
+          <p class="ships">${it.ships}</p>
+          <a class="guide-link" href="#" onclick="event.preventDefault();openGuide('${guideSlug(it.name)}')">Open guide →</a>
+        </div>`).join('')}
+    </div>`).join('');
+
+  document.getElementById('content-area').innerHTML = `
+    <div class="single"><div class="markdown-body">
+      <h1>Quick Guides</h1>
+      <p>Eleven things you can do with AgentField that no other agent framework ships out of the box.
+         Each is a single composed snippet — copy it, run it, see the wow. Read each as
+         <strong>persona → problem → what it ships</strong>, then see how they compose in
+         <a href="#" onclick="event.preventDefault();document.querySelector('.nav-item[data-view=&quot;finding-the-red&quot;]').click()">Finding the Red</a>.</p>
+      ${groups}
+      <p style="margin-top:24px;color:var(--text2);font-size:12px">Every guide opens locally — no internet required.</p>
+    </div></div>`;
+}
+
+// Render a single quick-guide from its local text/markdown block (offline).
+function openGuide(slug) {
+  const el = document.getElementById('guide-md-' + slug);
+  document.getElementById('content-area').className = 'single';
+  if (!el) {
+    document.getElementById('content-area').innerHTML =
+      `<div class="single"><div class="markdown-body"><p style="color:var(--red)">No local guide for "${slug}".</p>` +
+      `<p><a href="#" onclick="event.preventDefault();renderSynthesizedView('quick-guides')">← All Quick Guides</a></p></div></div>`;
+    return;
+  }
+  const html = enhanceCodeBlocks(enhanceDiagrams(marked.parse(el.textContent)));
+  const back = `<a href="#" onclick="event.preventDefault();renderSynthesizedView('quick-guides')">← All Quick Guides</a>`;
+  document.getElementById('content-area').innerHTML =
+    `<div class="single"><div class="markdown-body"><p>${back}</p>${html}` +
+    `<p style="margin-top:32px">${back}</p></div></div>`;
+  document.getElementById('loc-info').textContent = `local guide · ${slug}`;
+  activeDoc = null;
+}
+window.openGuide = openGuide;
+window.renderSynthesizedView = renderSynthesizedView;
+
+// ── Finding the Red: a worked use case that teaches the thinking move ──
+const RED_MAP = [
+  { ritual: 'Set quotas by <b>channel × segment</b> and work backward from bookings (ASP, cycle time, win rate).',
+    tag: 'Harness Orchestration', why: 'Per-segment models compute each lever as typed workers under a cost cap.' },
+  { ritual: 'Track <b>actuals against assumptions</b> continuously, not at quarter-end.',
+    tag: 'Memory Triggers', why: 'An agent wakes the instant a metric is written, diffs it vs the plan.' },
+  { ritual: 'A cell drifts — win rate 50% → 41% — and <b>lights up</b>. That\'s the red.',
+    tag: 'Memory Triggers + Webhook Triggers', why: 'CRM data lands via signed webhook; a pattern match on drift fires the diagnostic.' },
+  { ritual: 'Drill the disease: <b>which conversion, segment, channel, stage</b> broke?',
+    tag: 'Agent Discovery', why: 'The LLM picks the sub-agent that owns that exact metric at runtime.' },
+  { ritual: 'Pull numbers from CRM and ad platforms <b>without sharing API keys</b>.',
+    tag: 'Outbound API Identity + Access Control', why: 'Each agent calls with its own identity, gated to the functions it may touch.' },
+  { ritual: 'Confidence comes from <b>knowing</b> — even bad numbers make her confident.',
+    tag: 'Cryptographic Receipts', why: 'Every diagnosis is a signed, replayable record — no "trust me" dashboards.' },
+  { ritual: 'Defend the read in a <b>board / quarterly review</b>.',
+    tag: 'Signed Audit Chain', why: 'The whole diagnosis exports as a chain of signed credentials.' },
+  { ritual: 'Before acting on the red — <b>reallocating budget</b> — a human signs off.',
+    tag: 'Durable Human Approval', why: 'The checkpoint survives a restart; the workflow resumes where it paused.' },
+  { ritual: 'Test the fix: run the <b>old vs new playbook</b> on live pipeline.',
+    tag: 'A/B Test Deployments', why: 'Split traffic between two agent versions, compare conversion deltas.' },
+];
+
+const RED_FRAMEWORK = [
+  { t: 'Find the ritual.', p: 'What does this operator check obsessively? Conant checks her dashboard <em>~8 times a day</em>. That ritual is your spec — build the system that feeds it.' },
+  { t: 'Name the disease, not the symptom.', p: 'Absolute numbers are symptoms. The <em>disease</em> is the conversion, ASP, or cycle-time cell. Find the atomic unit that can "light up."' },
+  { t: 'Work backward into assumptions.', p: 'Every target decomposes into inputs (ASP × cycle × win rate). Each assumption becomes a <em>tracked value</em> an agent watches.' },
+  { t: 'Map each step to a capability.', p: 'When → a trigger. Compute → orchestration. Trust → identity + receipts. Act → approval + A/B. The ritual <em>is</em> the architecture.' },
+  { t: 'Make every decision a receipt.', p: 'Confidence comes from knowing. If a diagnosis can\'t be replayed and verified offline, it\'s a guess wearing a chart.' },
+];
+
+function renderFindingTheRed() {
+  const cells = [
+    { l: 'Commercial · Inbound', v: '52% win', red: false },
+    { l: 'Mid-market · Outbound', v: '41% win', red: true },
+    { l: 'Strategic · Partner', v: '58% win', red: false },
+    { l: 'Commercial · ASP', v: '$12.4k', red: false },
+  ];
+  const cellHtml = cells.map(c => `
+    <div class="cell${c.red ? ' red' : ''}">
+      <div class="label">${c.l}</div>
+      <div class="val">${c.v}</div>
+    </div>`).join('');
+
+  const mapHtml = RED_MAP.map(m => `
+    <div class="map-row">
+      <div class="ritual">${m.ritual}</div>
+      <div class="arrow">→</div>
+      <div class="cap"><span class="tag">${m.tag}</span><div class="why">${m.why}</div></div>
+    </div>`).join('');
+
+  const fw = RED_FRAMEWORK.map((s, i) => `
+    <div class="framework-step">
+      <div class="num">${i + 1}</div>
+      <div class="body"><strong>${s.t}</strong><p>${s.p}</p></div>
+    </div>`).join('');
+
+  document.getElementById('content-area').innerHTML = `
+    <div class="single"><div class="markdown-body">
+      <div class="fr-hero">
+        <span class="persona">Use case · GTM engineer building for a revenue team</span>
+        <h2>🎯 Finding the Red</h2>
+        <p>Before you write a line of agent code, learn how the operator <em>thinks</em>.
+           "Finding the red" is CMO Latané Conant's diagnostic ritual — hunting a shared dashboard
+           for the one specific thing that's broken, so you fix the disease, not the symptom.</p>
+      </div>
+
+      <h2>How the CMO thinks</h2>
+      <p>She and her head of sales set pipeline quotas every quarter, broken down by
+         <strong>channel AND segment</strong> (commercial vs. mid-market vs. strategic — different
+         assumptions each). They work backward from the bookings target using three levers:</p>
+      <div class="lever-grid">
+        <div class="lever"><div class="name">ASP</div><div class="desc">average deal size</div></div>
+        <div class="lever"><div class="name">Cycle time</div><div class="desc">time to close</div></div>
+        <div class="lever"><div class="name">Win rate</div><div class="desc">conversion per stage</div></div>
+      </div>
+      <p>Then they track actuals against the assumptions. When something drifts —
+         "we assumed a 50% win rate and it dropped to 41%" — that cell lights up. <strong>That's the red.</strong></p>
+
+      <div class="cell-grid">${cellHtml}</div>
+
+      <div class="fr-quote">
+        <p>"The absolute numbers are like symptoms. If you want to treat the actual disease,
+           you've got to get into those conversions and ASPs and cycle times."</p>
+        <span class="cite">— Latané Conant, on why precision beats blame</span>
+      </div>
+      <p>Most teams, when pipeline misses, waste time blaming each other in the abstract
+         ("the leads are bad" / "sales isn't following up"). Finding the red lets her say exactly:
+         it's <strong>this stage, in this segment, through this channel, at this conversion step</strong>.
+         Then you go fix that one thing.</p>
+
+      <h2>How you'd build it on AgentField</h2>
+      <p>The ritual maps almost one-to-one onto the quick guides. Read each row as
+         <strong>what the operator does → the capability that powers it</strong>:</p>
+      ${mapHtml}
+      <p style="margin-top:16px">That's nine of the eleven guides composed into one system. The last two are bonus surface area:
+         <strong>Multimodal Agents</strong> can ingest a screenshot of the board deck or render the red-cell chart,
+         and the whole thing is discoverable and reusable by the next team.</p>
+
+      <h2>The reusable move</h2>
+      <p>"Finding the red" is one instance of a general pattern. Point it at any operator —
+         an SRE watching error budgets, a CFO watching burn, a support lead watching CSAT — and the
+         same five steps turn their ritual into an agent system:</p>
+      ${fw}
+
+      <p style="margin-top:24px">
+        <a href="#" onclick="event.preventDefault();document.querySelector('.nav-item[data-view=&quot;quick-guides&quot;]').click()">Browse all 11 quick guides →</a>
+         &nbsp;·&nbsp;
+        <a href="${DOCS_URL}" target="_blank" rel="noopener">Full docs ↗</a>
+      </p>
+    </div></div>`;
+}
+
+async function renderDataModel() {
+  // Fetch key source files to extract actual structs/types
+  const [cpDomain, pyTypes, goTypes] = await Promise.all([
+    fetch('control-plane.md').then(r => r.text()).catch(() => ''),
+    fetch('sdk-python.md').then(r => r.text()).catch(() => ''),
+    fetch('sdk-go.md').then(r => r.text()).catch(() => '')
+  ]);
+
+  document.getElementById('content-area').innerHTML = `
+    <div class="single"><div class="markdown-body">
+      <h1>Data Model</h1>
+      <p>Synthesized from control plane domain models, SDK types, and storage schemas. Code references point to actual source files.</p>
+
+      <h2>Core Domain Models</h2>
+      <p><code>control-plane/internal/core/domain/models.go</code></p>
+      <div class="model-grid">
+        <div class="model-card">
+          <h4>AgentNode</h4>
+          <div class="file">core/domain/models.go:7</div>
+          <div class="fields">
+            <span class="field-name">ID</span> <span class="field-type">string</span> — unique agent identifier<br>
+            <span class="field-name">Name</span> <span class="field-type">string</span> — human-readable name<br>
+            <span class="field-name">Port</span> <span class="field-type">int</span> — HTTP port<br>
+            <span class="field-name">PID</span> <span class="field-type">int</span> — OS process ID<br>
+            <span class="field-name">Status</span> <span class="field-type">string</span> — runtime status<br>
+            <span class="field-name">LifecycleStatus</span> <span class="field-type">string</span> — lifecycle phase<br>
+            <span class="field-name">StartedAt</span> <span class="field-type">time.Time</span> — start timestamp<br>
+            <span class="field-name">Environment</span> <span class="field-type">map[string]string</span><br>
+            <span class="field-name">LogFile</span> <span class="field-type">string</span>
+          </div>
+        </div>
+        <div class="model-card">
+          <h4>InstalledPackage</h4>
+          <div class="file">core/domain/models.go:51</div>
+          <div class="fields">
+            <span class="field-name">Name</span> <span class="field-type">string</span><br>
+            <span class="field-name">Version</span> <span class="field-type">string</span><br>
+            <span class="field-name">Path</span> <span class="field-type">string</span><br>
+            <span class="field-name">Environment</span> <span class="field-type">map[string]string</span><br>
+            <span class="field-name">InstalledAt</span> <span class="field-type">time.Time</span>
+          </div>
+        </div>
+        <div class="model-card">
+          <h4>ExecutionRecord</h4>
+          <div class="file">storage/execution_records.go</div>
+          <div class="fields">
+            <span class="field-name">WorkflowID</span> <span class="field-type">string</span><br>
+            <span class="field-name">NodeID</span> <span class="field-type">string</span><br>
+            <span class="field-name">ReasonerName</span> <span class="field-type">string</span><br>
+            <span class="field-name">Input</span> <span class="field-type">json.RawMessage</span><br>
+            <span class="field-name">Output</span> <span class="field-type">json.RawMessage</span><br>
+            <span class="field-name">Status</span> <span class="field-type">string</span> — pending/running/completed/failed<br>
+            <span class="field-name">ParentID</span> <span class="field-type">*string</span> — DAG parent link<br>
+            <span class="field-name">StartedAt</span> / <span class="field-name">CompletedAt</span> <span class="field-type">time.Time</span>
+          </div>
+        </div>
+        <div class="model-card">
+          <h4>VC Credential</h4>
+          <div class="file">encryption/encryption.go + did/types.go</div>
+          <div class="fields">
+            <span class="field-name">DID</span> <span class="field-type">string</span> — decentralized identifier<br>
+            <span class="field-name">PublicKey</span> <span class="field-type">ed25519.PublicKey</span><br>
+            <span class="field-name">Signature</span> <span class="field-type">[]byte</span> — Ed25519 signature<br>
+            <span class="field-name">InputHash</span> <span class="field-type">string</span> — SHA-256 of execution input<br>
+            <span class="field-name">OutputHash</span> <span class="field-type">string</span> — SHA-256 of execution output<br>
+            <span class="field-name">Timestamp</span> <span class="field-type">time.Time</span>
+          </div>
+        </div>
+      </div>
+
+      <h2>Memory Scopes</h2>
+      <p><code>sdk/python/agentfield/memory.py:1-60</code></p>
+      <table>
+        <tr><th>Scope</th><th>Lifetime</th><th>Lookup Priority</th><th>Use Case</th></tr>
+        <tr><td><strong>global</strong></td><td>Until explicitly deleted</td><td>4th (lowest)</td><td>Shared config, knowledge bases</td></tr>
+        <tr><td><strong>session</strong></td><td>Duration of user session</td><td>2nd</td><td>Conversation context</td></tr>
+        <tr><td><strong>actor</strong></td><td>Across all sessions</td><td>3rd</td><td>Actor-specific learned data</td></tr>
+        <tr><td><strong>workflow/run</strong></td><td>Single workflow execution</td><td>1st (highest)</td><td>Intermediate results</td></tr>
+      </table>
+      <p><strong>Resolution order:</strong> workflow → session → actor → global (narrowest first match wins)</p>
+
+      <h2>Agent Lifecycle States</h2>
+      <table>
+        <tr><th>State</th><th>Meaning</th><th>Transition</th></tr>
+        <tr><td><strong>created</strong></td><td>Agent struct initialized</td><td>→ registering</td></tr>
+        <tr><td><strong>registering</strong></td><td>Registering with control plane</td><td>→ ready / failed</td></tr>
+        <tr><td><strong>ready</strong></td><td>Accepting execution requests</td><td>→ draining</td></tr>
+        <tr><td><strong>draining</strong></td><td>Completing in-flight requests</td><td>→ stopped</td></tr>
+        <tr><td><strong>failed</strong></td><td>Registration or runtime error</td><td>terminal</td></tr>
+        <tr><td><strong>stopped</strong></td><td>Graceful shutdown complete</td><td>terminal</td></tr>
+      </table>
+
+      <h2>Execution State Machine</h2>
+      <table>
+        <tr><th>State</th><th>Meaning</th></tr>
+        <tr><td><strong>pending</strong></td><td>Queued, awaiting dispatch</td></tr>
+        <tr><td><strong>running</strong></td><td>Executing on target agent</td></tr>
+        <tr><td><strong>pending_approval</strong></td><td>Waiting for human approval</td></tr>
+        <tr><td><strong>completed</strong></td><td>Successful completion</td></tr>
+        <tr><td><strong>failed</strong></td><td>Execution error</td></tr>
+        <tr><td><strong>cancelled</strong></td><td>Cancelled by caller or system</td></tr>
+      </table>
+
+      <h2>Event Types</h2>
+      <p><code>control-plane/internal/events/</code></p>
+      <table>
+        <tr><th>Event</th><th>File</th><th>Payload</th></tr>
+        <tr><td>execution.started</td><td>execution_events.go</td><td>workflow_id, node_id, input</td></tr>
+        <tr><td>execution.completed</td><td>execution_events.go</td><td>workflow_id, node_id, output, duration</td></tr>
+        <tr><td>execution.failed</td><td>execution_events.go</td><td>workflow_id, node_id, error</td></tr>
+        <tr><td>node.registered</td><td>node_events.go</td><td>node_id, name, port</td></tr>
+        <tr><td>node.heartbeat</td><td>node_events.go</td><td>node_id, status, timestamp</td></tr>
+        <tr><td>trigger.fired</td><td>trigger_events.go</td><td>trigger_id, source, payload</td></tr>
+        <tr><td>reasoner.executed</td><td>reasoner_events.go</td><td>node_id, reasoner, input, output</td></tr>
+      </table>
+
+      <h2>Storage Backends</h2>
+      <table>
+        <tr><th>Mode</th><th>Engine</th><th>Config Variable</th></tr>
+        <tr><td>Local</td><td>SQLite + BoltDB</td><td><code>AGENTFIELD_MODE=local</code></td></tr>
+        <tr><td>PostgreSQL</td><td>PostgreSQL 15+</td><td><code>AGENTFIELD_STORAGE_MODE=postgresql</code></td></tr>
+        <tr><td>Cloud</td><td>Managed PostgreSQL</td><td><code>AGENTFIELD_STORAGE_MODE=cloud</code></td></tr>
+      </table>
+    </div></div>
+  `;
+}
+
+function renderSystemMap() {
+  document.getElementById('content-area').innerHTML = `
+    <div class="single"><div class="markdown-body">
+      <h1>System Map</h1>
+      <p>Interactive architecture diagram of the AgentField system. Click a component to open its spec.</p>
+
+      <h2>Three-Tier Architecture</h2>
+      <pre class="diagram-box arch" style="font-size:10px; line-height:1.4">
+┌──────────────────────────────────────────────────────────────────────────┐
+│                          <strong>Web UI</strong> (React/TypeScript)                          │
+│                    control-plane/web/client/src/                          │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐                    │
+│  │  Dashboard   │  │ Workflow DAG │  │  DID/VC View │                    │
+│  │  (widgets,   │  │ (graph viz,  │  │ (identity    │                    │
+│  │   metrics)   │  │  layouts)    │  │  inspection) │                    │
+│  └──────────────┘  └──────────────┘  └──────────────┘                    │
+│                    SSE ↑↓ REST                                            │
+├═══════════════════════════════════════════════════════════════════════════┤
+│                       <strong>Control Plane</strong> (Go/Gin) :8080                         │
+│                    control-plane/cmd/af/                                  │
+│  ┌──────────────────────────────────────────────────────────────────┐     │
+│  │                     Middleware Layer                              │     │
+│  │  Auth │ CORS │ Logging │ Tracing │ Rate Limiting                  │     │
+│  └────────────────────────────┬─────────────────────────────────────┘     │
+│                               │                                           │
+│  ┌────────────────────────────▼─────────────────────────────────────┐     │
+│  │                      Handler Layer                                │     │
+│  │  admin/ │ agentic/ │ connector/ │ ui/  │ nodes_*.go │ execute_*.go│     │
+│  └────────────────────────────┬─────────────────────────────────────┘     │
+│                               │                                           │
+│  ┌────────────────────────────▼─────────────────────────────────────┐     │
+│  │                      Service Layer                                │     │
+│  │  Workflow Execution │ Agent Registry │ DID/VC │ Workflow Status   │     │
+│  └────────────────────────────┬─────────────────────────────────────┘     │
+│                               │                                           │
+│  ┌────────────────────────────▼─────────────────────────────────────┐     │
+│  │                      Storage Layer                                │     │
+│  │  ┌──────────┐  ┌──────────────┐  ┌──────────┐                    │     │
+│  │  │  SQLite  │  │  PostgreSQL  │  │  BoltDB  │                    │     │
+│  │  │ (local)  │  │ (production) │  │ (local   │                    │     │
+│  │  │          │  │              │  │  KV)     │                    │     │
+│  │  └──────────┘  └──────────────┘  └──────────┘                    │     │
+│  └──────────────────────────────────────────────────────────────────┘     │
+│  ┌──────────────────────────────────────────────────────────────────┐     │
+│  │  Event Bus (SSE)  │  MCP Integration  │  Sources (GitHub/Stripe/  │     │
+│  │  events/          │  mcp/             │  Slack/Cron/Webhooks)     │     │
+│  └──────────────────────────────────────────────────────────────────┘     │
+├═══════════════════════════════════════════════════════════════════════════┤
+│                          <strong>Agent SDKs</strong>                                  │
+│  ┌─────────────────────────────┐  ┌──────────────────────────────┐        │
+│  │     <strong>Python SDK</strong>            │  │       <strong>Go SDK</strong>                │        │
+│  │  agent.py:Agent              │  │  agent/:Agent                │        │
+│  │  ├─ AgentServer (FastAPI)    │  │  ├─ Lifecycle (Init/Run)     │        │
+│  │  ├─ AgentAI (LLM calls)      │  │  ├─ Skills (Register/Exec)   │        │
+│  │  ├─ Memory (4 scopes)        │  │  ├─ Memory (CP backend)      │        │
+│  │  ├─ ExecutionContext         │  │  ├─ Harness (Claude/Gemini/  │        │
+│  │  ├─ Client (HTTP to CP)      │  │  │   Codex/OpenAI)           │        │
+│  │  ├─ Router (discovery)       │  │  ├─ DID (Identity + VCs)     │        │
+│  │  ├─ DIDManager/VCGenerator   │  │  ├─ Router (request routing) │        │
+│  │  ├─ Triggers (webhooks)      │  │  └─ CLI (CLI mode)           │        │
+│  │  ├─ ToolCalling (structured) │  │                              │        │
+│  │  └─ Multimodal (vision/audio)│  │                              │        │
+│  └─────────────────────────────┘  └──────────────────────────────┘        │
+└──────────────────────────────────────────────────────────────────────────┘</pre>
+
+      <h2>Request Flow</h2>
+      <div class="flow-steps">
+        <div class="flow-step">
+          <div class="flow-step-num">1</div>
+          <div class="flow-step-content">
+            <strong>Client sends request</strong>
+            <p>HTTP POST to control plane at <code>/api/v1/execute/{node}.{reasoner}</code></p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-step-num">2</div>
+          <div class="flow-step-content">
+            <strong>Middleware processes</strong>
+            <p>Auth validation, CORS, logging, rate limiting — <code>internal/server/middleware/</code></p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-step-num">3</div>
+          <div class="flow-step-content">
+            <strong>Handler routes request</strong>
+            <p>Parses target <code>{node}.{reasoner}</code>, resolves agent from registry — <code>internal/handlers/agentic/</code></p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-step-num">4</div>
+          <div class="flow-step-content">
+            <strong>Service executes logic</strong>
+            <p>Workflow DAG tracking, execution context propagation, DID/VC generation — <code>internal/services/</code></p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-step-num">5</div>
+          <div class="flow-step-content">
+            <strong>Control plane calls agent</strong>
+            <p>HTTP request forwarded to target agent's server (Python FastAPI or Go net/http)</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-step-num">6</div>
+          <div class="flow-step-content">
+            <strong>Agent executes reasoner</strong>
+            <p>Reasoner function runs with input, may call AI models, tools, or other agents</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-step-num">7</div>
+          <div class="flow-step-content">
+            <strong>Result flows back</strong>
+            <p>Output stored in execution record, event emitted via SSE, response returned to caller</p>
+          </div>
+        </div>
+      </div>
+
+      <h2>Data Flow: Agent-to-Agent Call</h2>
+      <pre class="diagram-box flow">
+┌──────────┐  1. Call("agent_b.score")   ┌──────────────┐
+│ Agent A  │────────────────────────────▶│ Control Plane│
+│ (caller) │                             │              │
+│          │◀────────────────────────────│  2. Lookup   │
+└──────────┘  7. Return result           │     agent_b  │
+                                         │  3. Route    │
+┌──────────┐                             │     call     │
+│ Agent B  │◀────────────────────────────│              │
+│ (target) │  4. Execute score()         │              │
+│          │────────────────────────────▶│              │
+└──────────┘  5. Return output           └──────────────┘</pre>
+
+      <h2>Workflow DAG Execution</h2>
+      <pre class="diagram-box flow">
+        ┌─────────┐
+        │ Trigger │  (webhook, cron, manual)
+        └────┬────┘
+             │
+        ┌────▼────┐
+        │Agent A  │  score_claim()
+        └────┬────┘
+             │
+     ┌───────┼───────┐
+     │               │
+┌────▼────┐    ┌─────▼────┐
+│Agent B  │    │ Agent C  │  (parallel branch)
+│fraud_   │    │risk_     │
+│check()  │    │assess()  │
+└────┬────┘    └─────┬────┘
+     │               │
+     └───────┬───────┘
+             │
+        ┌────▼────┐
+        │Agent D  │  approve_claim()
+        │(depends │
+        │ on B,C) │
+        └────┬────┘
+             │
+        ┌────▼────┐
+        │  Done   │
+        └─────────┘</pre>
+
+      <h2>Component Connections</h2>
+      <table>
+        <tr><th>From</th><th>To</th><th>Protocol</th><th>Purpose</th></tr>
+        <tr><td>Web UI</td><td>Control Plane</td><td>REST + SSE</td><td>Dashboard data, real-time updates</td></tr>
+        <tr><td>Agent SDK</td><td>Control Plane</td><td>REST (HTTP)</td><td>Registration, execution, memory</td></tr>
+        <tr><td>Control Plane</td><td>Agent SDK</td><td>REST (HTTP)</td><td>Route execution calls to agents</td></tr>
+        <tr><td>Control Plane</td><td>PostgreSQL</td><td>TCP/pgwire</td><td>Persistent storage</td></tr>
+        <tr><td>Control Plane</td><td>SQLite</td><td>File I/O</td><td>Local dev storage</td></tr>
+        <tr><td>Control Plane</td><td>BoltDB</td><td>File I/O</td><td>Local KV storage</td></tr>
+        <tr><td>Agent SDK</td><td>AI Provider</td><td>HTTPS</td><td>LLM API calls</td></tr>
+        <tr><td>External Service</td><td>Control Plane</td><td>Webhook (HTTP)</td><td>Trigger agent workflows</td></tr>
+      </table>
+
+      <h2>Key Code Paths</h2>
+      <table>
+        <tr><th>Operation</th><th>Code Path</th></tr>
+        <tr><td>Agent registers</td><td><code>handlers/nodes_rest.go</code> → <code>services/</code> → <code>storage/</code> → <code>events/node_events.go</code></td></tr>
+        <tr><td>Agent calls agent</td><td><code>client.py</code> → CP <code>handlers/agentic/</code> → target agent <code>agent.py</code></td></tr>
+        <tr><td>Workflow executes</td><td><code>services/</code> → <code>events/execution_events.go</code> → SSE → Web UI</td></tr>
+        <tr><td>Memory read</td><td><code>memory.py</code> → CP <code>handlers/memory_events.go</code> → <code>storage/</code> (scope resolution)</td></tr>
+        <tr><td>VC generated</td><td><code>services/</code> → <code>encryption/encryption.go</code> → <code>vc_generator.py</code></td></tr>
+      </table>
+    </div></div>
+  `;
+}
+
+// Line highlight helper
+function hlLines() {
+  document.querySelectorAll('pre code').forEach(block => {
+    block.innerHTML = block.innerHTML.replace(/^(\s*)(\/\/|\#|\/\*|<!--)\s*(Code reference:.*)$/gm,
+      '$1<span style="color:var(--green)">$2 $3</span>');
+  });
+}
+
+// Toast
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+    e.preventDefault();
+    document.getElementById('search').focus();
+  }
+  if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+    e.preventDefault();
+    setViewMode(viewMode === 'single' ? 'split' : 'single');
+  }
+});
+
+// Open from URL hash
+if (window.location.hash) {
+  const doc = window.location.hash.slice(1);
+  if (DOCS.includes(doc)) loadDoc(doc);
+}
+window.addEventListener('hashchange', () => {
+  const doc = window.location.hash.slice(1);
+  if (DOCS.includes(doc)) loadDoc(doc);
+});
+
+console.log('%c🚀 AgentField Specs Viewer %cready',
+  'font-size:16px;font-weight:bold;color:#a78bfa',
+  'color:#9898a8');
+console.log('%cCmd+K %csearch  %cCmd+S %csplit view  %cClick sidebar %cnavigate',
+  'color:#fff','color:#9898a8','color:#fff','color:#9898a8','color:#fff','color:#9898a8');
+</script>
+</body>
+</html>

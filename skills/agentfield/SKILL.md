@@ -236,7 +236,10 @@ A TypeScript SDK exists (`sdk/typescript/`) and a Go SDK exists (`sdk/go/`). **D
 | `references/primitives-snapshot.md` | **Offline only** — when you cannot fetch live docs |
 | `references/scaffold-recipe.md` | Actually writing files / compose / Dockerfile |
 | `references/verification.md` | The full ladder, troubleshooting, async vs sync |
-| `references/triggers.md` | Use case is event-driven (webhook) or scheduled (cron) |
+| `references/triggers.md` | Use case is event-driven (webhook) or scheduled (cron) — **local, no fetch** |
+| `references/shared-memory.md` | Reasoners share state across time/agents — scopes, KV, vector — **local, no fetch** |
+| `references/memory-events.md` | Reasoners react to memory writes (`@app.on_change`) — **local, no fetch** |
+| `references/capability-playbook.md` | **Architect/CTO/CMO**: which coordination primitive to use, and its ROI/vertical fit |
 | `references/project-claude-template.md` | Generating the per-project CLAUDE.md (always) |
 | `references/anti-patterns.md` | When tempted to take a shortcut, or when the user pushes back on a rejection |
 
