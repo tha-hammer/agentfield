@@ -6,6 +6,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.95-rc.1] - 2026-06-25
+
+
+### Fixed
+
+- Fix(go-sdk): surface json.Marshal errors in memory backend requests (#679)
+
+* fix(go-sdk): surface json.Marshal errors in memory backend requests
+
+mustJSONReader discarded the json.Marshal error and returned a reader
+over a nil byte slice. When a value could not be serialized (unsupported
+type, cyclic struct, channel, func), the control-plane POST was sent with
+an empty body — silently storing nothing or overwriting with an empty
+value — and the real error never reached the caller.
+
+Replace it with jsonReader(v any) (io.Reader, error) and propagate the
+error at each call site (Set, Get, Delete, SetVector, SearchVector), all
+of which already return an error.
+
+Adds a test asserting an unserializable value yields an error instead of
+an empty reader. Fixes #434.
+
+* test(go-sdk): avoid dead marshal path in get/delete
+
+---------
+
+Co-authored-by: santoshkumarradha <santosh@agentfield.ai> (f9666c9)
+
 ## [0.1.94] - 2026-06-25
 
 ## [0.1.94-rc.3] - 2026-06-25
