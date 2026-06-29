@@ -366,6 +366,36 @@ class CheckSilmariRebrandContractTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         self.assertIn("Silmari rebrand check passed.", output)
 
+    def test_negated_all_occurrences_reason_does_not_grant_file_wide_coverage(self) -> None:
+        fixture_path = "tests/fixture.txt"
+        manifest_text = build_manifest(
+            audited_rows=[
+                (
+                    fixture_path,
+                    "audited-no-change",
+                    "python3 -m pytest tests/test_check_silmari_rebrand.py",
+                )
+            ],
+            preserved_rows=[
+                (
+                    fixture_path,
+                    LEGACY_BRAND,
+                    "test-fixture",
+                    "Fixture keeps AgentField as a compatibility assertion but does not cover all occurrences in this file.",
+                )
+            ],
+        )
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+            write_text(root, fixture_path, f"{LEGACY_BRAND}\n{LEGACY_BRAND}\n")
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertNotIn(f"{fixture_path}:1: {LEGACY_BRAND}", output)
+        self.assertIn(f"{fixture_path}:2: {LEGACY_BRAND}", output)
+
     def test_enclosing_identifier_is_accepted(self) -> None:
         fixture_path = "tests/env-fixture.txt"
         manifest_text = build_manifest(

@@ -302,11 +302,9 @@ def is_concrete_reason(reason: str) -> bool:
 
 def reason_covers_all_occurrences(reason: str) -> bool:
     normalized = " ".join(reason.strip().lower().split())
-    return any(
-        phrase in normalized
-        for phrase in (
-            "all occurrences in this file",
-            "all occurrences in that file",
+    return bool(
+        re.search(
+            r"\bcovers all occurrences in (?:this|that) file\b", normalized
         )
     )
 
