@@ -49,51 +49,56 @@ def build_manifest(
     verification_rows: list[tuple[str, str, str, str]] | None = None,
     deferred_lines: list[str] | None = None,
 ) -> str:
-    audited_rows = audited_rows or []
-    preserved_rows = preserved_rows or []
-    codecleanup_rows = codecleanup_rows or [
-        (
-            "Brand surface pass",
-            "not-applicable",
-            "Later rebrand slices update visible prose and UI copy.",
-        ),
-        (
-            "Compatibility pass",
-            "pass",
-            "The scanner enforces allowed preserved-identifier categories.",
-        ),
-        (
-            "Mirror and generated-template pass",
-            "pass",
-            "The scanner checks embedded skill mirror parity.",
-        ),
-        (
-            "Link and asset pass",
-            "not-applicable",
-            "Link and asset relabeling lands in later slices.",
-        ),
-        (
-            "Formatting and lint pass",
-            "pass",
-            "The validation slice keeps manifest, scanner, and tests formatted.",
-        ),
-        (
-            "Verification pass",
-            "pass",
-            "Contract tests exercise the scanner behaviors for this slice.",
-        ),
-    ]
-    verification_rows = verification_rows or [
-        (
-            "python3 -m pytest tests/test_check_silmari_rebrand.py",
-            ".",
-            "0",
-            "Contract tests cover the scanner slice.",
-        ),
-    ]
-    deferred_lines = deferred_lines or [
-        "Repo-wide Silmari copy edits land in later AF-RB slices.",
-    ]
+    if audited_rows is None:
+        audited_rows = []
+    if preserved_rows is None:
+        preserved_rows = []
+    if codecleanup_rows is None:
+        codecleanup_rows = [
+            (
+                "Brand surface pass",
+                "not-applicable",
+                "Later rebrand slices update visible prose and UI copy.",
+            ),
+            (
+                "Compatibility pass",
+                "pass",
+                "The scanner enforces allowed preserved-identifier categories.",
+            ),
+            (
+                "Mirror and generated-template pass",
+                "pass",
+                "The scanner checks embedded skill mirror parity.",
+            ),
+            (
+                "Link and asset pass",
+                "not-applicable",
+                "Link and asset relabeling lands in later slices.",
+            ),
+            (
+                "Formatting and lint pass",
+                "pass",
+                "The validation slice keeps manifest, scanner, and tests formatted.",
+            ),
+            (
+                "Verification pass",
+                "pass",
+                "Contract tests exercise the scanner behaviors for this slice.",
+            ),
+        ]
+    if verification_rows is None:
+        verification_rows = [
+            (
+                "python3 -m pytest tests/test_check_silmari_rebrand.py",
+                ".",
+                "0",
+                "Contract tests cover the scanner slice.",
+            ),
+        ]
+    if deferred_lines is None:
+        deferred_lines = [
+            "Repo-wide Silmari copy edits land in later AF-RB slices.",
+        ]
 
     return textwrap.dedent(
         f"""\
@@ -242,6 +247,36 @@ class CheckSilmariRebrandContractTests(unittest.TestCase):
             output,
         )
 
+    def test_repo_under_build_ancestor_still_scans_repo_relative_docs_file(self) -> None:
+        manifest_text = build_manifest(
+            audited_rows=[
+                (
+                    "docs/unmanifested.md",
+                    "rebranded",
+                    "./scripts/check-silmari-rebrand.sh",
+                )
+            ]
+        )
+        build_root = Path("/tmp/build")
+        build_root.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=build_root) as tmpdir_name:
+            root = Path(tmpdir_name) / "repo"
+            write_text(root, MANIFEST_PATH, manifest_text)
+            write_sync_script(root)
+            seed_skill_tree(root, mirrored=True)
+            write_text(
+                root,
+                "docs/unmanifested.md",
+                f"Silmari still mentions {LEGACY_BRAND} under a build ancestor.\n",
+            )
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("docs/unmanifested.md:1", output)
+        self.assertIn(LEGACY_BRAND, output)
+
     def test_single_exact_preserved_token_is_accepted(self) -> None:
         fixture_path = "tests/fixture.txt"
         manifest_text = build_manifest(
@@ -271,6 +306,36 @@ class CheckSilmariRebrandContractTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         self.assertIn("Silmari rebrand check passed.", output)
         self.assertIn("validated 1 preserved identifier rows", output)
+
+    def test_exact_preserved_token_covers_only_one_occurrence(self) -> None:
+        fixture_path = "tests/fixture.txt"
+        manifest_text = build_manifest(
+            audited_rows=[
+                (
+                    fixture_path,
+                    "audited-no-change",
+                    "python3 -m pytest tests/test_check_silmari_rebrand.py",
+                )
+            ],
+            preserved_rows=[
+                (
+                    fixture_path,
+                    LEGACY_BRAND,
+                    "test-fixture",
+                    "First fixture occurrence remains to assert compatibility behavior.",
+                )
+            ],
+        )
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+            write_text(root, fixture_path, f"{LEGACY_BRAND}\n{LEGACY_BRAND}\n")
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertNotIn(f"{fixture_path}:1: {LEGACY_BRAND}", output)
+        self.assertIn(f"{fixture_path}:2: {LEGACY_BRAND}", output)
 
     def test_enclosing_identifier_is_accepted(self) -> None:
         fixture_path = "tests/env-fixture.txt"
@@ -318,6 +383,25 @@ class CheckSilmariRebrandContractTests(unittest.TestCase):
                     "Legacy env var name remains stable for compatibility docs.",
                 )
             ],
+        )
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 0)
+        self.assertNotIn("Unmanifested identifiers:", output)
+
+    def test_manifest_audit_rows_with_old_brand_tokens_are_excluded_from_brand_scan(self) -> None:
+        manifest_text = build_manifest(
+            audited_rows=[
+                (
+                    "skills/agentfield/SKILL.md",
+                    "audited-no-change",
+                    "./scripts/sync-embedded-skills.sh --check",
+                )
+            ]
         )
         with self.make_repo(manifest_text) as tmpdir_name:
             root = Path(tmpdir_name)
@@ -405,6 +489,46 @@ class CheckSilmariRebrandContractTests(unittest.TestCase):
         output = result.stdout + result.stderr
         self.assertEqual(result.returncode, 1)
         self.assertIn("Reason must be concrete", output)
+
+    def test_verification_commands_table_requires_at_least_one_row(self) -> None:
+        manifest_text = build_manifest(verification_rows=[])
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Verification Commands table must contain at least one row.", output)
+
+
+class ScannerHelperEdgeCaseTests(unittest.TestCase):
+    def test_empty_identifier_produces_no_ranges(self) -> None:
+        module = load_embedded_module()
+
+        self.assertEqual(module.identifier_ranges(f"keep {LOWER_IMPORT} stable", ""), [])
+
+    def test_enclosing_identifier_covers_match_at_trailing_boundary(self) -> None:
+        module = load_embedded_module()
+        enclosing_identifier = "github.com/Agent-Field/agentfield"
+        line_text = f"Use {enclosing_identifier} in compatibility docs."
+        start = line_text.index(LOWER_LEGACY)
+        match = module.BrandMatch(
+            path="README.md",
+            line_number=1,
+            column_start=start,
+            column_end=start + len(LOWER_LEGACY),
+            match_text=LOWER_LEGACY,
+            line_text=line_text,
+        )
+        row = module.PreservedIdentifier(
+            path="README.md",
+            identifier=enclosing_identifier,
+            category="import-module-path",
+            reason="Go import path stays stable for compatibility docs.",
+        )
+
+        self.assertTrue(module.row_covers_match(match, row))
 
 
 class IdentifierCoveragePropertyTests(unittest.TestCase):

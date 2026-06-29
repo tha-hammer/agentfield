@@ -479,6 +479,10 @@ def is_binary_file(path: Path) -> bool:
         return False
 
 
+def has_excluded_relative_directory(relative_path: Path) -> bool:
+    return any(part in EXCLUDED_DIR_NAMES for part in relative_path.parent.parts)
+
+
 def collect_scan_files(repo_root: Path) -> list[Path]:
     collected: list[Path] = []
     seen: set[str] = set()
@@ -502,9 +506,10 @@ def collect_scan_files(repo_root: Path) -> list[Path]:
         for path in candidate.rglob("*"):
             if not path.is_file():
                 continue
-            if any(part in EXCLUDED_DIR_NAMES for part in path.parts):
+            relative_path = path.relative_to(repo_root)
+            if has_excluded_relative_directory(relative_path):
                 continue
-            relative = path.relative_to(repo_root).as_posix()
+            relative = relative_path.as_posix()
             if relative == MANIFEST_REL_PATH or is_excluded_file(relative):
                 continue
             if is_binary_file(path):
@@ -573,19 +578,50 @@ def row_covers_match(match: BrandMatch, row: PreservedIdentifier) -> bool:
     )
 
 
-def is_manifested(match: BrandMatch, manifest: Manifest) -> bool:
-    if match.path not in manifest.audited_files:
-        return False
-
+def valid_preserved_rows_by_path(
+    manifest: Manifest,
+) -> dict[str, list[PreservedIdentifier]]:
+    rows_by_path: dict[str, list[PreservedIdentifier]] = {}
     for row in manifest.preserved_identifiers:
-        if row.path != match.path:
-            continue
         if row.category not in ALLOWED_CATEGORIES:
             continue
         if not is_concrete_reason(row.reason):
             continue
+        rows_by_path.setdefault(row.path, []).append(row)
+    return rows_by_path
+
+
+def build_exact_token_row_counts(
+    rows_by_path: dict[str, list[PreservedIdentifier]],
+) -> dict[tuple[str, str], int]:
+    counts: dict[tuple[str, str], int] = {}
+    for path, rows in rows_by_path.items():
+        for row in rows:
+            key = (path, row.identifier)
+            counts[key] = counts.get(key, 0) + 1
+    return counts
+
+
+def is_manifested(
+    match: BrandMatch,
+    manifest: Manifest,
+    rows_by_path: dict[str, list[PreservedIdentifier]],
+    available_exact_rows: dict[tuple[str, str], int],
+) -> bool:
+    if match.path not in manifest.audited_files:
+        return False
+
+    for row in rows_by_path.get(match.path, []):
+        if row.identifier == match.match_text:
+            continue
         if row_covers_match(match, row):
             return True
+
+    exact_key = (match.path, match.match_text)
+    if available_exact_rows.get(exact_key, 0) > 0:
+        available_exact_rows[exact_key] -= 1
+        return True
+
     return False
 
 
@@ -598,6 +634,8 @@ def build_preserved_identifier_coverage_view(
     missing_seen: set[str] = set()
     unmanifested_matches: list[BrandMatch] = []
     covered_matches = 0
+    rows_by_path = valid_preserved_rows_by_path(manifest)
+    available_exact_rows = build_exact_token_row_counts(rows_by_path)
 
     for match in matches:
         if match.path not in manifest.audited_files:
@@ -605,7 +643,7 @@ def build_preserved_identifier_coverage_view(
                 missing_seen.add(match.path)
                 missing_audited_files.append(match.path)
             continue
-        if is_manifested(match, manifest):
+        if is_manifested(match, manifest, rows_by_path, available_exact_rows):
             covered_matches += 1
             continue
         unmanifested_matches.append(match)
