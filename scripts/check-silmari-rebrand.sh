@@ -302,11 +302,50 @@ def is_concrete_reason(reason: str) -> bool:
 
 def reason_covers_all_occurrences(reason: str) -> bool:
     normalized = " ".join(reason.strip().lower().split())
-    return bool(
-        re.search(
-            r"\bcovers all occurrences in (?:this|that) file\b", normalized
+    pattern = re.compile(r"\bcovers all occurrences in (?:this|that) file\b")
+    negation_tokens = {
+        "cannot",
+        "can't",
+        "cant",
+        "didn't",
+        "didnt",
+        "doesn't",
+        "doesnt",
+        "don't",
+        "dont",
+        "mustn't",
+        "mustnt",
+        "never",
+        "no",
+        "not",
+        "without",
+        "won't",
+        "wont",
+    }
+
+    for match in pattern.finditer(normalized):
+        clause_start = max(
+            normalized.rfind(".", 0, match.start()),
+            normalized.rfind(";", 0, match.start()),
+            normalized.rfind("!", 0, match.start()),
+            normalized.rfind("?", 0, match.start()),
         )
-    )
+        clause_prefix = normalized[clause_start + 1 : match.start()]
+
+        local_prefix_start = 0
+        for connector in (",", " and ", " but ", " so ", " because "):
+            connector_index = clause_prefix.rfind(connector)
+            if connector_index != -1:
+                local_prefix_start = max(
+                    local_prefix_start, connector_index + len(connector)
+                )
+        local_prefix = clause_prefix[local_prefix_start:]
+        trailing_tokens = re.findall(r"[a-z]+(?:'[a-z]+)?", local_prefix)[-3:]
+        if any(token in negation_tokens for token in trailing_tokens):
+            continue
+        return True
+
+    return False
 
 
 def validate_table_shape(
