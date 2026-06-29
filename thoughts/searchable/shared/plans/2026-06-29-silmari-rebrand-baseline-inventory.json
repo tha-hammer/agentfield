@@ -73,7 +73,7 @@
   },
   "brandInventoryCollected": {
     "classificationCounts": {
-      "edit": 226,
+      "edit": 227,
       "historical": 4,
       "preserve": 257,
       "runtime-compatible": 128
@@ -161,31 +161,37 @@
         "classification": "edit",
         "matches": 53,
         "path": "CLAUDE.md",
-        "reason": "Root-facing product prose is user-visible and should use Silmari branding."
+        "reason": "Root-facing product prose and visible link labels are user-visible and should use Silmari branding."
       },
       {
         "classification": "edit",
         "matches": 2,
         "path": "CODE_OF_CONDUCT.md",
-        "reason": "Root-facing product prose is user-visible and should use Silmari branding."
+        "reason": "Root-facing product prose and visible link labels are user-visible and should use Silmari branding."
       },
       {
         "classification": "edit",
         "matches": 93,
         "path": "README.md",
-        "reason": "Root-facing product prose is user-visible and should use Silmari branding."
+        "reason": "Root-facing product prose and visible link labels are user-visible and should use Silmari branding."
       },
       {
         "classification": "edit",
         "matches": 2,
         "path": "SECURITY.md",
-        "reason": "Root-facing product prose is user-visible and should use Silmari branding."
+        "reason": "Root-facing product prose and visible link labels are user-visible and should use Silmari branding."
       },
       {
         "classification": "edit",
         "matches": 2,
         "path": "SUPPORT.md",
-        "reason": "Root-facing product prose is user-visible and should use Silmari branding."
+        "reason": "Root-facing product prose and visible link labels are user-visible and should use Silmari branding."
+      },
+      {
+        "classification": "edit",
+        "matches": 66,
+        "path": "assets/utm-links.csv",
+        "reason": "Root-facing product prose and visible link labels are user-visible and should use Silmari branding."
       },
       {
         "classification": "edit",
@@ -3770,7 +3776,7 @@
         "reason": "Functional test fixtures keep stable package, route, and compatibility identifiers."
       }
     ],
-    "command": "rg --json --ignore-case -o \\bAgentField\\b|\\bagentfield\\b|AGENTFIELD|Agent-Field|agentfield\\.ai|AgentPlane|agentplane|Agent Plane|agent plane README.md CODE_OF_CONDUCT.md SUPPORT.md SECURITY.md CLAUDE.md .github docs specs examples deployments skills control-plane/README.md control-plane/scripts/README.md control-plane/tools/perf/README.md control-plane/migrations/README.md control-plane/internal/templates control-plane/internal/skillkit/skill_data/agentfield control-plane/web/client sdk tests --glob !**/node_modules/** --glob !**/dist/** --glob !**/.pytest_cache/**",
+    "command": "rg --json --ignore-case -o \\bAgentField\\b|\\bagentfield\\b|AGENTFIELD|Agent-Field|agentfield\\.ai|AgentPlane|agentplane|Agent Plane|agent plane README.md CODE_OF_CONDUCT.md SUPPORT.md SECURITY.md CLAUDE.md assets/utm-links.csv .github docs specs examples deployments skills control-plane/README.md control-plane/scripts/README.md control-plane/tools/perf/README.md control-plane/migrations/README.md control-plane/internal/templates control-plane/internal/skillkit/skill_data/agentfield control-plane/web/client sdk tests --glob !**/node_modules/** --glob !**/dist/** --glob !**/.pytest_cache/**",
     "commandRef": "Brand Surface Inventory",
     "scanRoots": [
       "README.md",
@@ -3778,6 +3784,7 @@
       "SUPPORT.md",
       "SECURITY.md",
       "CLAUDE.md",
+      "assets/utm-links.csv",
       ".github",
       "docs",
       "specs",
@@ -3794,8 +3801,8 @@
       "sdk",
       "tests"
     ],
-    "totalMatchedFiles": 615,
-    "totalMatches": 4529
+    "totalMatchedFiles": 616,
+    "totalMatches": 4595
   },
   "changeSetBoundaryVerified": {
     "editableBrandSurfaces": [
@@ -3829,7 +3836,8 @@
       "control-plane/migrations/*.sql",
       "control-plane/pkg/types/**",
       "sdk/python/agentfield/**",
-      "sdk/go/**",
+      "sdk/go/**/*.go",
+      "sdk/go/go.mod",
       "sdk/typescript/src/**",
       "runtime route names",
       "storage schema and JSON field names",
@@ -4190,7 +4198,7 @@
           "classification": "edit",
           "matches": 93,
           "path": "README.md",
-          "reason": "Root-facing product prose is user-visible and should use Silmari branding."
+          "reason": "Root-facing product prose and visible link labels are user-visible and should use Silmari branding."
         }
       ],
       "command": "rg --json --ignore-case -o \\bAgentField\\b|\\bagentfield\\b|AGENTFIELD|Agent-Field|agentfield\\.ai|AgentPlane|agentplane|Agent Plane|agent plane README.md --glob !**/node_modules/** --glob !**/dist/** --glob !**/.pytest_cache/**",

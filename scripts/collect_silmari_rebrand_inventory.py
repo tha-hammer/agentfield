@@ -22,6 +22,7 @@ SCAN_ROOTS = [
     "SUPPORT.md",
     "SECURITY.md",
     "CLAUDE.md",
+    "assets/utm-links.csv",
     ".github",
     "docs",
     "specs",
@@ -51,7 +52,8 @@ PROTECTED_RUNTIME_AREAS = [
     "control-plane/migrations/*.sql",
     "control-plane/pkg/types/**",
     "sdk/python/agentfield/**",
-    "sdk/go/**",
+    "sdk/go/**/*.go",
+    "sdk/go/go.mod",
     "sdk/typescript/src/**",
     "runtime route names",
     "storage schema and JSON field names",
@@ -256,11 +258,12 @@ def classify_path(path: str) -> tuple[str, str]:
         "SUPPORT.md",
         "SECURITY.md",
         "CLAUDE.md",
+        "assets/utm-links.csv",
     }:
         return (
             "edit",
-            "Root-facing product prose is user-visible and should use "
-            "Silmari branding.",
+            "Root-facing product prose and visible link labels are "
+            "user-visible and should use Silmari branding.",
         )
     if path.startswith(".github/"):
         return (
