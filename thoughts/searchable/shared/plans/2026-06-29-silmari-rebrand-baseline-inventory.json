@@ -1,0 +1,4205 @@
+{
+  "branchPrepared": {
+    "branchAssertionAfter": {
+      "currentBranch": "integration/silmari-rebrand-agentfield",
+      "exitCode": 0
+    },
+    "branchAssertionBefore": {
+      "currentBranch": "issue/b9915df1-01-AF-RB-01-branch-inventory",
+      "exitCode": 1
+    },
+    "branchAssertionCommand": "test \"$(git rev-parse --abbrev-ref HEAD)\" = \"integration/silmari-rebrand-agentfield\"",
+    "branchSwitchCommand": "git switch -c integration/silmari-rebrand-agentfield",
+    "expectedBranch": "integration/silmari-rebrand-agentfield",
+    "notes": "Branch preparation stayed on the exact local integration branch and left unrelated root-repo artifacts unstaged.",
+    "rootRepoUnrelatedUntrackedStillUnstaged": [
+      "?? .agentfield_output.261841418cf1.json",
+      "?? .agentfield_output.2f96f481a041.json",
+      "?? .agentfield_output.3565c5a081dd.json",
+      "?? .agentfield_output.3670ba68db91.json",
+      "?? .agentfield_output.51ed7216753f.json",
+      "?? .agentfield_output.5f722591571b.json",
+      "?? .agentfield_output.6375d9f9dd37.json",
+      "?? .agentfield_output.73b10fd96d3f.json",
+      "?? .agentfield_output.73e4aa2fc0f0.json",
+      "?? .agentfield_output.7e8591e4e9f6.json",
+      "?? .agentfield_output.82de25743a37.json",
+      "?? .agentfield_output.99410e6a0b90.json",
+      "?? .agentfield_output.9ed2a8e12018.json",
+      "?? .agentfield_output.a4a4638ceec8.json",
+      "?? .agentfield_output.aa5e79642390.json",
+      "?? .agentfield_output.b52614575da7.json",
+      "?? .agentfield_output.bca36d99fe74.json",
+      "?? .agentfield_output.bde4c9cff69f.json",
+      "?? .agentfield_output.cbe19e6c67fb.json",
+      "?? .agentfield_output.cc8bd7301505.json",
+      "?? .agentfield_output.e6726f7c63a1.json",
+      "?? .agentfield_output.f6db0d6d93ed.json",
+      "?? .agentfield_output.f6deff1aebfc.json",
+      "?? .agentfield_schema.261841418cf1.json",
+      "?? .agentfield_schema.2f96f481a041.json",
+      "?? .agentfield_schema.3565c5a081dd.json",
+      "?? .agentfield_schema.3670ba68db91.json",
+      "?? .agentfield_schema.51ed7216753f.json",
+      "?? .agentfield_schema.5f722591571b.json",
+      "?? .agentfield_schema.6375d9f9dd37.json",
+      "?? .agentfield_schema.73b10fd96d3f.json",
+      "?? .agentfield_schema.73e4aa2fc0f0.json",
+      "?? .agentfield_schema.7e8591e4e9f6.json",
+      "?? .agentfield_schema.82de25743a37.json",
+      "?? .agentfield_schema.99410e6a0b90.json",
+      "?? .agentfield_schema.9ed2a8e12018.json",
+      "?? .agentfield_schema.a4a4638ceec8.json",
+      "?? .agentfield_schema.aa5e79642390.json",
+      "?? .agentfield_schema.b52614575da7.json",
+      "?? .agentfield_schema.bca36d99fe74.json",
+      "?? .agentfield_schema.bde4c9cff69f.json",
+      "?? .agentfield_schema.cbe19e6c67fb.json",
+      "?? .agentfield_schema.cc8bd7301505.json",
+      "?? .agentfield_schema.e6726f7c63a1.json",
+      "?? .agentfield_schema.f6db0d6d93ed.json",
+      "?? .agentfield_schema.f6deff1aebfc.json",
+      "?? .artifacts/",
+      "?? .python-version",
+      "?? pyproject.toml",
+      "?? thoughts/searchable/shared/research/2026-06-29-13-08-agentfield-did-vc-workflow-chain.md",
+      "?? uv.lock"
+    ],
+    "statusAfter": "## integration/silmari-rebrand-agentfield\n?? .agentfield_schema.a2bf6827f347.json",
+    "statusBefore": "## issue/b9915df1-01-AF-RB-01-branch-inventory\n?? .agentfield_schema.a2bf6827f347.json",
+    "worktreeUntrackedAfter": [
+      ".agentfield_schema.a2bf6827f347.json"
+    ]
+  },
+  "brandInventoryCollected": {
+    "classificationCounts": {
+      "edit": 226,
+      "historical": 4,
+      "preserve": 257,
+      "runtime-compatible": 128
+    },
+    "classifiedFiles": [
+      {
+        "classification": "edit",
+        "matches": 5,
+        "path": ".github/BRANCH_PROTECTION.md",
+        "reason": "Issue templates, PR templates, and workflow-facing prose need Silmari branding review."
+      },
+      {
+        "classification": "edit",
+        "matches": 10,
+        "path": ".github/ISSUE_TEMPLATE/community-project.md",
+        "reason": "Issue templates, PR templates, and workflow-facing prose need Silmari branding review."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": ".github/ISSUE_TEMPLATE/feature_request.md",
+        "reason": "Issue templates, PR templates, and workflow-facing prose need Silmari branding review."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": ".github/ISSUE_TEMPLATE/question.md",
+        "reason": "Issue templates, PR templates, and workflow-facing prose need Silmari branding review."
+      },
+      {
+        "classification": "edit",
+        "matches": 2,
+        "path": ".github/ISSUE_TEMPLATE/task.md",
+        "reason": "Issue templates, PR templates, and workflow-facing prose need Silmari branding review."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": ".github/pull_request_template.md",
+        "reason": "Issue templates, PR templates, and workflow-facing prose need Silmari branding review."
+      },
+      {
+        "classification": "edit",
+        "matches": 2,
+        "path": ".github/workflows/contributor-reminders.yml",
+        "reason": "Issue templates, PR templates, and workflow-facing prose need Silmari branding review."
+      },
+      {
+        "classification": "edit",
+        "matches": 2,
+        "path": ".github/workflows/control-plane.yml",
+        "reason": "Issue templates, PR templates, and workflow-facing prose need Silmari branding review."
+      },
+      {
+        "classification": "edit",
+        "matches": 2,
+        "path": ".github/workflows/docker.yml",
+        "reason": "Issue templates, PR templates, and workflow-facing prose need Silmari branding review."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": ".github/workflows/functional-tests.yml",
+        "reason": "Issue templates, PR templates, and workflow-facing prose need Silmari branding review."
+      },
+      {
+        "classification": "edit",
+        "matches": 3,
+        "path": ".github/workflows/memory-metrics.yml",
+        "reason": "Issue templates, PR templates, and workflow-facing prose need Silmari branding review."
+      },
+      {
+        "classification": "edit",
+        "matches": 19,
+        "path": ".github/workflows/release.yml",
+        "reason": "Issue templates, PR templates, and workflow-facing prose need Silmari branding review."
+      },
+      {
+        "classification": "edit",
+        "matches": 5,
+        "path": ".github/workflows/update-download-stats.yml",
+        "reason": "Issue templates, PR templates, and workflow-facing prose need Silmari branding review."
+      },
+      {
+        "classification": "edit",
+        "matches": 53,
+        "path": "CLAUDE.md",
+        "reason": "Root-facing product prose is user-visible and should use Silmari branding."
+      },
+      {
+        "classification": "edit",
+        "matches": 2,
+        "path": "CODE_OF_CONDUCT.md",
+        "reason": "Root-facing product prose is user-visible and should use Silmari branding."
+      },
+      {
+        "classification": "edit",
+        "matches": 93,
+        "path": "README.md",
+        "reason": "Root-facing product prose is user-visible and should use Silmari branding."
+      },
+      {
+        "classification": "edit",
+        "matches": 2,
+        "path": "SECURITY.md",
+        "reason": "Root-facing product prose is user-visible and should use Silmari branding."
+      },
+      {
+        "classification": "edit",
+        "matches": 2,
+        "path": "SUPPORT.md",
+        "reason": "Root-facing product prose is user-visible and should use Silmari branding."
+      },
+      {
+        "classification": "edit",
+        "matches": 25,
+        "path": "control-plane/README.md",
+        "reason": "Control-plane documentation is user-facing and should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 15,
+        "path": "control-plane/internal/skillkit/skill_data/agentfield/SKILL.md",
+        "reason": "Skill prose and reference content need Silmari wording while skill slugs stay stable."
+      },
+      {
+        "classification": "edit",
+        "matches": 4,
+        "path": "control-plane/internal/skillkit/skill_data/agentfield/commands/agentfield.md",
+        "reason": "Skill prose and reference content need Silmari wording while skill slugs stay stable."
+      },
+      {
+        "classification": "edit",
+        "matches": 5,
+        "path": "control-plane/internal/skillkit/skill_data/agentfield/references/anti-patterns.md",
+        "reason": "Skill prose and reference content need Silmari wording while skill slugs stay stable."
+      },
+      {
+        "classification": "edit",
+        "matches": 2,
+        "path": "control-plane/internal/skillkit/skill_data/agentfield/references/capability-playbook.md",
+        "reason": "Skill prose and reference content need Silmari wording while skill slugs stay stable."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/internal/skillkit/skill_data/agentfield/references/cli-toolkit.md",
+        "reason": "Skill prose and reference content need Silmari wording while skill slugs stay stable."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/internal/skillkit/skill_data/agentfield/references/examples-map.md",
+        "reason": "Skill prose and reference content need Silmari wording while skill slugs stay stable."
+      },
+      {
+        "classification": "edit",
+        "matches": 14,
+        "path": "control-plane/internal/skillkit/skill_data/agentfield/references/live-docs.md",
+        "reason": "Skill prose and reference content need Silmari wording while skill slugs stay stable."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/internal/skillkit/skill_data/agentfield/references/memory-events.md",
+        "reason": "Skill prose and reference content need Silmari wording while skill slugs stay stable."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/internal/skillkit/skill_data/agentfield/references/model-selection.md",
+        "reason": "Skill prose and reference content need Silmari wording while skill slugs stay stable."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/internal/skillkit/skill_data/agentfield/references/patterns-emerge.md",
+        "reason": "Skill prose and reference content need Silmari wording while skill slugs stay stable."
+      },
+      {
+        "classification": "edit",
+        "matches": 8,
+        "path": "control-plane/internal/skillkit/skill_data/agentfield/references/primitives-snapshot.md",
+        "reason": "Skill prose and reference content need Silmari wording while skill slugs stay stable."
+      },
+      {
+        "classification": "edit",
+        "matches": 5,
+        "path": "control-plane/internal/skillkit/skill_data/agentfield/references/project-claude-template.md",
+        "reason": "Skill prose and reference content need Silmari wording while skill slugs stay stable."
+      },
+      {
+        "classification": "edit",
+        "matches": 18,
+        "path": "control-plane/internal/skillkit/skill_data/agentfield/references/scaffold-recipe.md",
+        "reason": "Skill prose and reference content need Silmari wording while skill slugs stay stable."
+      },
+      {
+        "classification": "edit",
+        "matches": 3,
+        "path": "control-plane/internal/skillkit/skill_data/agentfield/references/triggers.md",
+        "reason": "Skill prose and reference content need Silmari wording while skill slugs stay stable."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/internal/skillkit/skill_data/agentfield/references/verification.md",
+        "reason": "Skill prose and reference content need Silmari wording while skill slugs stay stable."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 7,
+        "path": "control-plane/internal/templates/docker/docker-compose.yml.tmpl",
+        "reason": "Generated deployment config keeps stable image names, env vars, and config paths."
+      },
+      {
+        "classification": "edit",
+        "matches": 6,
+        "path": "control-plane/internal/templates/go/README.md.tmpl",
+        "reason": "Generated README or source-template comments shown to users need Silmari copy."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "control-plane/internal/templates/go/go.mod.tmpl",
+        "reason": "Generated dependency and module template identifiers stay stable for compatibility."
+      },
+      {
+        "classification": "edit",
+        "matches": 5,
+        "path": "control-plane/internal/templates/go/main.go.tmpl",
+        "reason": "Generated README or source-template comments shown to users need Silmari copy."
+      },
+      {
+        "classification": "edit",
+        "matches": 4,
+        "path": "control-plane/internal/templates/go/reasoners.go.tmpl",
+        "reason": "Generated README or source-template comments shown to users need Silmari copy."
+      },
+      {
+        "classification": "edit",
+        "matches": 6,
+        "path": "control-plane/internal/templates/python/README.md.tmpl",
+        "reason": "Generated README or source-template comments shown to users need Silmari copy."
+      },
+      {
+        "classification": "edit",
+        "matches": 6,
+        "path": "control-plane/internal/templates/python/main.py.tmpl",
+        "reason": "Generated README or source-template comments shown to users need Silmari copy."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/internal/templates/python/reasoners.py.tmpl",
+        "reason": "Generated README or source-template comments shown to users need Silmari copy."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "control-plane/internal/templates/python/requirements.txt.tmpl",
+        "reason": "Generated dependency and module template identifiers stay stable for compatibility."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 2,
+        "path": "control-plane/internal/templates/templates.go",
+        "reason": "Template embedding code is runtime implementation and keeps stable image and skill identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "control-plane/internal/templates/templates_test.go",
+        "reason": "Template tests intentionally assert stable package and import identifiers."
+      },
+      {
+        "classification": "edit",
+        "matches": 6,
+        "path": "control-plane/internal/templates/typescript/README.md.tmpl",
+        "reason": "Generated README or source-template comments shown to users need Silmari copy."
+      },
+      {
+        "classification": "edit",
+        "matches": 3,
+        "path": "control-plane/internal/templates/typescript/main.ts.tmpl",
+        "reason": "Generated README or source-template comments shown to users need Silmari copy."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "control-plane/internal/templates/typescript/package.json.tmpl",
+        "reason": "Generated dependency and module template identifiers stay stable for compatibility."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/internal/templates/typescript/reasoners.ts.tmpl",
+        "reason": "Generated README or source-template comments shown to users need Silmari copy."
+      },
+      {
+        "classification": "edit",
+        "matches": 9,
+        "path": "control-plane/migrations/README.md",
+        "reason": "Control-plane documentation is user-facing and should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 22,
+        "path": "control-plane/scripts/README.md",
+        "reason": "Control-plane documentation is user-facing and should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 22,
+        "path": "control-plane/tools/perf/README.md",
+        "reason": "Control-plane documentation is user-facing and should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/web/client/src/components/AdminTokenPrompt.tsx",
+        "reason": "Admin UI labels, navigation, or visible component copy are rebrand surfaces."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/web/client/src/components/AppLayout.tsx",
+        "reason": "Admin UI labels, navigation, or visible component copy are rebrand surfaces."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/web/client/src/components/AppSidebar.tsx",
+        "reason": "Admin UI labels, navigation, or visible component copy are rebrand surfaces."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/web/client/src/components/AuthGuard.tsx",
+        "reason": "Admin UI labels, navigation, or visible component copy are rebrand surfaces."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/web/client/src/components/HealthStrip.tsx",
+        "reason": "Admin UI labels, navigation, or visible component copy are rebrand surfaces."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/web/client/src/components/StepDetail.tsx",
+        "reason": "Admin UI labels, navigation, or visible component copy are rebrand surfaces."
+      },
+      {
+        "classification": "edit",
+        "matches": 2,
+        "path": "control-plane/web/client/src/components/execution/TechnicalDetailsPanel.tsx",
+        "reason": "Admin UI labels, navigation, or visible component copy are rebrand surfaces."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/web/client/src/components/forms/ConfigField.tsx",
+        "reason": "Admin UI labels, navigation, or visible component copy are rebrand surfaces."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/web/client/src/components/forms/ConfigurationForm.tsx",
+        "reason": "Admin UI labels, navigation, or visible component copy are rebrand surfaces."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/web/client/src/components/forms/ConfigurationWizard.tsx",
+        "reason": "Admin UI labels, navigation, or visible component copy are rebrand surfaces."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/web/client/src/components/forms/EnvironmentVariableForm.tsx",
+        "reason": "Admin UI labels, navigation, or visible component copy are rebrand surfaces."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/web/client/src/components/nodes/EnhancedNodeDetailHeader.tsx",
+        "reason": "Admin UI labels, navigation, or visible component copy are rebrand surfaces."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/web/client/src/components/nodes/EnhancedNodesHeader.tsx",
+        "reason": "Admin UI labels, navigation, or visible component copy are rebrand surfaces."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/web/client/src/components/reasoners/EmptyReasonersState.tsx",
+        "reason": "Admin UI labels, navigation, or visible component copy are rebrand surfaces."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/web/client/src/components/status/StatusBadge.tsx",
+        "reason": "Admin UI labels, navigation, or visible component copy are rebrand surfaces."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/web/client/src/components/status/StatusRefreshButton.test.tsx",
+        "reason": "Admin UI labels, navigation, or visible component copy are rebrand surfaces."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/web/client/src/components/status/StatusRefreshButton.tsx",
+        "reason": "Admin UI labels, navigation, or visible component copy are rebrand surfaces."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/web/client/src/components/status/UnifiedStatusIndicator.test.tsx",
+        "reason": "Admin UI labels, navigation, or visible component copy are rebrand surfaces."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/web/client/src/components/status/UnifiedStatusIndicator.tsx",
+        "reason": "Admin UI labels, navigation, or visible component copy are rebrand surfaces."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/web/client/src/components/status/index.ts",
+        "reason": "Admin UI labels, navigation, or visible component copy are rebrand surfaces."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/web/client/src/components/ui/data-formatters.tsx",
+        "reason": "Admin UI labels, navigation, or visible component copy are rebrand surfaces."
+      },
+      {
+        "classification": "edit",
+        "matches": 3,
+        "path": "control-plane/web/client/src/config/navigation.ts",
+        "reason": "Admin UI labels, navigation, or visible component copy are rebrand surfaces."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 3,
+        "path": "control-plane/web/client/src/contexts/ModeContext.tsx",
+        "reason": "This file carries the stable web UI localStorage key `agentfield-app-mode` and stays compatibility-safe."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "control-plane/web/client/src/hooks/queries/useAgents.ts",
+        "reason": "This admin UI source carries compatibility-sensitive service or schema identifiers rather than visible brand copy."
+      },
+      {
+        "classification": "edit",
+        "matches": 4,
+        "path": "control-plane/web/client/src/pages/AccessManagementPage.tsx",
+        "reason": "Admin UI labels, navigation, or visible component copy are rebrand surfaces."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/web/client/src/pages/AgentsPage.tsx",
+        "reason": "Admin UI labels, navigation, or visible component copy are rebrand surfaces."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/web/client/src/pages/NewDashboardPage.tsx",
+        "reason": "Admin UI labels, navigation, or visible component copy are rebrand surfaces."
+      },
+      {
+        "classification": "edit",
+        "matches": 11,
+        "path": "control-plane/web/client/src/pages/NewSettingsPage.tsx",
+        "reason": "Admin UI labels, navigation, or visible component copy are rebrand surfaces."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/web/client/src/pages/RunDetailPage.tsx",
+        "reason": "Admin UI labels, navigation, or visible component copy are rebrand surfaces."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "control-plane/web/client/src/services/api.ts",
+        "reason": "This admin UI source carries compatibility-sensitive service or schema identifiers rather than visible brand copy."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "control-plane/web/client/src/services/configurationApi.ts",
+        "reason": "This admin UI source carries compatibility-sensitive service or schema identifiers rather than visible brand copy."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "control-plane/web/client/src/services/executionsApi.ts",
+        "reason": "This admin UI source carries compatibility-sensitive service or schema identifiers rather than visible brand copy."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/web/client/src/test/components/AppLayout.test.tsx",
+        "reason": "UI tests that assert visible copy should move with the Silmari UI wording pass."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/web/client/src/test/components/AppSidebar.test.tsx",
+        "reason": "UI tests that assert visible copy should move with the Silmari UI wording pass."
+      },
+      {
+        "classification": "edit",
+        "matches": 2,
+        "path": "control-plane/web/client/src/test/components/ConfigurationWizard.test.tsx",
+        "reason": "UI tests that assert visible copy should move with the Silmari UI wording pass."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/web/client/src/test/components/execution/ExecutionComponents.test.tsx",
+        "reason": "UI tests that assert visible copy should move with the Silmari UI wording pass."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/web/client/src/test/components/execution/execution-misc-panels.test.tsx",
+        "reason": "UI tests that assert visible copy should move with the Silmari UI wording pass."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/web/client/src/test/components/execution/execution-observability-panel.test.tsx",
+        "reason": "UI tests that assert visible copy should move with the Silmari UI wording pass."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/web/client/src/test/components/execution/execution-panels.test.tsx",
+        "reason": "UI tests that assert visible copy should move with the Silmari UI wording pass."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/web/client/src/test/components/forms/configuration-form.test.tsx",
+        "reason": "UI tests that assert visible copy should move with the Silmari UI wording pass."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/web/client/src/test/components/status/StatusBadge.test.tsx",
+        "reason": "UI tests that assert visible copy should move with the Silmari UI wording pass."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/web/client/src/test/pages/AccessManagementPage.test.tsx",
+        "reason": "UI tests that assert visible copy should move with the Silmari UI wording pass."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/web/client/src/test/pages/AgentsPage.test.tsx",
+        "reason": "UI tests that assert visible copy should move with the Silmari UI wording pass."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "control-plane/web/client/src/test/pages/ComparisonPage.test.tsx",
+        "reason": "UI tests that assert visible copy should move with the Silmari UI wording pass."
+      },
+      {
+        "classification": "edit",
+        "matches": 4,
+        "path": "control-plane/web/client/src/test/pages/NewSettingsPage.restored.test.tsx",
+        "reason": "UI tests that assert visible copy should move with the Silmari UI wording pass."
+      },
+      {
+        "classification": "preserve",
+        "matches": 3,
+        "path": "control-plane/web/client/src/test/services/didApi.test.ts",
+        "reason": "Service and utility tests intentionally keep stable JSON fields, workspace identifiers, or API fixtures."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "control-plane/web/client/src/test/services/executionsApi.test.ts",
+        "reason": "Service and utility tests intentionally keep stable JSON fields, workspace identifiers, or API fixtures."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "control-plane/web/client/src/test/services/identityApi.test.ts",
+        "reason": "Service and utility tests intentionally keep stable JSON fields, workspace identifiers, or API fixtures."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "control-plane/web/client/src/test/services/observabilityWebhookApi.test.ts",
+        "reason": "Service and utility tests intentionally keep stable JSON fields, workspace identifiers, or API fixtures."
+      },
+      {
+        "classification": "preserve",
+        "matches": 3,
+        "path": "control-plane/web/client/src/test/ui/notification.test.tsx",
+        "reason": "Service and utility tests intentionally keep stable JSON fields, workspace identifiers, or API fixtures."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "control-plane/web/client/src/test/utils/formattingUtils.test.ts",
+        "reason": "Service and utility tests intentionally keep stable JSON fields, workspace identifiers, or API fixtures."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "control-plane/web/client/src/test/utils/schemaUtils.test.ts",
+        "reason": "Service and utility tests intentionally keep stable JSON fields, workspace identifiers, or API fixtures."
+      },
+      {
+        "classification": "preserve",
+        "matches": 4,
+        "path": "control-plane/web/client/src/types/did.ts",
+        "reason": "This admin UI source carries compatibility-sensitive service or schema identifiers rather than visible brand copy."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "control-plane/web/client/src/types/executions.ts",
+        "reason": "This admin UI source carries compatibility-sensitive service or schema identifiers rather than visible brand copy."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "control-plane/web/client/src/utils/lifecycle-status.test.ts",
+        "reason": "This admin UI source carries compatibility-sensitive service or schema identifiers rather than visible brand copy."
+      },
+      {
+        "classification": "preserve",
+        "matches": 3,
+        "path": "control-plane/web/client/src/utils/lifecycle-status.ts",
+        "reason": "This admin UI source carries compatibility-sensitive service or schema identifiers rather than visible brand copy."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "control-plane/web/client/src/utils/node-status.test.ts",
+        "reason": "This admin UI source carries compatibility-sensitive service or schema identifiers rather than visible brand copy."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "control-plane/web/client/src/utils/node-status.ts",
+        "reason": "This admin UI source carries compatibility-sensitive service or schema identifiers rather than visible brand copy."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 1,
+        "path": "control-plane/web/client/ui_embed.go",
+        "reason": "The embedded UI registration code is a runtime surface and should not be renamed for branding."
+      },
+      {
+        "classification": "edit",
+        "matches": 9,
+        "path": "deployments/README.md",
+        "reason": "Deployment-facing documentation is user-facing and should use Silmari wording."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 9,
+        "path": "deployments/docker/Dockerfile.control-plane",
+        "reason": "Dockerfiles and compose manifests carry stable image names, binary names, volumes, and env vars."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 4,
+        "path": "deployments/docker/Dockerfile.demo-go-agent",
+        "reason": "Dockerfiles and compose manifests carry stable image names, binary names, volumes, and env vars."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 1,
+        "path": "deployments/docker/Dockerfile.demo-python-agent",
+        "reason": "Dockerfiles and compose manifests carry stable image names, binary names, volumes, and env vars."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 1,
+        "path": "deployments/docker/Dockerfile.go-agent",
+        "reason": "Dockerfiles and compose manifests carry stable image names, binary names, volumes, and env vars."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 1,
+        "path": "deployments/docker/Dockerfile.python-agent",
+        "reason": "Dockerfiles and compose manifests carry stable image names, binary names, volumes, and env vars."
+      },
+      {
+        "classification": "edit",
+        "matches": 6,
+        "path": "deployments/docker/README.md",
+        "reason": "Docker deployment documentation is user-facing and should use Silmari wording."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 29,
+        "path": "deployments/docker/docker-compose.yml",
+        "reason": "Dockerfiles and compose manifests carry stable image names, binary names, volumes, and env vars."
+      },
+      {
+        "classification": "edit",
+        "matches": 2,
+        "path": "deployments/helm/agentfield/Chart.yaml",
+        "reason": "The chart description needs Silmari copy even though the chart name `agentfield` stays stable."
+      },
+      {
+        "classification": "edit",
+        "matches": 20,
+        "path": "deployments/helm/agentfield/README.md",
+        "reason": "Helm documentation is user-facing and should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 3,
+        "path": "deployments/helm/agentfield/templates/NOTES.txt",
+        "reason": "Post-install NOTES output is user-visible and should use Silmari copy while helper names stay unchanged."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 20,
+        "path": "deployments/helm/agentfield/templates/_helpers.tpl",
+        "reason": "Helm templates and values keep stable chart, helper, resource, and env-var identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 2,
+        "path": "deployments/helm/agentfield/templates/api-auth-secret.yaml",
+        "reason": "Helm templates and values keep stable chart, helper, resource, and env-var identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 24,
+        "path": "deployments/helm/agentfield/templates/control-plane-deployment.yaml",
+        "reason": "Helm templates and values keep stable chart, helper, resource, and env-var identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 3,
+        "path": "deployments/helm/agentfield/templates/control-plane-ingress.yaml",
+        "reason": "Helm templates and values keep stable chart, helper, resource, and env-var identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 2,
+        "path": "deployments/helm/agentfield/templates/control-plane-pvc.yaml",
+        "reason": "Helm templates and values keep stable chart, helper, resource, and env-var identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 4,
+        "path": "deployments/helm/agentfield/templates/control-plane-service.yaml",
+        "reason": "Helm templates and values keep stable chart, helper, resource, and env-var identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 10,
+        "path": "deployments/helm/agentfield/templates/demo-agent-deployment.yaml",
+        "reason": "Helm templates and values keep stable chart, helper, resource, and env-var identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 3,
+        "path": "deployments/helm/agentfield/templates/demo-agent-service.yaml",
+        "reason": "Helm templates and values keep stable chart, helper, resource, and env-var identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 6,
+        "path": "deployments/helm/agentfield/templates/demo-python-agent-configmap.yaml",
+        "reason": "Helm templates and values keep stable chart, helper, resource, and env-var identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 11,
+        "path": "deployments/helm/agentfield/templates/demo-python-agent-deployment.yaml",
+        "reason": "Helm templates and values keep stable chart, helper, resource, and env-var identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 3,
+        "path": "deployments/helm/agentfield/templates/demo-python-agent-service.yaml",
+        "reason": "Helm templates and values keep stable chart, helper, resource, and env-var identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 2,
+        "path": "deployments/helm/agentfield/templates/postgres-secret.yaml",
+        "reason": "Helm templates and values keep stable chart, helper, resource, and env-var identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 3,
+        "path": "deployments/helm/agentfield/templates/postgres-service.yaml",
+        "reason": "Helm templates and values keep stable chart, helper, resource, and env-var identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 9,
+        "path": "deployments/helm/agentfield/templates/postgres-statefulset.yaml",
+        "reason": "Helm templates and values keep stable chart, helper, resource, and env-var identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 9,
+        "path": "deployments/helm/agentfield/values.yaml",
+        "reason": "Helm templates and values keep stable chart, helper, resource, and env-var identifiers."
+      },
+      {
+        "classification": "edit",
+        "matches": 9,
+        "path": "deployments/kubernetes/README.md",
+        "reason": "Deployment README prose is user-facing and should use Silmari while preserving config identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 7,
+        "path": "deployments/kubernetes/base/control-plane-deployment.yaml",
+        "reason": "Kubernetes manifests carry stable resource names, image names, env vars, and config paths."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 1,
+        "path": "deployments/kubernetes/base/control-plane-pvc.yaml",
+        "reason": "Kubernetes manifests carry stable resource names, image names, env vars, and config paths."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 1,
+        "path": "deployments/kubernetes/base/control-plane-service.yaml",
+        "reason": "Kubernetes manifests carry stable resource names, image names, env vars, and config paths."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 1,
+        "path": "deployments/kubernetes/base/kustomization.yaml",
+        "reason": "Kubernetes manifests carry stable resource names, image names, env vars, and config paths."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 6,
+        "path": "deployments/kubernetes/overlays/local-demo/demo-agent-deployment.yaml",
+        "reason": "Kubernetes manifests carry stable resource names, image names, env vars, and config paths."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 1,
+        "path": "deployments/kubernetes/overlays/local-demo/demo-agent-service.yaml",
+        "reason": "Kubernetes manifests carry stable resource names, image names, env vars, and config paths."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 6,
+        "path": "deployments/kubernetes/overlays/postgres-demo/demo-agent-deployment.yaml",
+        "reason": "Kubernetes manifests carry stable resource names, image names, env vars, and config paths."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 1,
+        "path": "deployments/kubernetes/overlays/postgres-demo/demo-agent-service.yaml",
+        "reason": "Kubernetes manifests carry stable resource names, image names, env vars, and config paths."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 12,
+        "path": "deployments/kubernetes/overlays/postgres-demo/patch-control-plane-postgres.yaml",
+        "reason": "Kubernetes manifests carry stable resource names, image names, env vars, and config paths."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 4,
+        "path": "deployments/kubernetes/overlays/postgres-demo/postgres-secret.yaml",
+        "reason": "Kubernetes manifests carry stable resource names, image names, env vars, and config paths."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 1,
+        "path": "deployments/kubernetes/overlays/postgres-demo/postgres-service.yaml",
+        "reason": "Kubernetes manifests carry stable resource names, image names, env vars, and config paths."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 5,
+        "path": "deployments/kubernetes/overlays/postgres-demo/postgres-statefulset.yaml",
+        "reason": "Kubernetes manifests carry stable resource names, image names, env vars, and config paths."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 5,
+        "path": "deployments/kubernetes/overlays/python-demo/demo-python-agent-configmap.yaml",
+        "reason": "Kubernetes manifests carry stable resource names, image names, env vars, and config paths."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 7,
+        "path": "deployments/kubernetes/overlays/python-demo/demo-python-agent-deployment.yaml",
+        "reason": "Kubernetes manifests carry stable resource names, image names, env vars, and config paths."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 1,
+        "path": "deployments/kubernetes/overlays/python-demo/demo-python-agent-service.yaml",
+        "reason": "Kubernetes manifests carry stable resource names, image names, env vars, and config paths."
+      },
+      {
+        "classification": "edit",
+        "matches": 34,
+        "path": "deployments/railway/README.md",
+        "reason": "Deployment-facing documentation is user-facing and should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 2,
+        "path": "docs/ARCHITECTURE.md",
+        "reason": "Documentation and spec prose are in-scope brand surfaces for the Silmari copy pass."
+      },
+      {
+        "classification": "edit",
+        "matches": 2,
+        "path": "docs/CONTRIBUTING.md",
+        "reason": "Documentation and spec prose are in-scope brand surfaces for the Silmari copy pass."
+      },
+      {
+        "classification": "edit",
+        "matches": 3,
+        "path": "docs/COVERAGE.md",
+        "reason": "Documentation and spec prose are in-scope brand surfaces for the Silmari copy pass."
+      },
+      {
+        "classification": "edit",
+        "matches": 9,
+        "path": "docs/DEVELOPMENT.md",
+        "reason": "Documentation and spec prose are in-scope brand surfaces for the Silmari copy pass."
+      },
+      {
+        "classification": "edit",
+        "matches": 61,
+        "path": "docs/ENVIRONMENT_VARIABLES.md",
+        "reason": "Documentation and spec prose are in-scope brand surfaces for the Silmari copy pass."
+      },
+      {
+        "classification": "edit",
+        "matches": 56,
+        "path": "docs/RELEASE.md",
+        "reason": "Documentation and spec prose are in-scope brand surfaces for the Silmari copy pass."
+      },
+      {
+        "classification": "edit",
+        "matches": 12,
+        "path": "docs/VC_AUTHORIZATION_ARCHITECTURE.md",
+        "reason": "Documentation and spec prose are in-scope brand surfaces for the Silmari copy pass."
+      },
+      {
+        "classification": "edit",
+        "matches": 3,
+        "path": "docs/api/AGENT_NODE_LOGS.md",
+        "reason": "Documentation and spec prose are in-scope brand surfaces for the Silmari copy pass."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "docs/design/execution-observability-rfc.md",
+        "reason": "Documentation and spec prose are in-scope brand surfaces for the Silmari copy pass."
+      },
+      {
+        "classification": "edit",
+        "matches": 10,
+        "path": "docs/design/harness-v2-design.md",
+        "reason": "Documentation and spec prose are in-scope brand surfaces for the Silmari copy pass."
+      },
+      {
+        "classification": "edit",
+        "matches": 3,
+        "path": "examples/README.md",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 11,
+        "path": "examples/benchmarks/100k-scale/README.md",
+        "reason": "Benchmark labels, chart text, and comparison copy are visible brand surfaces for the rebrand pass."
+      },
+      {
+        "classification": "edit",
+        "matches": 17,
+        "path": "examples/benchmarks/100k-scale/analyze.py",
+        "reason": "Benchmark labels, chart text, and comparison copy are visible brand surfaces for the rebrand pass."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "examples/benchmarks/100k-scale/crewai-bench/benchmark.py",
+        "reason": "Benchmark labels, chart text, and comparison copy are visible brand surfaces for the rebrand pass."
+      },
+      {
+        "classification": "preserve",
+        "matches": 6,
+        "path": "examples/benchmarks/100k-scale/go-bench/go.mod",
+        "reason": "Example dependency and module identifiers stay stable so the sample remains runnable."
+      },
+      {
+        "classification": "edit",
+        "matches": 4,
+        "path": "examples/benchmarks/100k-scale/go-bench/main.go",
+        "reason": "Benchmark labels, chart text, and comparison copy are visible brand surfaces for the rebrand pass."
+      },
+      {
+        "classification": "edit",
+        "matches": 3,
+        "path": "examples/benchmarks/100k-scale/langchain-bench/benchmark.py",
+        "reason": "Benchmark labels, chart text, and comparison copy are visible brand surfaces for the rebrand pass."
+      },
+      {
+        "classification": "edit",
+        "matches": 10,
+        "path": "examples/benchmarks/100k-scale/python-bench/benchmark.py",
+        "reason": "Benchmark labels, chart text, and comparison copy are visible brand surfaces for the rebrand pass."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "examples/benchmarks/100k-scale/requirements.txt",
+        "reason": "Example dependency and module identifiers stay stable so the sample remains runnable."
+      },
+      {
+        "classification": "historical",
+        "matches": 1,
+        "path": "examples/benchmarks/100k-scale/results/AgentField_Go.json",
+        "reason": "Recorded benchmark outputs are preserved as historical evidence for later manifest rows."
+      },
+      {
+        "classification": "historical",
+        "matches": 1,
+        "path": "examples/benchmarks/100k-scale/results/AgentField_Python.json",
+        "reason": "Recorded benchmark outputs are preserved as historical evidence for later manifest rows."
+      },
+      {
+        "classification": "historical",
+        "matches": 1,
+        "path": "examples/benchmarks/100k-scale/results/AgentField_TypeScript.json",
+        "reason": "Recorded benchmark outputs are preserved as historical evidence for later manifest rows."
+      },
+      {
+        "classification": "edit",
+        "matches": 5,
+        "path": "examples/benchmarks/100k-scale/run_benchmarks.sh",
+        "reason": "Benchmark labels, chart text, and comparison copy are visible brand surfaces for the rebrand pass."
+      },
+      {
+        "classification": "edit",
+        "matches": 7,
+        "path": "examples/benchmarks/100k-scale/ts-bench/benchmark.ts",
+        "reason": "Benchmark labels, chart text, and comparison copy are visible brand surfaces for the rebrand pass."
+      },
+      {
+        "classification": "preserve",
+        "matches": 5,
+        "path": "examples/benchmarks/100k-scale/ts-bench/package-lock.json",
+        "reason": "Example dependency and module identifiers stay stable so the sample remains runnable."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "examples/benchmarks/100k-scale/ts-bench/package.json",
+        "reason": "Example dependency and module identifiers stay stable so the sample remains runnable."
+      },
+      {
+        "classification": "edit",
+        "matches": 23,
+        "path": "examples/e2e_resilience_tests/README.md",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 3,
+        "path": "examples/e2e_resilience_tests/agent_flaky.py",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 3,
+        "path": "examples/e2e_resilience_tests/agent_healthy.py",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 3,
+        "path": "examples/e2e_resilience_tests/agent_slow.py",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 15,
+        "path": "examples/e2e_resilience_tests/run_tests.sh",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 5,
+        "path": "examples/go_agent_nodes/cmd/multi_version/main.go",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 11,
+        "path": "examples/go_agent_nodes/cmd/permission_agent_a/main.go",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 11,
+        "path": "examples/go_agent_nodes/cmd/permission_agent_b/main.go",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 6,
+        "path": "examples/go_agent_nodes/cmd/serverless/main.go",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "preserve",
+        "matches": 6,
+        "path": "examples/go_agent_nodes/go.mod",
+        "reason": "Example dependency and module identifiers stay stable so the sample remains runnable."
+      },
+      {
+        "classification": "edit",
+        "matches": 12,
+        "path": "examples/go_agent_nodes/main.go",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "preserve",
+        "matches": 6,
+        "path": "examples/go_harness_demo/go.mod",
+        "reason": "Example dependency and module identifiers stay stable so the sample remains runnable."
+      },
+      {
+        "classification": "edit",
+        "matches": 2,
+        "path": "examples/go_harness_demo/main.go",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "examples/python_agent_nodes/agentic_rag/README.md",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 4,
+        "path": "examples/python_agent_nodes/agentic_rag/main.py",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "examples/python_agent_nodes/agentic_rag/requirements.txt",
+        "reason": "Example dependency and module identifiers stay stable so the sample remains runnable."
+      },
+      {
+        "classification": "edit",
+        "matches": 2,
+        "path": "examples/python_agent_nodes/deep_research/README.md",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 5,
+        "path": "examples/python_agent_nodes/deep_research/main.py",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "examples/python_agent_nodes/deep_research/requirements.txt",
+        "reason": "Example dependency and module identifiers stay stable so the sample remains runnable."
+      },
+      {
+        "classification": "edit",
+        "matches": 7,
+        "path": "examples/python_agent_nodes/deep_research/routers/planning.py",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "examples/python_agent_nodes/deep_research/routers/research.py",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 5,
+        "path": "examples/python_agent_nodes/docker_hello_world/main.py",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 4,
+        "path": "examples/python_agent_nodes/documentation_chatbot/README.md",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 13,
+        "path": "examples/python_agent_nodes/documentation_chatbot/install.sh",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 6,
+        "path": "examples/python_agent_nodes/documentation_chatbot/main.py",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "examples/python_agent_nodes/documentation_chatbot/pipeline_utils.py",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 5,
+        "path": "examples/python_agent_nodes/documentation_chatbot/product_context.py",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "examples/python_agent_nodes/documentation_chatbot/requirements.txt",
+        "reason": "Example dependency and module identifiers stay stable so the sample remains runnable."
+      },
+      {
+        "classification": "edit",
+        "matches": 5,
+        "path": "examples/python_agent_nodes/documentation_chatbot/routers/ingestion.py",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 7,
+        "path": "examples/python_agent_nodes/documentation_chatbot/routers/qa.py",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 2,
+        "path": "examples/python_agent_nodes/documentation_chatbot/routers/query_planning.py",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 2,
+        "path": "examples/python_agent_nodes/documentation_chatbot/routers/retrieval.py",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 6,
+        "path": "examples/python_agent_nodes/hello_world/main.py",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 4,
+        "path": "examples/python_agent_nodes/hello_world_rag/README.md",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 7,
+        "path": "examples/python_agent_nodes/hello_world_rag/main.py",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "examples/python_agent_nodes/hello_world_rag/requirements.txt",
+        "reason": "Example dependency and module identifiers stay stable so the sample remains runnable."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "examples/python_agent_nodes/hello_world_rag/test_pydantic_skill.py",
+        "reason": "Example-local tests keep stable compatibility fixtures and package imports."
+      },
+      {
+        "classification": "edit",
+        "matches": 5,
+        "path": "examples/python_agent_nodes/image_generation_hello_world/README.md",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 4,
+        "path": "examples/python_agent_nodes/image_generation_hello_world/main.py",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "examples/python_agent_nodes/image_generation_hello_world/requirements.txt",
+        "reason": "Example dependency and module identifiers stay stable so the sample remains runnable."
+      },
+      {
+        "classification": "edit",
+        "matches": 3,
+        "path": "examples/python_agent_nodes/multi_version/main.py",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 3,
+        "path": "examples/python_agent_nodes/permission_agent_a/main.py",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "examples/python_agent_nodes/permission_agent_b/README.md",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 3,
+        "path": "examples/python_agent_nodes/permission_agent_b/main.py",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "examples/python_agent_nodes/rag_evaluation/Dockerfile",
+        "reason": "Example dependency and module identifiers stay stable so the sample remains runnable."
+      },
+      {
+        "classification": "edit",
+        "matches": 3,
+        "path": "examples/python_agent_nodes/rag_evaluation/README.md",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 6,
+        "path": "examples/python_agent_nodes/rag_evaluation/docker-compose.yml",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 3,
+        "path": "examples/python_agent_nodes/rag_evaluation/main.py",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 8,
+        "path": "examples/python_agent_nodes/rag_evaluation/rag_eval_client.py",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "examples/python_agent_nodes/rag_evaluation/reasoners/__init__.py",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "examples/python_agent_nodes/rag_evaluation/requirements.txt",
+        "reason": "Example dependency and module identifiers stay stable so the sample remains runnable."
+      },
+      {
+        "classification": "edit",
+        "matches": 2,
+        "path": "examples/python_agent_nodes/rag_evaluation/ui/app/page.tsx",
+        "reason": "Example UI copy and visible asset labels are user-facing rebrand surfaces."
+      },
+      {
+        "classification": "edit",
+        "matches": 4,
+        "path": "examples/python_agent_nodes/rag_evaluation/ui/components/PoweredBy.tsx",
+        "reason": "Example UI copy and visible asset labels are user-facing rebrand surfaces."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "examples/python_agent_nodes/rag_evaluation/ui/public/agentfield-logo-dark.svg",
+        "reason": "Example UI copy and visible asset labels are user-facing rebrand surfaces."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "examples/python_agent_nodes/rag_evaluation/ui/public/agentfield-logo-light.svg",
+        "reason": "Example UI copy and visible asset labels are user-facing rebrand surfaces."
+      },
+      {
+        "classification": "edit",
+        "matches": 5,
+        "path": "examples/python_agent_nodes/serverless_hello/main.py",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 2,
+        "path": "examples/python_agent_nodes/simulation_engine/README.md",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 3,
+        "path": "examples/python_agent_nodes/simulation_engine/example.ipynb",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 4,
+        "path": "examples/python_agent_nodes/simulation_engine/main.py",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "examples/python_agent_nodes/simulation_engine/requirements.txt",
+        "reason": "Example dependency and module identifiers stay stable so the sample remains runnable."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "examples/python_agent_nodes/simulation_engine/routers/aggregation.py",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "examples/python_agent_nodes/simulation_engine/routers/decision.py",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "examples/python_agent_nodes/simulation_engine/routers/entity.py",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "examples/python_agent_nodes/simulation_engine/routers/scenario.py",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "examples/python_agent_nodes/simulation_engine/routers/simulation.py",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 4,
+        "path": "examples/python_agent_nodes/tool_calling/orchestrator.py",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 3,
+        "path": "examples/python_agent_nodes/tool_calling/worker.py",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 3,
+        "path": "examples/python_agent_nodes/waiting_state/main.py",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "examples/triggers-demo/Dockerfile",
+        "reason": "Example dependency and module identifiers stay stable so the sample remains runnable."
+      },
+      {
+        "classification": "edit",
+        "matches": 2,
+        "path": "examples/triggers-demo/README.md",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 7,
+        "path": "examples/triggers-demo/agent.py",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 9,
+        "path": "examples/triggers-demo/docker-compose.yml",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 19,
+        "path": "examples/triggers-demo/scripts/fire-events.sh",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 4,
+        "path": "examples/ts-node-examples/discovery-memory/main.ts",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 4,
+        "path": "examples/ts-node-examples/init-example/main.ts",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "examples/ts-node-examples/init-example/package.json",
+        "reason": "Example dependency and module identifiers stay stable so the sample remains runnable."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "examples/ts-node-examples/init-example/reasoners.ts",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 3,
+        "path": "examples/ts-node-examples/multi-version/main.ts",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "preserve",
+        "matches": 5,
+        "path": "examples/ts-node-examples/package-lock.json",
+        "reason": "Example dependency and module identifiers stay stable so the sample remains runnable."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "examples/ts-node-examples/package.json",
+        "reason": "Example dependency and module identifiers stay stable so the sample remains runnable."
+      },
+      {
+        "classification": "edit",
+        "matches": 4,
+        "path": "examples/ts-node-examples/permission-agent-a/main.ts",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 4,
+        "path": "examples/ts-node-examples/permission-agent-b/main.ts",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 4,
+        "path": "examples/ts-node-examples/serverless-hello/main.ts",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "examples/ts-node-examples/simulation/main.ts",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "examples/ts-node-examples/simulation/routers/aggregation.ts",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "examples/ts-node-examples/simulation/routers/decision.ts",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "examples/ts-node-examples/simulation/routers/entity.ts",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "examples/ts-node-examples/simulation/routers/scenario.ts",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "examples/ts-node-examples/simulation/routers/simulation.ts",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 5,
+        "path": "examples/ts-node-examples/verifiable-credentials/README.md",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 4,
+        "path": "examples/ts-node-examples/verifiable-credentials/main.ts",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "examples/ts-node-examples/verifiable-credentials/reasoners.ts",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 8,
+        "path": "examples/ts-node-examples/waiting-state/main.ts",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "examples/ts-node-examples/waiting-state/package.json",
+        "reason": "Example dependency and module identifiers stay stable so the sample remains runnable."
+      },
+      {
+        "classification": "edit",
+        "matches": 4,
+        "path": "examples/ts_agent_nodes/tool_calling/orchestrator.ts",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "preserve",
+        "matches": 3,
+        "path": "examples/ts_agent_nodes/tool_calling/package-lock.json",
+        "reason": "Example dependency and module identifiers stay stable so the sample remains runnable."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "examples/ts_agent_nodes/tool_calling/package.json",
+        "reason": "Example dependency and module identifiers stay stable so the sample remains runnable."
+      },
+      {
+        "classification": "preserve",
+        "matches": 5,
+        "path": "examples/ts_agent_nodes/tool_calling/test_orchestrator.ts",
+        "reason": "Example-local tests keep stable compatibility fixtures and package imports."
+      },
+      {
+        "classification": "edit",
+        "matches": 3,
+        "path": "examples/ts_agent_nodes/tool_calling/worker.ts",
+        "reason": "Example README, product context, script output, or visible sample copy should use Silmari wording."
+      },
+      {
+        "classification": "edit",
+        "matches": 20,
+        "path": "sdk/go/README.md",
+        "reason": "SDK README prose is user-facing and should use Silmari wording."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 34,
+        "path": "sdk/go/agent/agent.go",
+        "reason": "Go SDK runtime and API source keeps stable module paths and public compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "sdk/go/agent/agent_accepts_webhook_test.go",
+        "reason": "Go SDK tests intentionally keep stable module paths and compatibility assertions."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 3,
+        "path": "sdk/go/agent/agent_did.go",
+        "reason": "Go SDK runtime and API source keeps stable module paths and public compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 4,
+        "path": "sdk/go/agent/agent_did_test.go",
+        "reason": "Go SDK tests intentionally keep stable module paths and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 6,
+        "path": "sdk/go/agent/agent_invariant_test.go",
+        "reason": "Go SDK tests intentionally keep stable module paths and compatibility assertions."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 5,
+        "path": "sdk/go/agent/agent_lifecycle.go",
+        "reason": "Go SDK runtime and API source keeps stable module paths and public compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 8,
+        "path": "sdk/go/agent/agent_lifecycle_test.go",
+        "reason": "Go SDK tests intentionally keep stable module paths and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 51,
+        "path": "sdk/go/agent/agent_test.go",
+        "reason": "Go SDK tests intentionally keep stable module paths and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 10,
+        "path": "sdk/go/agent/agent_trigger_origin_test.go",
+        "reason": "Go SDK tests intentionally keep stable module paths and compatibility assertions."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 1,
+        "path": "sdk/go/agent/cli.go",
+        "reason": "Go SDK runtime and API source keeps stable module paths and public compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 3,
+        "path": "sdk/go/agent/cli_test.go",
+        "reason": "Go SDK tests intentionally keep stable module paths and compatibility assertions."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 4,
+        "path": "sdk/go/agent/control_plane_memory_backend.go",
+        "reason": "Go SDK runtime and API source keeps stable module paths and public compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 7,
+        "path": "sdk/go/agent/did_async_additional_test.go",
+        "reason": "Go SDK tests intentionally keep stable module paths and compatibility assertions."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 5,
+        "path": "sdk/go/agent/discovery.go",
+        "reason": "Go SDK runtime and API source keeps stable module paths and public compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 5,
+        "path": "sdk/go/agent/discovery_test.go",
+        "reason": "Go SDK tests intentionally keep stable module paths and compatibility assertions."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 2,
+        "path": "sdk/go/agent/harness.go",
+        "reason": "Go SDK runtime and API source keeps stable module paths and public compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 5,
+        "path": "sdk/go/agent/harness_test.go",
+        "reason": "Go SDK tests intentionally keep stable module paths and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "sdk/go/agent/middleware_additional_test.go",
+        "reason": "Go SDK tests intentionally keep stable module paths and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "sdk/go/agent/misc_branch_additional_test.go",
+        "reason": "Go SDK tests intentionally keep stable module paths and compatibility assertions."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 6,
+        "path": "sdk/go/agent/note.go",
+        "reason": "Go SDK runtime and API source keeps stable module paths and public compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 15,
+        "path": "sdk/go/agent/note_test.go",
+        "reason": "Go SDK tests intentionally keep stable module paths and compatibility assertions."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 6,
+        "path": "sdk/go/agent/process_logs.go",
+        "reason": "Go SDK runtime and API source keeps stable module paths and public compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 30,
+        "path": "sdk/go/agent/process_logs_test.go",
+        "reason": "Go SDK tests intentionally keep stable module paths and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 7,
+        "path": "sdk/go/agent/registration_integration_test.go",
+        "reason": "Go SDK tests intentionally keep stable module paths and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 5,
+        "path": "sdk/go/agent/router_test.go",
+        "reason": "Go SDK tests intentionally keep stable module paths and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "sdk/go/agent/run_memory_additional_test.go",
+        "reason": "Go SDK tests intentionally keep stable module paths and compatibility assertions."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 5,
+        "path": "sdk/go/agent/verification.go",
+        "reason": "Go SDK runtime and API source keeps stable module paths and public compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 4,
+        "path": "sdk/go/agent/workflow_event_additional_test.go",
+        "reason": "Go SDK tests intentionally keep stable module paths and compatibility assertions."
+      },
+      {
+        "classification": "edit",
+        "matches": 6,
+        "path": "sdk/go/ai/README.md",
+        "reason": "SDK README prose is user-facing and should use Silmari wording."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 2,
+        "path": "sdk/go/ai/tool_calling.go",
+        "reason": "Go SDK runtime and API source keeps stable module paths and public compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "sdk/go/ai/tool_calling_additional_test.go",
+        "reason": "Go SDK tests intentionally keep stable module paths and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "sdk/go/ai/tool_calling_test.go",
+        "reason": "Go SDK tests intentionally keep stable module paths and compatibility assertions."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 5,
+        "path": "sdk/go/client/client.go",
+        "reason": "Go SDK runtime and API source keeps stable module paths and public compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "sdk/go/client/client_invariant_test.go",
+        "reason": "Go SDK tests intentionally keep stable module paths and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "sdk/go/client/client_low_coverage_test.go",
+        "reason": "Go SDK tests intentionally keep stable module paths and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 7,
+        "path": "sdk/go/client/client_redirect_test.go",
+        "reason": "Go SDK tests intentionally keep stable module paths and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "sdk/go/client/client_test.go",
+        "reason": "Go SDK tests intentionally keep stable module paths and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "sdk/go/did/did_client_test.go",
+        "reason": "Go SDK tests intentionally keep stable module paths and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "sdk/go/did/did_manager_test.go",
+        "reason": "Go SDK tests intentionally keep stable module paths and compatibility assertions."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 3,
+        "path": "sdk/go/did/types.go",
+        "reason": "Go SDK runtime and API source keeps stable module paths and public compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 6,
+        "path": "sdk/go/did/types_test.go",
+        "reason": "Go SDK tests intentionally keep stable module paths and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "sdk/go/go.mod",
+        "reason": "Lockfile, manifest, or module identifiers stay stable for package compatibility."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "sdk/go/harness/codex_integration_test.go",
+        "reason": "Go SDK tests intentionally keep stable module paths and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 3,
+        "path": "sdk/go/harness/coverage_branches_test.go",
+        "reason": "Go SDK tests intentionally keep stable module paths and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "sdk/go/harness/gemini_integration_test.go",
+        "reason": "Go SDK tests intentionally keep stable module paths and compatibility assertions."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 2,
+        "path": "sdk/go/harness/opencode.go",
+        "reason": "Go SDK runtime and API source keeps stable module paths and public compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 1,
+        "path": "sdk/go/harness/runner.go",
+        "reason": "Go SDK runtime and API source keeps stable module paths and public compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "sdk/go/harness/runner_invariant_test.go",
+        "reason": "Go SDK tests intentionally keep stable module paths and compatibility assertions."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 2,
+        "path": "sdk/go/harness/schema.go",
+        "reason": "Go SDK runtime and API source keeps stable module paths and public compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 3,
+        "path": "sdk/go/harness/schema_test.go",
+        "reason": "Go SDK tests intentionally keep stable module paths and compatibility assertions."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 1,
+        "path": "sdk/go/types/types.go",
+        "reason": "Go SDK runtime and API source keeps stable module paths and public compatibility identifiers."
+      },
+      {
+        "classification": "historical",
+        "matches": 1,
+        "path": "sdk/python/CHANGELOG.md",
+        "reason": "The changelog is preserved as a historical record rather than rewritten during the rebrand."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "sdk/python/MANIFEST.in",
+        "reason": "Lockfile, manifest, or module identifiers stay stable for package compatibility."
+      },
+      {
+        "classification": "edit",
+        "matches": 14,
+        "path": "sdk/python/README.md",
+        "reason": "SDK README prose is user-facing and should use Silmari wording."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 4,
+        "path": "sdk/python/agentfield/__init__.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 164,
+        "path": "sdk/python/agentfield/agent.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 15,
+        "path": "sdk/python/agentfield/agent_ai.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 2,
+        "path": "sdk/python/agentfield/agent_cli.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 4,
+        "path": "sdk/python/agentfield/agent_discovery.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 42,
+        "path": "sdk/python/agentfield/agent_field_handler.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 1,
+        "path": "sdk/python/agentfield/agent_pause.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 42,
+        "path": "sdk/python/agentfield/agent_server.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 10,
+        "path": "sdk/python/agentfield/agent_serverless.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 5,
+        "path": "sdk/python/agentfield/agent_vc.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 5,
+        "path": "sdk/python/agentfield/agent_workflow.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 5,
+        "path": "sdk/python/agentfield/async_config.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 11,
+        "path": "sdk/python/agentfield/async_execution_manager.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 2,
+        "path": "sdk/python/agentfield/cancel.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 66,
+        "path": "sdk/python/agentfield/client.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 17,
+        "path": "sdk/python/agentfield/connection_manager.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 2,
+        "path": "sdk/python/agentfield/decorators.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 1,
+        "path": "sdk/python/agentfield/did_auth.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 17,
+        "path": "sdk/python/agentfield/did_manager.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 19,
+        "path": "sdk/python/agentfield/exceptions.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 2,
+        "path": "sdk/python/agentfield/execution_context.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 6,
+        "path": "sdk/python/agentfield/fixtures/triggers/github.json",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 4,
+        "path": "sdk/python/agentfield/harness/__init__.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 4,
+        "path": "sdk/python/agentfield/harness/_runner.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 4,
+        "path": "sdk/python/agentfield/harness/_schema.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 2,
+        "path": "sdk/python/agentfield/harness/providers/__init__.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 1,
+        "path": "sdk/python/agentfield/harness/providers/_base.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 6,
+        "path": "sdk/python/agentfield/harness/providers/_factory.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 2,
+        "path": "sdk/python/agentfield/harness/providers/claude.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 2,
+        "path": "sdk/python/agentfield/harness/providers/codex.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 2,
+        "path": "sdk/python/agentfield/harness/providers/gemini.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 10,
+        "path": "sdk/python/agentfield/harness/providers/opencode.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 9,
+        "path": "sdk/python/agentfield/http_connection_manager.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 22,
+        "path": "sdk/python/agentfield/logger.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 8,
+        "path": "sdk/python/agentfield/media_providers.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 1,
+        "path": "sdk/python/agentfield/media_router.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 22,
+        "path": "sdk/python/agentfield/memory.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 1,
+        "path": "sdk/python/agentfield/memory_events.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 1,
+        "path": "sdk/python/agentfield/multimodal_response.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 5,
+        "path": "sdk/python/agentfield/node_logs.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 2,
+        "path": "sdk/python/agentfield/pydantic_utils.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 1,
+        "path": "sdk/python/agentfield/rate_limiter.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 5,
+        "path": "sdk/python/agentfield/router.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 1,
+        "path": "sdk/python/agentfield/status.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 4,
+        "path": "sdk/python/agentfield/testing.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 4,
+        "path": "sdk/python/agentfield/tool_calling.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 4,
+        "path": "sdk/python/agentfield/triggers.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 2,
+        "path": "sdk/python/agentfield/types.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 3,
+        "path": "sdk/python/agentfield/utils.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 13,
+        "path": "sdk/python/agentfield/vc_generator.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 10,
+        "path": "sdk/python/agentfield/verification.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 5,
+        "path": "sdk/python/agentfield/vision.py",
+        "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+      },
+      {
+        "classification": "edit",
+        "matches": 21,
+        "path": "sdk/python/pyproject.toml",
+        "reason": "Published SDK metadata descriptions and keywords need Silmari branding while package names stay stable."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "sdk/python/requirements-dev.txt",
+        "reason": "Lockfile, manifest, or module identifiers stay stable for package compatibility."
+      },
+      {
+        "classification": "preserve",
+        "matches": 3,
+        "path": "sdk/python/scripts/run_pytest.sh",
+        "reason": "SDK helper scripts keep stable package and runtime identifiers for compatibility."
+      },
+      {
+        "classification": "preserve",
+        "matches": 19,
+        "path": "sdk/python/tests/conftest.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 5,
+        "path": "sdk/python/tests/debug_complex_json.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 38,
+        "path": "sdk/python/tests/helpers.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 43,
+        "path": "sdk/python/tests/integration/conftest.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 25,
+        "path": "sdk/python/tests/integration/test_agentfield_end_to_end.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 3,
+        "path": "sdk/python/tests/test_accepts_webhook.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 12,
+        "path": "sdk/python/tests/test_agent_ai.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "sdk/python/tests/test_agent_ai_comprehensive.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 3,
+        "path": "sdk/python/tests/test_agent_ai_coverage_additions.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 18,
+        "path": "sdk/python/tests/test_agent_ai_deadlock_recovery.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 4,
+        "path": "sdk/python/tests/test_agent_ai_final90.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 12,
+        "path": "sdk/python/tests/test_agent_bigfiles_final90.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 19,
+        "path": "sdk/python/tests/test_agent_call.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "sdk/python/tests/test_agent_cli.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 8,
+        "path": "sdk/python/tests/test_agent_core.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 11,
+        "path": "sdk/python/tests/test_agent_coverage_additions.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 124,
+        "path": "sdk/python/tests/test_agent_field_handler.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 30,
+        "path": "sdk/python/tests/test_agent_graceful_shutdown.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 14,
+        "path": "sdk/python/tests/test_agent_helpers.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 22,
+        "path": "sdk/python/tests/test_agent_instance_id.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 30,
+        "path": "sdk/python/tests/test_agent_integration.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "sdk/python/tests/test_agent_lifecycle_invariants.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 3,
+        "path": "sdk/python/tests/test_agent_networking.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "sdk/python/tests/test_agent_registry.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 7,
+        "path": "sdk/python/tests/test_agent_resilience.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 20,
+        "path": "sdk/python/tests/test_agent_server.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 13,
+        "path": "sdk/python/tests/test_agent_server_extended.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 5,
+        "path": "sdk/python/tests/test_agent_serverless.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "sdk/python/tests/test_agent_utils.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 3,
+        "path": "sdk/python/tests/test_agent_workflow.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 8,
+        "path": "sdk/python/tests/test_agent_workflow_extended.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 6,
+        "path": "sdk/python/tests/test_agent_workflow_registration.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "sdk/python/tests/test_ai_config.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 32,
+        "path": "sdk/python/tests/test_approval.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 7,
+        "path": "sdk/python/tests/test_async_config.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 51,
+        "path": "sdk/python/tests/test_async_execution.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 3,
+        "path": "sdk/python/tests/test_async_execution_manager_comprehensive.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 11,
+        "path": "sdk/python/tests/test_async_execution_manager_final90.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 3,
+        "path": "sdk/python/tests/test_async_execution_manager_paths.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 3,
+        "path": "sdk/python/tests/test_cancel.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 23,
+        "path": "sdk/python/tests/test_client.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 40,
+        "path": "sdk/python/tests/test_client_auth.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 12,
+        "path": "sdk/python/tests/test_client_bigfiles_coverage.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 16,
+        "path": "sdk/python/tests/test_client_coverage_additions.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 5,
+        "path": "sdk/python/tests/test_client_execution_paths.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 5,
+        "path": "sdk/python/tests/test_client_execution_vc_payload.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 55,
+        "path": "sdk/python/tests/test_client_laser_push.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 10,
+        "path": "sdk/python/tests/test_client_lifecycle.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 11,
+        "path": "sdk/python/tests/test_client_unit.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 20,
+        "path": "sdk/python/tests/test_connection_manager.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 18,
+        "path": "sdk/python/tests/test_connection_manager_invariants.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "sdk/python/tests/test_cost_tracker.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "sdk/python/tests/test_decorator_code_origin.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 7,
+        "path": "sdk/python/tests/test_decorators.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "sdk/python/tests/test_did_auth.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 8,
+        "path": "sdk/python/tests/test_did_auth_invariants.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 8,
+        "path": "sdk/python/tests/test_did_manager.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 18,
+        "path": "sdk/python/tests/test_did_manager_error_paths.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 47,
+        "path": "sdk/python/tests/test_exceptions.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 4,
+        "path": "sdk/python/tests/test_execution_context_core.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "sdk/python/tests/test_execution_context_coverage_additions.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "sdk/python/tests/test_execution_context_parent_vc.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 16,
+        "path": "sdk/python/tests/test_execution_logger.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "sdk/python/tests/test_execution_state.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 11,
+        "path": "sdk/python/tests/test_execution_state_invariants.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 6,
+        "path": "sdk/python/tests/test_harness_agent_wiring.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "sdk/python/tests/test_harness_ai_schema_repair.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 5,
+        "path": "sdk/python/tests/test_harness_cli.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "sdk/python/tests/test_harness_cost_estimation.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 17,
+        "path": "sdk/python/tests/test_harness_factory.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 11,
+        "path": "sdk/python/tests/test_harness_functional.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 7,
+        "path": "sdk/python/tests/test_harness_provider_claude.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 10,
+        "path": "sdk/python/tests/test_harness_provider_codex.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 10,
+        "path": "sdk/python/tests/test_harness_provider_gemini.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 23,
+        "path": "sdk/python/tests/test_harness_provider_opencode.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 19,
+        "path": "sdk/python/tests/test_harness_runner.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 8,
+        "path": "sdk/python/tests/test_harness_schema.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 4,
+        "path": "sdk/python/tests/test_harness_types.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 6,
+        "path": "sdk/python/tests/test_http_connection_manager.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "sdk/python/tests/test_image_config.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 10,
+        "path": "sdk/python/tests/test_invariants.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "sdk/python/tests/test_litellm_adapters.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 13,
+        "path": "sdk/python/tests/test_media_integration.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 6,
+        "path": "sdk/python/tests/test_media_providers.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "sdk/python/tests/test_media_providers_additional.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "sdk/python/tests/test_media_router.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 7,
+        "path": "sdk/python/tests/test_memory_bigfiles_coverage.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 8,
+        "path": "sdk/python/tests/test_memory_client_core.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 3,
+        "path": "sdk/python/tests/test_memory_coverage_additions.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 16,
+        "path": "sdk/python/tests/test_memory_events.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 14,
+        "path": "sdk/python/tests/test_memory_events_additional.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 9,
+        "path": "sdk/python/tests/test_memory_flow_core.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 31,
+        "path": "sdk/python/tests/test_memory_invariants.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 20,
+        "path": "sdk/python/tests/test_memory_performance.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "sdk/python/tests/test_multimodal.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "sdk/python/tests/test_multimodal_response.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 3,
+        "path": "sdk/python/tests/test_multimodal_response_additional.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "sdk/python/tests/test_multimodal_response_cost.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 23,
+        "path": "sdk/python/tests/test_node_logs.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 3,
+        "path": "sdk/python/tests/test_openrouter_audio.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "sdk/python/tests/test_openrouter_video.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "sdk/python/tests/test_pydantic_utils.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 5,
+        "path": "sdk/python/tests/test_rate_limiter_core.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 8,
+        "path": "sdk/python/tests/test_reasoner_path_normalization.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "sdk/python/tests/test_result_cache.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 8,
+        "path": "sdk/python/tests/test_result_cache_bigfiles_coverage.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 11,
+        "path": "sdk/python/tests/test_router.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 12,
+        "path": "sdk/python/tests/test_run_cli_env.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 3,
+        "path": "sdk/python/tests/test_simulate_trigger.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 4,
+        "path": "sdk/python/tests/test_skill_pydantic_models.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "sdk/python/tests/test_status_utils.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "sdk/python/tests/test_tool_calling.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "sdk/python/tests/test_tool_calling_error_paths.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "sdk/python/tests/test_trigger_context.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 5,
+        "path": "sdk/python/tests/test_trigger_param_binding.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "sdk/python/tests/test_types.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 6,
+        "path": "sdk/python/tests/test_utils.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 11,
+        "path": "sdk/python/tests/test_vc_generator.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 11,
+        "path": "sdk/python/tests/test_vc_generator_error_paths.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 5,
+        "path": "sdk/python/tests/test_verification.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "sdk/python/tests/test_video_output.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 4,
+        "path": "sdk/python/tests/test_vision.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 6,
+        "path": "sdk/python/tests/test_workflow_parent_child.py",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "sdk/python/uv.lock",
+        "reason": "Lockfile, manifest, or module identifiers stay stable for package compatibility."
+      },
+      {
+        "classification": "edit",
+        "matches": 13,
+        "path": "sdk/typescript/README.md",
+        "reason": "SDK README prose is user-facing and should use Silmari wording."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "sdk/typescript/package-lock.json",
+        "reason": "Lockfile, manifest, or module identifiers stay stable for package compatibility."
+      },
+      {
+        "classification": "edit",
+        "matches": 10,
+        "path": "sdk/typescript/package.json",
+        "reason": "Published SDK metadata descriptions and keywords need Silmari branding while package names stay stable."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "sdk/typescript/scripts/did-smoke.ts",
+        "reason": "SDK helper scripts keep stable package and runtime identifiers for compatibility."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 33,
+        "path": "sdk/typescript/src/agent/Agent.ts",
+        "reason": "TypeScript SDK runtime and API source keeps stable module paths, client field names, and request identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 1,
+        "path": "sdk/typescript/src/agent/cancel.ts",
+        "reason": "TypeScript SDK runtime and API source keeps stable module paths, client field names, and request identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 7,
+        "path": "sdk/typescript/src/agent/processLogs.ts",
+        "reason": "TypeScript SDK runtime and API source keeps stable module paths, client field names, and request identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 1,
+        "path": "sdk/typescript/src/ai/ToolCalling.ts",
+        "reason": "TypeScript SDK runtime and API source keeps stable module paths, client field names, and request identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 1,
+        "path": "sdk/typescript/src/approval/ApprovalClient.ts",
+        "reason": "TypeScript SDK runtime and API source keeps stable module paths, client field names, and request identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 2,
+        "path": "sdk/typescript/src/client/AgentFieldClient.ts",
+        "reason": "TypeScript SDK runtime and API source keeps stable module paths, client field names, and request identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 3,
+        "path": "sdk/typescript/src/did/DidClient.ts",
+        "reason": "TypeScript SDK runtime and API source keeps stable module paths, client field names, and request identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 2,
+        "path": "sdk/typescript/src/did/DidManager.ts",
+        "reason": "TypeScript SDK runtime and API source keeps stable module paths, client field names, and request identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 1,
+        "path": "sdk/typescript/src/harness/providers/opencode.ts",
+        "reason": "TypeScript SDK runtime and API source keeps stable module paths, client field names, and request identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 2,
+        "path": "sdk/typescript/src/harness/schema.ts",
+        "reason": "TypeScript SDK runtime and API source keeps stable module paths, client field names, and request identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 1,
+        "path": "sdk/typescript/src/status/ExecutionStatus.ts",
+        "reason": "TypeScript SDK runtime and API source keeps stable module paths, client field names, and request identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 1,
+        "path": "sdk/typescript/src/types/agent.ts",
+        "reason": "TypeScript SDK runtime and API source keeps stable module paths, client field names, and request identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 1,
+        "path": "sdk/typescript/src/utils/httpAgents.ts",
+        "reason": "TypeScript SDK runtime and API source keeps stable module paths, client field names, and request identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 9,
+        "path": "sdk/typescript/src/verification/LocalVerifier.ts",
+        "reason": "TypeScript SDK runtime and API source keeps stable module paths, client field names, and request identifiers."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 4,
+        "path": "sdk/typescript/src/workflow/WorkflowReporter.ts",
+        "reason": "TypeScript SDK runtime and API source keeps stable module paths, client field names, and request identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 7,
+        "path": "sdk/typescript/tests/agent_invariant.test.ts",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 11,
+        "path": "sdk/typescript/tests/agent_lifecycle.test.ts",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 14,
+        "path": "sdk/typescript/tests/agent_runtime_paths.test.ts",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 23,
+        "path": "sdk/typescript/tests/agentfield_client.test.ts",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 17,
+        "path": "sdk/typescript/tests/agentfield_client_coverage.test.ts",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 3,
+        "path": "sdk/typescript/tests/ai_multimodal_response_extra.test.ts",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "sdk/typescript/tests/cancel.test.ts",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 10,
+        "path": "sdk/typescript/tests/did_auth.test.ts",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 3,
+        "path": "sdk/typescript/tests/did_client_methods.test.ts",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "sdk/typescript/tests/did_manager.test.ts",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 4,
+        "path": "sdk/typescript/tests/execution_logger.test.ts",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "sdk/typescript/tests/harness_functional.test.ts",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 3,
+        "path": "sdk/typescript/tests/harness_runner.test.ts",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 8,
+        "path": "sdk/typescript/tests/harness_schema.test.ts",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 6,
+        "path": "sdk/typescript/tests/header-forwarding.test.ts",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 8,
+        "path": "sdk/typescript/tests/integration.e2e.test.ts",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 6,
+        "path": "sdk/typescript/tests/memory_and_discovery.test.ts",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "sdk/typescript/tests/memory_performance.test.ts",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 5,
+        "path": "sdk/typescript/tests/multimodal.test.ts",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 20,
+        "path": "sdk/typescript/tests/process_logs.test.ts",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 6,
+        "path": "sdk/typescript/tests/workflow_reporter.test.ts",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "preserve",
+        "matches": 5,
+        "path": "sdk/typescript/tests/workflow_reporter_dag.test.ts",
+        "reason": "SDK tests intentionally keep stable AgentField fixtures, import paths, and compatibility assertions."
+      },
+      {
+        "classification": "edit",
+        "matches": 15,
+        "path": "skills/agentfield/SKILL.md",
+        "reason": "Skill prose and reference content need Silmari wording while skill slugs stay stable."
+      },
+      {
+        "classification": "edit",
+        "matches": 4,
+        "path": "skills/agentfield/commands/agentfield.md",
+        "reason": "Skill prose and reference content need Silmari wording while skill slugs stay stable."
+      },
+      {
+        "classification": "edit",
+        "matches": 5,
+        "path": "skills/agentfield/references/anti-patterns.md",
+        "reason": "Skill prose and reference content need Silmari wording while skill slugs stay stable."
+      },
+      {
+        "classification": "edit",
+        "matches": 2,
+        "path": "skills/agentfield/references/capability-playbook.md",
+        "reason": "Skill prose and reference content need Silmari wording while skill slugs stay stable."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "skills/agentfield/references/cli-toolkit.md",
+        "reason": "Skill prose and reference content need Silmari wording while skill slugs stay stable."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "skills/agentfield/references/examples-map.md",
+        "reason": "Skill prose and reference content need Silmari wording while skill slugs stay stable."
+      },
+      {
+        "classification": "edit",
+        "matches": 14,
+        "path": "skills/agentfield/references/live-docs.md",
+        "reason": "Skill prose and reference content need Silmari wording while skill slugs stay stable."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "skills/agentfield/references/memory-events.md",
+        "reason": "Skill prose and reference content need Silmari wording while skill slugs stay stable."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "skills/agentfield/references/model-selection.md",
+        "reason": "Skill prose and reference content need Silmari wording while skill slugs stay stable."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "skills/agentfield/references/patterns-emerge.md",
+        "reason": "Skill prose and reference content need Silmari wording while skill slugs stay stable."
+      },
+      {
+        "classification": "edit",
+        "matches": 8,
+        "path": "skills/agentfield/references/primitives-snapshot.md",
+        "reason": "Skill prose and reference content need Silmari wording while skill slugs stay stable."
+      },
+      {
+        "classification": "edit",
+        "matches": 5,
+        "path": "skills/agentfield/references/project-claude-template.md",
+        "reason": "Skill prose and reference content need Silmari wording while skill slugs stay stable."
+      },
+      {
+        "classification": "edit",
+        "matches": 18,
+        "path": "skills/agentfield/references/scaffold-recipe.md",
+        "reason": "Skill prose and reference content need Silmari wording while skill slugs stay stable."
+      },
+      {
+        "classification": "edit",
+        "matches": 3,
+        "path": "skills/agentfield/references/triggers.md",
+        "reason": "Skill prose and reference content need Silmari wording while skill slugs stay stable."
+      },
+      {
+        "classification": "edit",
+        "matches": 1,
+        "path": "skills/agentfield/references/verification.md",
+        "reason": "Skill prose and reference content need Silmari wording while skill slugs stay stable."
+      },
+      {
+        "classification": "edit",
+        "matches": 8,
+        "path": "specs/README.md",
+        "reason": "Documentation and spec prose are in-scope brand surfaces for the Silmari copy pass."
+      },
+      {
+        "classification": "edit",
+        "matches": 6,
+        "path": "specs/agentplane-ui-api-spec.md",
+        "reason": "Documentation and spec prose are in-scope brand surfaces for the Silmari copy pass."
+      },
+      {
+        "classification": "edit",
+        "matches": 12,
+        "path": "specs/architecture-overview.md",
+        "reason": "Documentation and spec prose are in-scope brand surfaces for the Silmari copy pass."
+      },
+      {
+        "classification": "edit",
+        "matches": 16,
+        "path": "specs/control-plane.md",
+        "reason": "Documentation and spec prose are in-scope brand surfaces for the Silmari copy pass."
+      },
+      {
+        "classification": "edit",
+        "matches": 6,
+        "path": "specs/data-flow.md",
+        "reason": "Documentation and spec prose are in-scope brand surfaces for the Silmari copy pass."
+      },
+      {
+        "classification": "edit",
+        "matches": 30,
+        "path": "specs/deployment.md",
+        "reason": "Documentation and spec prose are in-scope brand surfaces for the Silmari copy pass."
+      },
+      {
+        "classification": "edit",
+        "matches": 5,
+        "path": "specs/sdk-go.md",
+        "reason": "Documentation and spec prose are in-scope brand surfaces for the Silmari copy pass."
+      },
+      {
+        "classification": "edit",
+        "matches": 34,
+        "path": "specs/sdk-python.md",
+        "reason": "Documentation and spec prose are in-scope brand surfaces for the Silmari copy pass."
+      },
+      {
+        "classification": "edit",
+        "matches": 7,
+        "path": "specs/security.md",
+        "reason": "Documentation and spec prose are in-scope brand surfaces for the Silmari copy pass."
+      },
+      {
+        "classification": "edit",
+        "matches": 31,
+        "path": "specs/viewer.html",
+        "reason": "Documentation and spec prose are in-scope brand surfaces for the Silmari copy pass."
+      },
+      {
+        "classification": "edit",
+        "matches": 2,
+        "path": "specs/web-ui.md",
+        "reason": "Documentation and spec prose are in-scope brand surfaces for the Silmari copy pass."
+      },
+      {
+        "classification": "edit",
+        "matches": 14,
+        "path": "tests/functional/README.md",
+        "reason": "Functional test documentation is user-facing and should use Silmari wording."
+      },
+      {
+        "classification": "preserve",
+        "matches": 5,
+        "path": "tests/functional/agents/call_chain_agents.py",
+        "reason": "Functional test fixtures keep stable package, route, and compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 3,
+        "path": "tests/functional/agents/docs_quick_start_agent.py",
+        "reason": "Functional test fixtures keep stable package, route, and compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 4,
+        "path": "tests/functional/agents/memory_agent.py",
+        "reason": "Functional test fixtures keep stable package, route, and compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 4,
+        "path": "tests/functional/agents/memory_events_agent.py",
+        "reason": "Functional test fixtures keep stable package, route, and compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 3,
+        "path": "tests/functional/agents/memory_events_decorator_agent.py",
+        "reason": "Functional test fixtures keep stable package, route, and compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 4,
+        "path": "tests/functional/agents/quick_start_agent.py",
+        "reason": "Functional test fixtures keep stable package, route, and compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 3,
+        "path": "tests/functional/agents/router_prefix_agent.py",
+        "reason": "Functional test fixtures keep stable package, route, and compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 4,
+        "path": "tests/functional/agents/scoping_agent.py",
+        "reason": "Functional test fixtures keep stable package, route, and compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 8,
+        "path": "tests/functional/conftest.py",
+        "reason": "Functional test fixtures keep stable package, route, and compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 2,
+        "path": "tests/functional/docker/Dockerfile.log-demo-node",
+        "reason": "Functional test fixtures keep stable package, route, and compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 7,
+        "path": "tests/functional/docker/Dockerfile.test-runner",
+        "reason": "Functional test fixtures keep stable package, route, and compatibility identifiers."
+      },
+      {
+        "classification": "edit",
+        "matches": 4,
+        "path": "tests/functional/docker/LOG_DEMO.md",
+        "reason": "Functional test documentation is user-facing and should use Silmari wording."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 7,
+        "path": "tests/functional/docker/agentfield-test.yaml",
+        "reason": "Functional test configs keep stable config keys, env vars, and file paths."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 22,
+        "path": "tests/functional/docker/docker-compose.local.yml",
+        "reason": "Functional test configs keep stable config keys, env vars, and file paths."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 27,
+        "path": "tests/functional/docker/docker-compose.log-demo.yml",
+        "reason": "Functional test configs keep stable config keys, env vars, and file paths."
+      },
+      {
+        "classification": "runtime-compatible",
+        "matches": 41,
+        "path": "tests/functional/docker/docker-compose.postgres.yml",
+        "reason": "Functional test configs keep stable config keys, env vars, and file paths."
+      },
+      {
+        "classification": "preserve",
+        "matches": 4,
+        "path": "tests/functional/docker/log-demo-node/log-demo.mjs",
+        "reason": "Functional test fixtures keep stable package, route, and compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 3,
+        "path": "tests/functional/docker/wait-for-services.sh",
+        "reason": "Functional test fixtures keep stable package, route, and compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 6,
+        "path": "tests/functional/go_agents/cmd/discovery/main.go",
+        "reason": "Functional test fixtures keep stable package, route, and compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 10,
+        "path": "tests/functional/go_agents/cmd/hello/main.go",
+        "reason": "Functional test fixtures keep stable package, route, and compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 6,
+        "path": "tests/functional/go_agents/cmd/serverless/main.go",
+        "reason": "Functional test fixtures keep stable package, route, and compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 6,
+        "path": "tests/functional/go_agents/go.mod",
+        "reason": "Functional test fixtures keep stable package, route, and compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 4,
+        "path": "tests/functional/tests/test_app_call.py",
+        "reason": "Functional test fixtures keep stable package, route, and compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 6,
+        "path": "tests/functional/tests/test_go_sdk_cli.py",
+        "reason": "Functional test fixtures keep stable package, route, and compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 3,
+        "path": "tests/functional/tests/test_go_sdk_discovery.py",
+        "reason": "Functional test fixtures keep stable package, route, and compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "tests/functional/tests/test_quick_start.py",
+        "reason": "Functional test fixtures keep stable package, route, and compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 12,
+        "path": "tests/functional/tests/test_serverless_agents.py",
+        "reason": "Functional test fixtures keep stable package, route, and compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "tests/functional/tests/test_ui_node_logs_proxy.py",
+        "reason": "Functional test fixtures keep stable package, route, and compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 3,
+        "path": "tests/functional/tests/test_vc_cli.py",
+        "reason": "Functional test fixtures keep stable package, route, and compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "tests/functional/tests/test_waiting_state.py",
+        "reason": "Functional test fixtures keep stable package, route, and compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 6,
+        "path": "tests/functional/ts_agents/echo-agent.mjs",
+        "reason": "Functional test fixtures keep stable package, route, and compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 7,
+        "path": "tests/functional/ts_agents/serverless-agent.mjs",
+        "reason": "Functional test fixtures keep stable package, route, and compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 5,
+        "path": "tests/functional/utils/agent_server.py",
+        "reason": "Functional test fixtures keep stable package, route, and compatibility identifiers."
+      },
+      {
+        "classification": "preserve",
+        "matches": 1,
+        "path": "tests/functional/utils/naming.py",
+        "reason": "Functional test fixtures keep stable package, route, and compatibility identifiers."
+      }
+    ],
+    "command": "rg --json --ignore-case -o \\bAgentField\\b|\\bagentfield\\b|AGENTFIELD|Agent-Field|agentfield\\.ai|AgentPlane|agentplane|Agent Plane|agent plane README.md CODE_OF_CONDUCT.md SUPPORT.md SECURITY.md CLAUDE.md .github docs specs examples deployments skills control-plane/README.md control-plane/scripts/README.md control-plane/tools/perf/README.md control-plane/migrations/README.md control-plane/internal/templates control-plane/internal/skillkit/skill_data/agentfield control-plane/web/client sdk tests --glob !**/node_modules/** --glob !**/dist/** --glob !**/.pytest_cache/**",
+    "commandRef": "Brand Surface Inventory",
+    "scanRoots": [
+      "README.md",
+      "CODE_OF_CONDUCT.md",
+      "SUPPORT.md",
+      "SECURITY.md",
+      "CLAUDE.md",
+      ".github",
+      "docs",
+      "specs",
+      "examples",
+      "deployments",
+      "skills",
+      "control-plane/README.md",
+      "control-plane/scripts/README.md",
+      "control-plane/tools/perf/README.md",
+      "control-plane/migrations/README.md",
+      "control-plane/internal/templates",
+      "control-plane/internal/skillkit/skill_data/agentfield",
+      "control-plane/web/client",
+      "sdk",
+      "tests"
+    ],
+    "totalMatchedFiles": 615,
+    "totalMatches": 4529
+  },
+  "changeSetBoundaryVerified": {
+    "editableBrandSurfaces": [
+      "root/community docs and templates",
+      "docs and specs",
+      "example READMEs, UI copy, and visible benchmark labels",
+      "deployment READMEs, chart descriptions, and NOTES output",
+      "generated template README/docstring surfaces",
+      "skills/agentfield source prose and embedded mirror prose",
+      "admin UI labels, navigation, empty states, and About copy",
+      "SDK README and package metadata descriptions"
+    ],
+    "notes": "No runtime route, storage schema, SDK API, package name, module path, image name, Helm chart name, env var, YAML config path, or skill slug rename is planned.",
+    "plannedRenames": {
+      "env_var": false,
+      "helm_chart_name": false,
+      "image_name": false,
+      "module_path": false,
+      "package_name": false,
+      "runtime_routes": false,
+      "sdk_api": false,
+      "skill_slug": false,
+      "storage_schema": false,
+      "yaml_config_path": false
+    },
+    "protectedRuntimeAreas": [
+      "control-plane/internal/server/**",
+      "control-plane/internal/handlers/**",
+      "control-plane/internal/storage/**",
+      "control-plane/internal/services/**",
+      "control-plane/migrations/*.sql",
+      "control-plane/pkg/types/**",
+      "sdk/python/agentfield/**",
+      "sdk/go/**",
+      "sdk/typescript/src/**",
+      "runtime route names",
+      "storage schema and JSON field names",
+      "package names and module paths",
+      "Docker image names and Kubernetes resource names",
+      "Helm chart names and helper names",
+      "env vars and YAML config paths",
+      "skill slugs and embedded skill paths",
+      "web UI storage keys and API path identifiers"
+    ]
+  },
+  "issue": "AF-RB-01-branch-inventory",
+  "title": "Prepare Exact Rebrand Branch And Baseline Inventory",
+  "verificationSamples": {
+    "emptyScope": {
+      "classificationCounts": {},
+      "classifiedFiles": [],
+      "command": "rg --json --ignore-case -o \\bAgentField\\b|\\bagentfield\\b|AGENTFIELD|Agent-Field|agentfield\\.ai|AgentPlane|agentplane|Agent Plane|agent plane LICENSE --glob !**/node_modules/** --glob !**/dist/** --glob !**/.pytest_cache/**",
+      "commandRef": "Brand Surface Inventory",
+      "scanRoots": [
+        "LICENSE"
+      ],
+      "totalMatchedFiles": 0,
+      "totalMatches": 0
+    },
+    "protectedRuntime": {
+      "classificationCounts": {
+        "runtime-compatible": 52
+      },
+      "classifiedFiles": [
+        {
+          "classification": "runtime-compatible",
+          "matches": 4,
+          "path": "sdk/python/agentfield/__init__.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 164,
+          "path": "sdk/python/agentfield/agent.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 15,
+          "path": "sdk/python/agentfield/agent_ai.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 2,
+          "path": "sdk/python/agentfield/agent_cli.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 4,
+          "path": "sdk/python/agentfield/agent_discovery.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 42,
+          "path": "sdk/python/agentfield/agent_field_handler.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 1,
+          "path": "sdk/python/agentfield/agent_pause.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 42,
+          "path": "sdk/python/agentfield/agent_server.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 10,
+          "path": "sdk/python/agentfield/agent_serverless.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 5,
+          "path": "sdk/python/agentfield/agent_vc.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 5,
+          "path": "sdk/python/agentfield/agent_workflow.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 5,
+          "path": "sdk/python/agentfield/async_config.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 11,
+          "path": "sdk/python/agentfield/async_execution_manager.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 2,
+          "path": "sdk/python/agentfield/cancel.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 66,
+          "path": "sdk/python/agentfield/client.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 17,
+          "path": "sdk/python/agentfield/connection_manager.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 2,
+          "path": "sdk/python/agentfield/decorators.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 1,
+          "path": "sdk/python/agentfield/did_auth.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 17,
+          "path": "sdk/python/agentfield/did_manager.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 19,
+          "path": "sdk/python/agentfield/exceptions.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 2,
+          "path": "sdk/python/agentfield/execution_context.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 6,
+          "path": "sdk/python/agentfield/fixtures/triggers/github.json",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 4,
+          "path": "sdk/python/agentfield/harness/__init__.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 4,
+          "path": "sdk/python/agentfield/harness/_runner.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 4,
+          "path": "sdk/python/agentfield/harness/_schema.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 2,
+          "path": "sdk/python/agentfield/harness/providers/__init__.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 1,
+          "path": "sdk/python/agentfield/harness/providers/_base.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 6,
+          "path": "sdk/python/agentfield/harness/providers/_factory.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 2,
+          "path": "sdk/python/agentfield/harness/providers/claude.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 2,
+          "path": "sdk/python/agentfield/harness/providers/codex.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 2,
+          "path": "sdk/python/agentfield/harness/providers/gemini.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 10,
+          "path": "sdk/python/agentfield/harness/providers/opencode.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 9,
+          "path": "sdk/python/agentfield/http_connection_manager.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 22,
+          "path": "sdk/python/agentfield/logger.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 8,
+          "path": "sdk/python/agentfield/media_providers.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 1,
+          "path": "sdk/python/agentfield/media_router.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 22,
+          "path": "sdk/python/agentfield/memory.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 1,
+          "path": "sdk/python/agentfield/memory_events.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 1,
+          "path": "sdk/python/agentfield/multimodal_response.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 5,
+          "path": "sdk/python/agentfield/node_logs.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 2,
+          "path": "sdk/python/agentfield/pydantic_utils.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 1,
+          "path": "sdk/python/agentfield/rate_limiter.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 5,
+          "path": "sdk/python/agentfield/router.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 1,
+          "path": "sdk/python/agentfield/status.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 4,
+          "path": "sdk/python/agentfield/testing.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 4,
+          "path": "sdk/python/agentfield/tool_calling.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 4,
+          "path": "sdk/python/agentfield/triggers.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 2,
+          "path": "sdk/python/agentfield/types.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 3,
+          "path": "sdk/python/agentfield/utils.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 13,
+          "path": "sdk/python/agentfield/vc_generator.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 10,
+          "path": "sdk/python/agentfield/verification.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        },
+        {
+          "classification": "runtime-compatible",
+          "matches": 5,
+          "path": "sdk/python/agentfield/vision.py",
+          "reason": "Python SDK runtime and API source keeps stable package names, method names, and compatibility identifiers."
+        }
+      ],
+      "command": "rg --json --ignore-case -o \\bAgentField\\b|\\bagentfield\\b|AGENTFIELD|Agent-Field|agentfield\\.ai|AgentPlane|agentplane|Agent Plane|agent plane sdk/python/agentfield --glob !**/node_modules/** --glob !**/dist/** --glob !**/.pytest_cache/**",
+      "commandRef": "Brand Surface Inventory",
+      "scanRoots": [
+        "sdk/python/agentfield"
+      ],
+      "totalMatchedFiles": 52,
+      "totalMatches": 602
+    },
+    "singleFile": {
+      "classificationCounts": {
+        "edit": 1
+      },
+      "classifiedFiles": [
+        {
+          "classification": "edit",
+          "matches": 93,
+          "path": "README.md",
+          "reason": "Root-facing product prose is user-visible and should use Silmari branding."
+        }
+      ],
+      "command": "rg --json --ignore-case -o \\bAgentField\\b|\\bagentfield\\b|AGENTFIELD|Agent-Field|agentfield\\.ai|AgentPlane|agentplane|Agent Plane|agent plane README.md --glob !**/node_modules/** --glob !**/dist/** --glob !**/.pytest_cache/**",
+      "commandRef": "Brand Surface Inventory",
+      "scanRoots": [
+        "README.md"
+      ],
+      "totalMatchedFiles": 1,
+      "totalMatches": 93
+    }
+  }
+}
