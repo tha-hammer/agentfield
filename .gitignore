@@ -4,6 +4,7 @@
 *.tmp
 *.swp
 *.swo
+.worktrees/
 test-reports/
 .env
 
