@@ -300,6 +300,17 @@ def is_concrete_reason(reason: str) -> bool:
     return len(tokens) >= 3
 
 
+def reason_covers_all_occurrences(reason: str) -> bool:
+    normalized = " ".join(reason.strip().lower().split())
+    return any(
+        phrase in normalized
+        for phrase in (
+            "all occurrences in this file",
+            "all occurrences in that file",
+        )
+    )
+
+
 def validate_table_shape(
     sections: dict[str, list[str]],
     heading: str,
@@ -593,13 +604,17 @@ def valid_preserved_rows_by_path(
 
 def build_exact_token_row_counts(
     rows_by_path: dict[str, list[PreservedIdentifier]],
-) -> dict[tuple[str, str], int]:
+) -> tuple[dict[tuple[str, str], int], set[tuple[str, str]]]:
     counts: dict[tuple[str, str], int] = {}
+    all_occurrence_keys: set[tuple[str, str]] = set()
     for path, rows in rows_by_path.items():
         for row in rows:
             key = (path, row.identifier)
+            if reason_covers_all_occurrences(row.reason):
+                all_occurrence_keys.add(key)
+                continue
             counts[key] = counts.get(key, 0) + 1
-    return counts
+    return counts, all_occurrence_keys
 
 
 def is_manifested(
@@ -607,6 +622,7 @@ def is_manifested(
     manifest: Manifest,
     rows_by_path: dict[str, list[PreservedIdentifier]],
     available_exact_rows: dict[tuple[str, str], int],
+    all_occurrence_exact_rows: set[tuple[str, str]],
 ) -> bool:
     if match.path not in manifest.audited_files:
         return False
@@ -618,6 +634,8 @@ def is_manifested(
             return True
 
     exact_key = (match.path, match.match_text)
+    if exact_key in all_occurrence_exact_rows:
+        return True
     if available_exact_rows.get(exact_key, 0) > 0:
         available_exact_rows[exact_key] -= 1
         return True
@@ -635,7 +653,9 @@ def build_preserved_identifier_coverage_view(
     unmanifested_matches: list[BrandMatch] = []
     covered_matches = 0
     rows_by_path = valid_preserved_rows_by_path(manifest)
-    available_exact_rows = build_exact_token_row_counts(rows_by_path)
+    available_exact_rows, all_occurrence_exact_rows = build_exact_token_row_counts(
+        rows_by_path
+    )
 
     for match in matches:
         if match.path not in manifest.audited_files:
@@ -643,7 +663,13 @@ def build_preserved_identifier_coverage_view(
                 missing_seen.add(match.path)
                 missing_audited_files.append(match.path)
             continue
-        if is_manifested(match, manifest, rows_by_path, available_exact_rows):
+        if is_manifested(
+            match,
+            manifest,
+            rows_by_path,
+            available_exact_rows,
+            all_occurrence_exact_rows,
+        ):
             covered_matches += 1
             continue
         unmanifested_matches.append(match)

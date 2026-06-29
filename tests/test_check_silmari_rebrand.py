@@ -337,6 +337,35 @@ class CheckSilmariRebrandContractTests(unittest.TestCase):
         self.assertNotIn(f"{fixture_path}:1: {LEGACY_BRAND}", output)
         self.assertIn(f"{fixture_path}:2: {LEGACY_BRAND}", output)
 
+    def test_exact_preserved_token_can_cover_all_occurrences_when_reason_says_so(self) -> None:
+        fixture_path = "tests/fixture.txt"
+        manifest_text = build_manifest(
+            audited_rows=[
+                (
+                    fixture_path,
+                    "audited-no-change",
+                    "python3 -m pytest tests/test_check_silmari_rebrand.py",
+                )
+            ],
+            preserved_rows=[
+                (
+                    fixture_path,
+                    LEGACY_BRAND,
+                    "test-fixture",
+                    "Fixture keeps AgentField as a compatibility assertion and covers all occurrences in this file.",
+                )
+            ],
+        )
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+            write_text(root, fixture_path, f"{LEGACY_BRAND}\n{LEGACY_BRAND}\n")
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("Silmari rebrand check passed.", output)
+
     def test_enclosing_identifier_is_accepted(self) -> None:
         fixture_path = "tests/env-fixture.txt"
         manifest_text = build_manifest(
@@ -359,6 +388,45 @@ class CheckSilmariRebrandContractTests(unittest.TestCase):
         with self.make_repo(manifest_text) as tmpdir_name:
             root = Path(tmpdir_name)
             write_text(root, fixture_path, f"Use {LEGACY_ENV} for configuration.\n")
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("Silmari rebrand check passed.", output)
+
+    def test_enclosing_identifier_is_preferred_before_exact_token_consumption(self) -> None:
+        fixture_path = "tests/import-fixture.txt"
+        manifest_text = build_manifest(
+            audited_rows=[
+                (
+                    fixture_path,
+                    "audited-no-change",
+                    "python3 -m pytest tests/test_check_silmari_rebrand.py",
+                )
+            ],
+            preserved_rows=[
+                (
+                    fixture_path,
+                    LOWER_IMPORT,
+                    "import-module-path",
+                    "Published import path remains stable for compatibility docs.",
+                ),
+                (
+                    fixture_path,
+                    LOWER_LEGACY,
+                    "test-fixture",
+                    "Standalone legacy token remains in fixture copy for scanner coverage.",
+                ),
+            ],
+        )
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+            write_text(
+                root,
+                fixture_path,
+                f"Keep {LOWER_IMPORT} stable while {LOWER_LEGACY} remains in fixture docs.\n",
+            )
 
             result = run_cli(root)
 
@@ -508,6 +576,11 @@ class ScannerHelperEdgeCaseTests(unittest.TestCase):
 
         self.assertEqual(module.identifier_ranges(f"keep {LOWER_IMPORT} stable", ""), [])
 
+    def test_none_identifier_produces_no_ranges(self) -> None:
+        module = load_embedded_module()
+
+        self.assertEqual(module.identifier_ranges(f"keep {LOWER_IMPORT} stable", None), [])
+
     def test_enclosing_identifier_covers_match_at_trailing_boundary(self) -> None:
         module = load_embedded_module()
         enclosing_identifier = "github.com/Agent-Field/agentfield"
@@ -529,6 +602,17 @@ class ScannerHelperEdgeCaseTests(unittest.TestCase):
         )
 
         self.assertTrue(module.row_covers_match(match, row))
+
+    def test_verify_skill_mirror_reports_missing_sync_script(self) -> None:
+        module = load_embedded_module()
+        with tempfile.TemporaryDirectory() as tmpdir_name:
+            root = Path(tmpdir_name)
+
+            ok, message = module.verify_skill_mirror(root)
+
+        self.assertFalse(ok)
+        self.assertIn("unable to run", message)
+        self.assertIn("./scripts/sync-embedded-skills.sh --check", message)
 
 
 class IdentifierCoveragePropertyTests(unittest.TestCase):
