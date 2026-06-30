@@ -125,6 +125,11 @@ REQUIRED_CODECLEANUP_PASSES = (
 
 ALLOWED_PASS_RESULTS = {"pass", "fail", "not-applicable"}
 
+REBRAND_STACK_BASE_REFS = (
+    "integration/b9915df1-silmari-rebrand-agentfield",
+    "issue/b9915df1-02-manifest-scanner-vertical-slice",
+)
+
 
 @dataclass(frozen=True)
 class AuditedFile:
@@ -168,6 +173,7 @@ class VerificationCommandLogView:
 @dataclass(frozen=True)
 class ManifestHealthView:
     missing_headings: tuple[str, ...]
+    changed_file_count: int
     audited_file_count: int
     preserved_identifier_count: int
     verification_command_count: int
@@ -181,6 +187,13 @@ class PreservedIdentifierCoverageView:
     covered_matches: int
     missing_audited_files: tuple[str, ...]
     unmanifested_matches: tuple[BrandMatch, ...]
+
+
+@dataclass(frozen=True)
+class AuditedFileCoverageView:
+    changed_file_count: int
+    missing_changed_files: tuple[str, ...]
+    missing_matched_files: tuple[str, ...]
 
 
 def read_manifest_text(manifest_path: Path) -> str:
@@ -400,7 +413,10 @@ def parse_verification_command_rows(text: str) -> list[VerificationCommandLogVie
 
 
 def build_manifest_health_view(
-    text: str, manifest: Manifest, errors: list[str]
+    text: str,
+    manifest: Manifest,
+    errors: list[str],
+    changed_file_count: int,
 ) -> ManifestHealthView:
     lines = {line.strip() for line in text.splitlines()}
     missing_headings = tuple(
@@ -409,6 +425,7 @@ def build_manifest_health_view(
     verification_commands = parse_verification_command_rows(text)
     return ManifestHealthView(
         missing_headings=missing_headings,
+        changed_file_count=changed_file_count,
         audited_file_count=len(manifest.audited_files),
         preserved_identifier_count=len(manifest.preserved_identifiers),
         verification_command_count=len(verification_commands),
@@ -432,6 +449,7 @@ def validate_manifest_shape(text: str, manifest: Manifest) -> list[str]:
         ("Path", "Action", "Verification"),
     )
     errors.extend(table_errors)
+    seen_audited_paths: set[str] = set()
     for row in audited_rows:
         if len(row) != 3:
             errors.append("Malformed audited file row: expected 3 columns.")
@@ -441,6 +459,10 @@ def validate_manifest_shape(text: str, manifest: Manifest) -> list[str]:
             errors.append("Audited file row is missing Path.")
         if path.startswith("./"):
             errors.append(f"Audited file path must be repo-relative without ./ prefix: {path}")
+        if path in seen_audited_paths:
+            errors.append(f"Duplicate audited file row for {path}")
+        else:
+            seen_audited_paths.add(path)
         if action not in ALLOWED_ACTIONS:
             errors.append(f"Unknown audited file action for {path}: {action}")
         if not verification:
@@ -462,6 +484,10 @@ def validate_manifest_shape(text: str, manifest: Manifest) -> list[str]:
         if path.startswith("./"):
             errors.append(
                 f"Preserved identifier path must be repo-relative without ./ prefix: {path}"
+            )
+        if path == MANIFEST_REL_PATH:
+            errors.append(
+                "Preserved identifier rows must not target docs/silmari-rebrand-manifest.md."
             )
         if not identifier:
             errors.append(f"Preserved identifier row is missing Identifier for {path}.")
@@ -509,10 +535,42 @@ def validate_manifest_shape(text: str, manifest: Manifest) -> list[str]:
             errors.append(f"Verification command row is missing Working Directory for {command}.")
         if not exit_code:
             errors.append(f"Verification command row is missing Exit Code for {command}.")
+        if exit_code and exit_code != "not-run" and not re.fullmatch(r"-?\d+", exit_code):
+            errors.append(f"Verification command row has invalid Exit Code for {command}: {exit_code}")
         if not result:
             errors.append(f"Verification command row is missing Result for {command}.")
+        if exit_code == "not-run" and not has_not_run_dependency_reason(command, result):
+            errors.append(
+                f"Verification command row must explain the missing dependency for {command}."
+            )
 
     return errors
+
+
+def has_not_run_dependency_reason(command: str, result: str) -> bool:
+    if not is_concrete_reason(result):
+        return False
+
+    lowered_result = result.lower()
+    dependency_markers = (
+        "missing",
+        "not installed",
+        "not available",
+        "not found",
+        "unavailable",
+        "requires",
+        "dependency",
+        "path",
+    )
+    if not any(marker in lowered_result for marker in dependency_markers):
+        return False
+
+    command_tokens = [
+        token
+        for token in re.split(r"[^a-z0-9]+", command.lower())
+        if len(token) >= 3 and token not in {"yes", "run", "check"}
+    ]
+    return any(token in lowered_result for token in command_tokens)
 
 
 def is_excluded_file(relative_path: str) -> bool:
@@ -720,16 +778,77 @@ def build_preserved_identifier_coverage_view(
     )
 
 
-def validate_matches(matches: list[BrandMatch], manifest: Manifest) -> list[str]:
-    errors: list[str] = []
-    coverage_view = build_preserved_identifier_coverage_view(matches, manifest, 0)
-    for path in coverage_view.missing_audited_files:
-        errors.append(f"Missing audited file row for {path}")
-    for match in coverage_view.unmanifested_matches:
-        errors.append(
-            f"Unmanifested identifier {match.path}:{match.line_number}: {match.match_text}"
+def discover_changed_file_base_ref(repo_root: Path) -> str | None:
+    for ref in REBRAND_STACK_BASE_REFS:
+        ref_proc = subprocess.run(
+            ["git", "rev-parse", "--verify", "--quiet", ref],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            check=False,
         )
-    return errors
+        if ref_proc.returncode != 0:
+            continue
+
+        head_proc = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if head_proc.returncode != 0:
+            return None
+
+        if ref_proc.stdout.strip() == head_proc.stdout.strip():
+            continue
+        return ref
+    return None
+
+
+def collect_changed_files(repo_root: Path) -> tuple[str, ...]:
+    base_ref = discover_changed_file_base_ref(repo_root)
+    if base_ref is None:
+        return ()
+
+    diff_proc = subprocess.run(
+        ["git", "diff", "--name-only", f"{base_ref}..HEAD"],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if diff_proc.returncode != 0:
+        return ()
+
+    return tuple(
+        sorted(
+            {
+                line.strip()
+                for line in diff_proc.stdout.splitlines()
+                if line.strip()
+            }
+        )
+    )
+
+
+def build_audited_file_coverage_view(
+    changed_files: tuple[str, ...],
+    matches: list[BrandMatch],
+    manifest: Manifest,
+) -> AuditedFileCoverageView:
+    matched_paths = sorted({match.path for match in matches})
+    missing_changed_files = sorted(
+        path for path in changed_files if path not in manifest.audited_files
+    )
+    missing_matched_files = sorted(
+        path for path in matched_paths if path not in manifest.audited_files
+    )
+    return AuditedFileCoverageView(
+        changed_file_count=len(changed_files),
+        missing_changed_files=tuple(missing_changed_files),
+        missing_matched_files=tuple(missing_matched_files),
+    )
 
 
 def verify_skill_mirror(repo_root: Path) -> tuple[bool, str]:
@@ -756,12 +875,21 @@ def format_match(match: BrandMatch) -> str:
 
 
 def print_failure(
+    audited_view: AuditedFileCoverageView,
     coverage_view: PreservedIdentifierCoverageView,
     manifest_errors: list[str],
     manifest: Manifest,
     mirror_status: str,
 ) -> None:
     print("Silmari rebrand check failed.")
+    print()
+    print("Changed files missing from Audited Files:")
+    if audited_view.missing_changed_files:
+        for path in audited_view.missing_changed_files:
+            print(f"  {path}")
+    else:
+        print("  (none)")
+
     print()
     print("Unmanifested identifiers:")
     if coverage_view.unmanifested_matches:
@@ -772,8 +900,8 @@ def print_failure(
 
     print()
     print("Files with identifiers missing from Audited Files:")
-    if coverage_view.missing_audited_files:
-        for path in coverage_view.missing_audited_files:
+    if audited_view.missing_matched_files:
+        for path in audited_view.missing_matched_files:
             print(f"  {path}")
     else:
         print("  (none)")
@@ -789,6 +917,7 @@ def print_failure(
     print()
     print(
         f"Scanned {coverage_view.scanned_file_count} files; "
+        f"audited {audited_view.changed_file_count} changed files; "
         f"validated {len(manifest.preserved_identifiers)} preserved identifier rows; "
         f"skill mirror status: {mirror_status}"
     )
@@ -802,23 +931,45 @@ def main(repo_root: Path) -> int:
 
     scan_files = collect_scan_files(repo_root)
     matches = find_brand_matches(repo_root, scan_files)
+    changed_files = collect_changed_files(repo_root)
+    audited_view = build_audited_file_coverage_view(changed_files, matches, manifest)
     coverage_view = build_preserved_identifier_coverage_view(
         matches, manifest, len(scan_files)
     )
+    for path in audited_view.missing_changed_files:
+        manifest_errors.append(f"Missing audited file row for changed file {path}")
+    for path in audited_view.missing_matched_files:
+        manifest_errors.append(f"Missing audited file row for {path}")
+    for match in coverage_view.unmanifested_matches:
+        manifest_errors.append(
+            f"Unmanifested identifier {match.path}:{match.line_number}: {match.match_text}"
+        )
 
     mirror_ok, mirror_message = verify_skill_mirror(repo_root)
     mirror_status = mirror_message or "skill mirror check unavailable"
     if not mirror_ok:
         manifest_errors.append(f"Skill mirror drift detected: {mirror_status}")
 
-    manifest_view = build_manifest_health_view(manifest_text, manifest, manifest_errors)
-    if manifest_view.errors or coverage_view.unmanifested_matches or coverage_view.missing_audited_files:
-        print_failure(coverage_view, list(manifest_view.errors), manifest, mirror_status)
+    manifest_view = build_manifest_health_view(
+        manifest_text,
+        manifest,
+        manifest_errors,
+        audited_view.changed_file_count,
+    )
+    if manifest_view.errors or coverage_view.unmanifested_matches or audited_view.missing_changed_files or audited_view.missing_matched_files:
+        print_failure(
+            audited_view,
+            coverage_view,
+            list(manifest_view.errors),
+            manifest,
+            mirror_status,
+        )
         return 1
 
     print("Silmari rebrand check passed.")
     print(
         f"Scanned {coverage_view.scanned_file_count} files; "
+        f"audited {audited_view.changed_file_count} changed files; "
         f"validated {manifest_view.preserved_identifier_count} preserved identifier rows; "
         f"skill mirror is in sync."
     )

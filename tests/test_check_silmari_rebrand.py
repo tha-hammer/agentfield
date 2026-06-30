@@ -247,6 +247,20 @@ class CheckSilmariRebrandContractTests(unittest.TestCase):
             output,
         )
 
+    def test_old_brand_match_in_unaudited_file_reports_missing_audited_row(self) -> None:
+        manifest_text = build_manifest()
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+            write_text(root, "README.md", f"Silmari still mentions {LEGACY_BRAND} here.\n")
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Files with identifiers missing from Audited Files:", output)
+        self.assertIn("README.md", output)
+        self.assertNotIn(f"README.md:1: {LEGACY_BRAND}", output)
+
     def test_repo_under_build_ancestor_still_scans_repo_relative_docs_file(self) -> None:
         manifest_text = build_manifest(
             audited_rows=[
@@ -620,6 +634,29 @@ class CheckSilmariRebrandContractTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("Reason must be concrete", output)
 
+    def test_manifest_cannot_self_cover_preserved_identifiers(self) -> None:
+        manifest_text = build_manifest(
+            preserved_rows=[
+                (
+                    MANIFEST_PATH.as_posix(),
+                    LEGACY_BRAND,
+                    "historical-record",
+                    "Legacy branch snapshot keeps AgentField here and covers all occurrences in this file.",
+                )
+            ]
+        )
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(
+            "Preserved identifier rows must not target docs/silmari-rebrand-manifest.md.",
+            output,
+        )
+
     def test_verification_commands_table_requires_at_least_one_row(self) -> None:
         manifest_text = build_manifest(verification_rows=[])
         with self.make_repo(manifest_text) as tmpdir_name:
@@ -630,6 +667,56 @@ class CheckSilmariRebrandContractTests(unittest.TestCase):
         output = result.stdout + result.stderr
         self.assertEqual(result.returncode, 1)
         self.assertIn("Verification Commands table must contain at least one row.", output)
+
+    def test_not_run_verification_command_requires_dependency_reason(self) -> None:
+        manifest_text = build_manifest(
+            verification_rows=[
+                ("lychee --version", ".", "not-run", "Could not run link checker.")
+            ]
+        )
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(
+            "Verification command row must explain the missing dependency for lychee --version.",
+            output,
+        )
+
+    def test_malformed_audited_file_row_is_rejected(self) -> None:
+        manifest_text = build_manifest().replace(
+            "| README.md | rebranded | ./scripts/check-silmari-rebrand.sh |\n",
+            "",
+        )
+        manifest_text = manifest_text.replace(
+            "| Path | Action | Verification |\n|---|---|---|",
+            "| Path | Action | Verification |\n|---|---|---|\n| README.md | rebranded |",
+        )
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Malformed audited file row: expected 3 columns.", output)
+
+    def test_malformed_preserved_identifier_row_is_rejected(self) -> None:
+        manifest_text = build_manifest().replace(
+            "| Path | Identifier | Category | Reason |\n|---|---|---|---|",
+            "| Path | Identifier | Category | Reason |\n|---|---|---|---|\n| README.md | AgentField | test-fixture |",
+        )
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Malformed preserved identifier row: expected 4 columns.", output)
 
 
 class ScannerHelperEdgeCaseTests(unittest.TestCase):
@@ -642,6 +729,20 @@ class ScannerHelperEdgeCaseTests(unittest.TestCase):
         module = load_embedded_module()
 
         self.assertEqual(module.identifier_ranges(f"keep {LOWER_IMPORT} stable", None), [])
+
+    def test_empty_reason_does_not_cover_all_occurrences(self) -> None:
+        module = load_embedded_module()
+
+        self.assertFalse(module.reason_covers_all_occurrences(""))
+
+    def test_affirmative_phrase_after_sentence_boundary_covers_all_occurrences(self) -> None:
+        module = load_embedded_module()
+
+        self.assertTrue(
+            module.reason_covers_all_occurrences(
+                "Fixture does not rename runtime identifiers. It covers all occurrences in this file."
+            )
+        )
 
     def test_enclosing_identifier_covers_match_at_trailing_boundary(self) -> None:
         module = load_embedded_module()
@@ -665,6 +766,26 @@ class ScannerHelperEdgeCaseTests(unittest.TestCase):
 
         self.assertTrue(module.row_covers_match(match, row))
 
+    def test_enclosing_identifier_covers_match_at_leading_boundary(self) -> None:
+        module = load_embedded_module()
+        line_text = f"{LEGACY_ENV} keeps compatibility docs stable."
+        match = module.BrandMatch(
+            path="README.md",
+            line_number=1,
+            column_start=0,
+            column_end=len("AGENTFIELD"),
+            match_text="AGENTFIELD",
+            line_text=line_text,
+        )
+        row = module.PreservedIdentifier(
+            path="README.md",
+            identifier=LEGACY_ENV,
+            category="env-var",
+            reason="Legacy env var remains stable for compatibility docs.",
+        )
+
+        self.assertTrue(module.row_covers_match(match, row))
+
     def test_verify_skill_mirror_reports_missing_sync_script(self) -> None:
         module = load_embedded_module()
         with tempfile.TemporaryDirectory() as tmpdir_name:
@@ -675,6 +796,22 @@ class ScannerHelperEdgeCaseTests(unittest.TestCase):
         self.assertFalse(ok)
         self.assertIn("unable to run", message)
         self.assertIn("./scripts/sync-embedded-skills.sh --check", message)
+
+    def test_not_run_dependency_reason_helper_requires_tool_name_and_dependency(self) -> None:
+        module = load_embedded_module()
+
+        self.assertFalse(
+            module.has_not_run_dependency_reason(
+                "lychee --version",
+                "Could not run the checker in this environment.",
+            )
+        )
+        self.assertTrue(
+            module.has_not_run_dependency_reason(
+                "lychee --version",
+                "lychee is not installed in PATH on this runner.",
+            )
+        )
 
 
 class IdentifierCoveragePropertyTests(unittest.TestCase):
@@ -703,6 +840,46 @@ class IdentifierCoveragePropertyTests(unittest.TestCase):
         )
 
         self.assertFalse(module.row_covers_match(match, row))
+
+    @given(
+        changed_files=st.permutations(
+            (
+                "README.md",
+                "docs/ENVIRONMENT_VARIABLES.md",
+                "scripts/check-silmari-rebrand.sh",
+            )
+        ),
+        duplicate_rows=st.integers(min_value=1, max_value=5),
+    )
+    def test_changed_file_order_and_duplicate_preserved_rows_do_not_hide_missing_coverage(
+        self, changed_files: tuple[str, ...], duplicate_rows: int
+    ) -> None:
+        module = load_embedded_module()
+        manifest = module.Manifest(
+            audited_files={
+                "README.md": module.AuditedFile(
+                    path="README.md",
+                    action="rebranded",
+                    verification="./scripts/check-silmari-rebrand.sh",
+                )
+            },
+            preserved_identifiers=[
+                module.PreservedIdentifier(
+                    path="README.md",
+                    identifier=LEGACY_BRAND,
+                    category="historical-record",
+                    reason="Legacy branch snapshot keeps AgentField here and covers all occurrences in this file.",
+                )
+                for _ in range(duplicate_rows)
+            ],
+        )
+
+        view = module.build_audited_file_coverage_view(tuple(changed_files), [], manifest)
+
+        self.assertEqual(
+            set(view.missing_changed_files),
+            {"docs/ENVIRONMENT_VARIABLES.md", "scripts/check-silmari-rebrand.sh"},
+        )
 
 
 if __name__ == "__main__":
