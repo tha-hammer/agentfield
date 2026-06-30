@@ -43,9 +43,11 @@ This manifest records the completed Silmari first-party rebrand on `integration/
 | control-plane/internal/skillkit/skill_data/agentfield/references/scaffold-recipe.md | rebranded-with-preserved-identifiers | mirror parity |
 | control-plane/internal/skillkit/skill_data/agentfield/references/triggers.md | audited-no-change | mirror parity; visual review |
 | control-plane/internal/skillkit/skill_data/agentfield/references/verification.md | rebranded | mirror parity |
+| control-plane/internal/skillkit/skillkit_rebrand_test.go | audited-no-change | `go test ./internal/templates/... ./internal/skillkit/...` |
 | control-plane/internal/skillkit/skillkit_test.go | rebranded | go test ./internal/skillkit |
 | control-plane/internal/templates/docker/.env.example.tmpl | excluded-runtime-compatibility | go test ./internal/templates/... |
 | control-plane/internal/templates/docker/docker-compose.yml.tmpl | rebranded-with-preserved-identifiers | go test ./internal/templates/... |
+| control-plane/internal/templates/docker_templates_test.go | audited-no-change | `go test ./internal/templates/... ./internal/skillkit/...` |
 | control-plane/internal/templates/go/.env.example.tmpl | excluded-runtime-compatibility | go test ./internal/templates/... |
 | control-plane/internal/templates/go/README.md.tmpl | rebranded-with-preserved-identifiers | go test ./internal/templates/... |
 | control-plane/internal/templates/go/go.mod.tmpl | excluded-runtime-compatibility | go test ./internal/templates/... |
@@ -104,6 +106,7 @@ This manifest records the completed Silmari first-party rebrand on `integration/
 | control-plane/web/client/src/test/components/AppSidebar.test.tsx | rebranded | `cd control-plane/web/client && npm run test` |
 | control-plane/web/client/src/test/components/AuthGuard.test.tsx | rebranded | `cd control-plane/web/client && npm run test` |
 | control-plane/web/client/src/test/components/ConfigurationWizard.test.tsx | rebranded | `cd control-plane/web/client && npm run test` |
+| control-plane/web/client/src/test/components/WorkflowDAG/workflowDagGraphComponents.test.tsx | audited-no-change | `cd control-plane/web/client && npm run test` |
 | control-plane/web/client/src/test/components/execution/ExecutionComponents.test.tsx | rebranded-with-preserved-identifiers | `cd control-plane/web/client && npm run test` |
 | control-plane/web/client/src/test/components/forms/configuration-form.test.tsx | audited-no-change | ./scripts/check-silmari-rebrand.sh |
 | control-plane/web/client/src/test/components/nodes/EnhancedNodesHeader.test.tsx | rebranded | `cd control-plane/web/client && npm run test` |
