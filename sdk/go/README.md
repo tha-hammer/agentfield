@@ -1,6 +1,6 @@
-# AgentField Go SDK
+# Silmari Go SDK
 
-The AgentField Go SDK provides idiomatic Go bindings for interacting with the AgentField control plane.
+The Silmari Go SDK provides idiomatic Go bindings for interacting with the Silmari control plane while keeping the published Go module path stable.
 
 ## Installation
 
@@ -41,8 +41,8 @@ func main() {
 
 ## Modules
 
-- `agent`: Build AgentField-compatible agents and register reasoners/skills.
-- `client`: Low-level HTTP client for the AgentField control plane.
+- `agent`: Build Silmari-compatible agents and register reasoners/skills.
+- `client`: Low-level HTTP client for the Silmari control plane.
 - `types`: Shared data structures and contracts.
 - `ai`: Helpers for interacting with AI providers via the control plane.
 
@@ -90,7 +90,7 @@ approvalClient := client.New("http://localhost:8080", nil)
 approvalRequestID := "req-abc123"
 
 // Create the human-facing approval request in your approval service first,
-// then pass its ID/URL to AgentField so the execution transitions to "waiting".
+// then pass its ID/URL to Silmari so the execution transitions to "waiting".
 _, err := approvalClient.RequestApproval(ctx, nodeID, executionID,
     client.RequestApprovalRequest{
         ApprovalRequestID:  approvalRequestID,

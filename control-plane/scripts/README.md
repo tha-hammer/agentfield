@@ -1,6 +1,6 @@
-# AgentField Server Release Scripts
+# Silmari Server Release Scripts
 
-This directory contains automation scripts for building and releasing AgentField Server binaries to GitHub.
+This directory contains automation scripts for building and releasing Silmari server binaries to GitHub.
 
 ## Overview
 
@@ -110,7 +110,7 @@ curl -sSL https://raw.githubusercontent.com/Agent-Field/agentfield/main/scripts/
 
 1. **Prepare for release:**
    ```bash
-   cd apps/platform/agentfield/scripts
+   cd control-plane/scripts
    ./release.sh dry-run    # Check prerequisites and preview
    ```
 
@@ -153,11 +153,11 @@ Each release creates these assets:
 ## Configuration
 
 ### GitHub Repository
-The scripts are configured for: `Agent-Field/agentfield`
+The scripts are configured for the legacy GitHub slug: `Agent-Field/agentfield`
 
 To change the repository, set the environment variable:
 ```bash
-export GITHUB_REPO="Agent-Field/your-repo"
+export GITHUB_REPO="your-org/your-repo"
 ./release.sh
 ```
 
@@ -248,7 +248,7 @@ gh release delete v0.1.0-alpha.X
 ### Complete Release Workflow
 ```bash
 # 1. Check current state
-cd apps/platform/agentfield/scripts
+cd control-plane/scripts
 ./version-manager.sh info
 
 # 2. Test the release process
@@ -282,7 +282,7 @@ ls -la ../dist/releases/
 ## File Structure
 
 ```
-apps/platform/agentfield/scripts/
+control-plane/scripts/
 ├── README.md              # This documentation
 ├── .version              # Version tracking file
 ├── version-manager.sh    # Version management script

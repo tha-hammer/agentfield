@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
@@ -32,8 +31,10 @@ vi.mock("@/hooks/useSSEQuerySync", () => ({
 }));
 
 // Mock UI library components
-vi.mock("@/components/ui/sidebar", async (importOriginal) => {
-  const original = await importOriginal();
+vi.mock("@/components/ui/sidebar", async () => {
+  const original = await vi.importActual<typeof import("@/components/ui/sidebar")>(
+    "@/components/ui/sidebar",
+  );
   return {
     ...original,
     SidebarProvider: ({ children }: React.PropsWithChildren) => <>{children}</>,
@@ -105,6 +106,6 @@ describe("AppLayout", () => {
   
   it('shows a default breadcrumb for unknown paths', () => {
     renderWithRouter(['/some/unknown/path']);
-    expect(screen.getAllByText('AgentField').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Silmari').length).toBeGreaterThan(0);
   });
 });

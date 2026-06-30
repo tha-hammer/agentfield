@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-This document describes the Verifiable Credential (VC) based authorization system for AgentField. The system implements a two-step authorization model: **tag approval** (admin decides which tags agents get) and **policy evaluation** (policies decide which tagged agents can call which other tagged agents).
+This document describes the Verifiable Credential (VC) based authorization system for Silmari. The system implements a two-step authorization model: **tag approval** (admin decides which tags agents get) and **policy evaluation** (policies decide which tagged agents can call which other tagged agents).
 
 **Key Principles:**
 - Agents propose tags at registration (agent-level and per-skill/per-reasoner)
@@ -314,7 +314,7 @@ Agents in `pending_approval` state cannot be called — the permission middlewar
 Access policies define tag-based authorization rules for cross-agent calls. They support function-level allow/deny lists and parameter constraints.
 
 ```yaml
-# agentfield.yaml
+# config/agentfield.yaml
 features:
   did:
     authorization:
@@ -392,7 +392,7 @@ Issued when admin approves an agent's tags. Certifies which tags an agent is aut
 {
   "@context": ["https://www.w3.org/2018/credentials/v1"],
   "type": ["VerifiableCredential", "AgentTagCredential"],
-  "id": "urn:agentfield:agent-tag-vc:550e8400-e29b-41d4-a716-446655440000",
+  "id": "urn:silmari:agent-tag-vc:550e8400-e29b-41d4-a716-446655440000",
   "issuer": "did:web:localhost%3A8080:agents:control-plane",
   "issuanceDate": "2026-02-08T10:30:00Z",
   "credentialSubject": {
@@ -436,7 +436,7 @@ If VC verification succeeds, the permission middleware uses **VC-verified tags**
 ### 5. DID Methods
 
 #### did:web (Primary)
-- DID resolves to URL: `did:web:agentfield.example.com:agents:agent-a`
+- DID resolves to URL: `did:web:silmari.example.com:agents:agent-a`
 - Control plane hosts DID document at that URL
 - **Real-time revocation** — return 404 or revoked status
 - Verifiers fetch fresh public key on each verification
@@ -866,7 +866,7 @@ Response 404 (revoked):
 ### Full Configuration Example
 
 ```yaml
-# agentfield.yaml
+# config/agentfield.yaml
 features:
   did:
     authorization:
@@ -877,7 +877,7 @@ features:
       did_auth_enabled: true
 
       # Domain for did:web identifiers
-      domain: "agentfield.example.com"
+      domain: "silmari.example.com"
 
       # Allowed time drift for DID signature timestamps (seconds)
       timestamp_window_seconds: 300
@@ -937,7 +937,7 @@ AGENTFIELD_AUTHORIZATION_ENABLED=true
 AGENTFIELD_AUTHORIZATION_DID_AUTH_ENABLED=true
 
 # Domain for did:web identifiers
-AGENTFIELD_AUTHORIZATION_DOMAIN=agentfield.example.com
+AGENTFIELD_AUTHORIZATION_DOMAIN=silmari.example.com
 
 # Separate token for admin operations
 AGENTFIELD_AUTHORIZATION_ADMIN_TOKEN=admin-secret-token

@@ -1,6 +1,6 @@
 # Deployment
 
-AgentField deployment models — from local development to production Kubernetes clusters.
+Silmari deployment models — from local development to production Kubernetes clusters.
 
 ## Deployment Models
 
@@ -60,12 +60,12 @@ Production-ready single-node deployment:
 # 1. Start PostgreSQL
 # 2. Run migrations
 cd control-plane
-export AGENTFIELD_DATABASE_URL="postgres://agentfield:agentfield@localhost:5432/agentfield?sslmode=disable"
+export AGENTFIELD_DATABASE_URL="postgres://silmari:silmari@localhost:5432/silmari?sslmode=disable"
 goose -dir ./migrations postgres "$AGENTFIELD_DATABASE_URL" up
 
 # 3. Start server
 AGENTFIELD_STORAGE_MODE=postgresql \
-AGENTFIELD_DATABASE_URL="postgres://agentfield:agentfield@localhost:5432/agentfield?sslmode=disable" \
+AGENTFIELD_DATABASE_URL="postgres://silmari:silmari@localhost:5432/silmari?sslmode=disable" \
 go run ./cmd/agentfield-server
 ```
 
@@ -174,7 +174,7 @@ See `control-plane/.env.example` for the complete list. Key deployment variables
 | `AGENTFIELD_DATABASE_URL` | connection string | — | PostgreSQL connection |
 | `AGENTFIELD_UI_ENABLED` | `true`, `false` | `true` | Enable embedded UI |
 | `AGENTFIELD_UI_MODE` | `embedded`, `development` | `embedded` | UI serving mode |
-| `AGENTFIELD_CONFIG_FILE` | file path | — | Custom config YAML |
+| `AGENTFIELD_CONFIG_FILE` | file path | — | Override the default `config/agentfield.yaml` path while keeping the legacy env var name stable |
 | `GIN_MODE` | `debug`, `release` | `debug` | Gin framework mode |
 | `LOG_LEVEL` | `debug`, `info`, `warn`, `error` | `info` | Log verbosity |
 | `AGENTFIELD_STORAGE_POSTGRES_MAX_CONNECTIONS` | integer | — | DB pool size |
@@ -204,8 +204,8 @@ GitHub Actions builds binaries for Linux, macOS, and Windows. The unified binary
 
 Agents can run in serverless environments (AWS Lambda, Cloudflare Workers, etc.) using the SDK's serverless adapter:
 
-**Python:** `agentfield/agent_serverless.py`
+**Python:** `sdk/python/agentfield/agent_serverless.py`
 
-The control plane communicates with serverless agents via HTTP callbacks rather than persistent connections. The serverless adapter handles the function lifecycle (cold start, invocation, teardown) and translates between the serverless event model and AgentField's execution model.
+The control plane communicates with serverless agents via HTTP callbacks rather than persistent connections. The serverless adapter handles the function lifecycle (cold start, invocation, teardown) and translates between the serverless event model and Silmari's execution model.
 
 **Code reference:** `sdk/python/agentfield/agent_serverless.py`

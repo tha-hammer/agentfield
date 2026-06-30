@@ -1,6 +1,6 @@
 # Triggers demo
 
-Run AgentField with a sample agent that exercises every built-in
+Run Silmari with a sample agent that exercises every built-in
 source plugin — **Stripe payments**, **GitHub pull requests + issues**, a
 **cron schedule**, plus **Slack**, **generic HMAC**, and **generic Bearer**
 inbound webhooks — and watch the events flow through the UI live.
@@ -16,7 +16,7 @@ quickest way to see what the trigger plugin system looks like end-to-end.
 
 | Service | Port | What it is |
 |---|---|---|
-| `control-plane` | 8080 | AgentField server with the embedded UI |
+| `control-plane` | 8080 | Silmari control plane with the embedded UI |
 | `triggers-demo-agent` | 8001 | Python agent declaring three triggers |
 
 The agent's code-managed triggers, declared via `@on_event` /

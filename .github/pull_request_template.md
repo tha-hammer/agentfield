@@ -1,5 +1,5 @@
 <!--
-Thanks for contributing to AgentField! Please keep the sections below in
+Thanks for contributing to Silmari! Please keep the sections below in
 the order they appear. You can delete the comment blocks and any sections
 that do not apply.
 -->

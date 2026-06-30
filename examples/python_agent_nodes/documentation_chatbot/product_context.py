@@ -2,13 +2,13 @@
 
 PRODUCT_CONTEXT = """
 ## Product Overview
-AgentField is a Kubernetes-style control plane with IAM for building next generation of autonomous software. It provides production infrastructure
+Silmari is a Kubernetes-style control plane with IAM for building next generation of autonomous software. It provides production infrastructure
 for deploying, orchestrating, and observing multi-agent systems with cryptographic identity and audit trails.
 
 **Architecture**: Distributed control plane + independent agent nodes. Think "Kubernetes for AI agents."
 
-**Positioning**: AgentField is infrastructure, not an application framework. While agent frameworks help you build
-single AI applications, AgentField provides the orchestration layer for
+**Positioning**: Silmari is infrastructure, not an application framework. While agent frameworks help you build
+single AI applications, Silmari provides the orchestration layer for
 deploying and managing distributed multi-agent systems in production (like Kubernetes orchestrates containers).
 
 ## Design Philosophy

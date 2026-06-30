@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -108,13 +107,15 @@ vi.mock("@/components/ui/button", () => ({
 }));
 
 vi.mock("@/components/ui/badge", () => ({
-  Badge: ({
-    children,
-    showIcon: _showIcon,
-    ...props
-  }: React.PropsWithChildren<React.HTMLAttributes<HTMLSpanElement> & { showIcon?: boolean }>) => (
-    <span {...props}>{children}</span>
-  ),
+  Badge: (
+    props: React.PropsWithChildren<
+      React.HTMLAttributes<HTMLSpanElement> & { showIcon?: boolean }
+    >,
+  ) => {
+    const { children, showIcon, ...spanProps } = props;
+    void showIcon;
+    return <span {...spanProps}>{children}</span>;
+  },
 }));
 
 vi.mock("@/components/ui/separator", () => ({
@@ -304,7 +305,10 @@ describe("NewSettingsPage restored coverage", () => {
     expect(await screen.findByDisplayValue("https://hooks.example.test/events")).toBeInTheDocument();
     expect(await screen.findByDisplayValue("did:web:agentfield.example.test")).toBeInTheDocument();
 
-    expect(screen.getByText("About AgentField")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Point your agents to this URL using the backward-compatible/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText("About Silmari")).toBeInTheDocument();
     expect(screen.getByText("Node log proxy")).toBeInTheDocument();
     expect(screen.getByText("Execution Events")).toBeInTheDocument();
     expect(screen.getByText("Reasoner Events")).toBeInTheDocument();

@@ -160,4 +160,4 @@ For all of the above, the **composition cascade** discipline applies. Every laye
 
 ## If none of these fit
 
-After walking the five principles, if no pattern emerges and the problem can be solved by a deterministic pipeline with one or two LLM calls, **tell the user honestly.** AgentField earns its place when the architecture itself encodes intelligence. If your problem is "one LLM call + some plumbing", build it as one LLM call + some plumbing — don't force a pretend mesh on top.
+After walking the five principles, if no pattern emerges and the problem can be solved by a deterministic pipeline with one or two LLM calls, **tell the user honestly.** Silmari earns its place when the architecture itself encodes intelligence. If your problem is "one LLM call + some plumbing", build it as one LLM call + some plumbing — don't force a pretend mesh on top.

@@ -1,6 +1,6 @@
 # Web UI
 
-The AgentField admin interface — a **React + TypeScript** single-page application embedded in the Go control plane binary. Provides dashboards for monitoring workflows, managing agents, configuring triggers, and inspecting cryptographic audit trails.
+The Silmari admin interface — a **React + TypeScript** single-page application embedded in the Go control plane binary. Provides dashboards for monitoring workflows, managing agents, configuring triggers, and inspecting cryptographic audit trails.
 
 **Root:** `control-plane/web/client/`
 

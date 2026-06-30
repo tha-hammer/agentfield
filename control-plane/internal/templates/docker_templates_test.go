@@ -29,6 +29,16 @@ func TestGetDockerTemplateFiles(t *testing.T) {
 			language:       "typescript",
 			wantDockerfile: false,
 		},
+		{
+			name:           "empty language still returns common docker scaffold",
+			language:       "",
+			wantDockerfile: false,
+		},
+		{
+			name:           "unsupported language still returns common docker scaffold",
+			language:       "ruby",
+			wantDockerfile: false,
+		},
 	}
 
 	common := map[string]string{

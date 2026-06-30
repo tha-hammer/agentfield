@@ -1,6 +1,6 @@
 # Verifiable Credentials Example
 
-This example demonstrates how to use **DID (Decentralized Identifiers)** and **Verifiable Credentials (VCs)** in AgentField to create cryptographically verifiable audit trails for agent executions.
+This example demonstrates how to use **DID (Decentralized Identifiers)** and **Verifiable Credentials (VCs)** in Silmari to create cryptographically verifiable audit trails for agent executions.
 
 ## What are Verifiable Credentials?
 
@@ -138,7 +138,7 @@ curl -X POST http://localhost:8080/api/v1/execute/vc-demo.vc_chain \
 
 ## Verifying Credentials in the UI
 
-1. Open AgentField UI: `http://localhost:8080`
+1. Open the Silmari UI: `http://localhost:8080`
 2. Navigate to **Workflows**
 3. Find your workflow (filter by "vc-demo" agent)
 4. Look for the **VC badge**:

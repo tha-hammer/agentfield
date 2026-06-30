@@ -18,7 +18,7 @@ We release patches for security vulnerabilities in the following versions:
 
 ## Security Best Practices
 
-When using AgentField:
+When using Silmari:
 
 - Keep your control plane and SDKs updated to the latest version
 - Use environment variables for sensitive configuration (API keys, database URLs)

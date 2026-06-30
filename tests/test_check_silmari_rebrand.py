@@ -1,0 +1,1088 @@
+from __future__ import annotations
+
+from pathlib import Path
+import stat
+import subprocess
+import sys
+import tempfile
+import textwrap
+import types
+import unittest
+
+from hypothesis import given
+from hypothesis import strategies as st
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+SCRIPT_PATH = REPO_ROOT / "scripts" / "check-silmari-rebrand.sh"
+MANIFEST_PATH = Path("docs") / "silmari-rebrand-manifest.md"
+LEGACY_BRAND = "Agent" + "Field"
+LEGACY_ENV = "AGENT" + "FIELD" + "_CONFIG_FILE"
+LOWER_LEGACY = "agent" + "field"
+LOWER_IMPORT = "@" + LOWER_LEGACY + "/sdk"
+LEGACY_SKILL_SLUG = "agent" + "field"
+SYNC_SCRIPT_REL = Path("scripts") / "sync-embedded-skills.sh"
+SKILL_SOURCE_REL = Path("skills") / LEGACY_SKILL_SLUG / "SKILL.md"
+SKILL_MIRROR_REL = (
+    Path("control-plane")
+    / "internal"
+    / "skillkit"
+    / "skill_data"
+    / LEGACY_SKILL_SLUG
+    / "SKILL.md"
+)
+
+
+def markdown_table(headers: tuple[str, ...], rows: list[tuple[str, ...]]) -> str:
+    header = "| " + " | ".join(headers) + " |"
+    separator = "|" + "|".join("---" for _ in headers) + "|"
+    body = ["| " + " | ".join(row) + " |" for row in rows]
+    return "\n".join([header, separator, *body])
+
+
+def default_codecleanup_rows() -> list[tuple[str, str, str]]:
+    return [
+        (
+            "Brand surface pass",
+            "not-applicable",
+            "Later rebrand slices update visible prose and UI copy.",
+        ),
+        (
+            "Compatibility pass",
+            "pass",
+            "The scanner enforces allowed preserved-identifier categories.",
+        ),
+        (
+            "Mirror and generated-template pass",
+            "pass",
+            "The scanner checks embedded skill mirror parity.",
+        ),
+        (
+            "Link and asset pass",
+            "not-applicable",
+            "Link and asset relabeling lands in later slices.",
+        ),
+        (
+            "Formatting and lint pass",
+            "pass",
+            "The validation slice keeps manifest, scanner, and tests formatted.",
+        ),
+        (
+            "Verification pass",
+            "pass",
+            "Contract tests exercise the scanner behaviors for this slice.",
+        ),
+    ]
+
+
+def build_manifest(
+    *,
+    summary: str = "Contract coverage for the manifest and scanner slice.",
+    audited_rows: list[tuple[str, str, str]] | None = None,
+    preserved_rows: list[tuple[str, str, str, str]] | None = None,
+    codecleanup_rows: list[tuple[str, str, str]] | None = None,
+    verification_rows: list[tuple[str, str, str, str]] | None = None,
+    deferred_lines: list[str] | None = None,
+) -> str:
+    if audited_rows is None:
+        audited_rows = []
+    if preserved_rows is None:
+        preserved_rows = []
+    if codecleanup_rows is None:
+        codecleanup_rows = default_codecleanup_rows()
+    if verification_rows is None:
+        verification_rows = [
+            (
+                "python3 -m pytest tests/test_check_silmari_rebrand.py",
+                ".",
+                "0",
+                "Contract tests cover the scanner slice.",
+            ),
+        ]
+    if deferred_lines is None:
+        deferred_lines = [
+            "Repo-wide Silmari copy edits land in later AF-RB slices.",
+        ]
+
+    return textwrap.dedent(
+        f"""\
+        # Silmari Rebrand Manifest
+
+        ## Summary
+        {summary}
+
+        ## Audited Files
+        {markdown_table(('Path', 'Action', 'Verification'), audited_rows)}
+
+        ## Preserved Non-Silmari Identifiers
+        {markdown_table(('Path', 'Identifier', 'Category', 'Reason'), preserved_rows)}
+
+        ## CodeCleanup Passes
+        {markdown_table(('Pass', 'Result', 'Notes'), codecleanup_rows)}
+
+        ## Verification Commands
+        {markdown_table(('Command', 'Working Directory', 'Exit Code', 'Result'), verification_rows)}
+
+        ## Deferred Or Excluded
+        {chr(10).join(f'- {line}' for line in deferred_lines)}
+        """
+    )
+
+
+def write_text(root: Path, relative_path: Path | str, content: str) -> None:
+    target = root / relative_path
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(content, encoding="utf-8")
+
+
+def write_sync_script(root: Path) -> None:
+    script = textwrap.dedent(
+        f"""\
+        #!/usr/bin/env bash
+        set -euo pipefail
+
+        REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+        src="$REPO_ROOT/skills/{LEGACY_SKILL_SLUG}"
+        dst="$REPO_ROOT/control-plane/internal/skillkit/skill_data/{LEGACY_SKILL_SLUG}"
+
+        if [[ "${{1:-}}" == "--check" ]]; then
+          if diff -rq "$src" "$dst" >/dev/null 2>&1; then
+            echo "All embedded skills are in sync with sources."
+            exit 0
+          fi
+          echo "DRIFT: {LEGACY_SKILL_SLUG} — embed copy out of sync with source" >&2
+          echo "" >&2
+          echo "Run ./scripts/sync-embedded-skills.sh to fix the drift, then commit." >&2
+          exit 1
+        fi
+
+        rm -rf "$dst"
+        mkdir -p "$dst"
+        cp -R "$src/." "$dst/"
+        echo "  ✓ synced {LEGACY_SKILL_SLUG}"
+        """
+    )
+    write_text(root, SYNC_SCRIPT_REL, script)
+    (root / SYNC_SCRIPT_REL).chmod(stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
+
+
+def seed_skill_tree(root: Path, *, mirrored: bool) -> None:
+    write_text(root, SKILL_SOURCE_REL, "# Skill\ncanonical\n")
+    mirror_body = "# Skill\ncanonical\n" if mirrored else "# Skill\ndrifted\n"
+    write_text(root, SKILL_MIRROR_REL, mirror_body)
+
+
+def init_git_repo(root: Path) -> None:
+    subprocess.run(
+        ["git", "init", "-b", "main"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "Codex Test"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.email", "codex@example.com"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    subprocess.run(
+        ["git", "add", "."],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    subprocess.run(
+        ["git", "commit", "-m", "Initial test state"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+
+def copy_public_cli(root: Path) -> None:
+    write_text(root, Path("scripts") / SCRIPT_PATH.name, SCRIPT_PATH.read_text(encoding="utf-8"))
+    (root / "scripts" / SCRIPT_PATH.name).chmod(
+        stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR
+    )
+
+
+def run_cli(root: Path) -> subprocess.CompletedProcess[str]:
+    copy_public_cli(root)
+    return subprocess.run(
+        ["./scripts/check-silmari-rebrand.sh"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def load_embedded_module() -> types.ModuleType:
+    script_text = SCRIPT_PATH.read_text(encoding="utf-8")
+    start_marker = "<<'PY'\n"
+    end_marker = "\nPY\n"
+    start = script_text.index(start_marker) + len(start_marker)
+    end = script_text.rindex(end_marker)
+
+    module = types.ModuleType("check_silmari_rebrand")
+    module.__dict__["__name__"] = "check_silmari_rebrand"
+    sys.modules[module.__name__] = module
+    exec(script_text[start:end], module.__dict__)
+    return module
+
+
+class CheckSilmariRebrandContractTests(unittest.TestCase):
+    def make_repo(self, manifest_text: str, *, mirrored: bool = True) -> tempfile.TemporaryDirectory[str]:
+        tmpdir = tempfile.TemporaryDirectory()
+        root = Path(tmpdir.name)
+        write_text(root, MANIFEST_PATH, manifest_text)
+        write_sync_script(root)
+        seed_skill_tree(root, mirrored=mirrored)
+        init_git_repo(root)
+        return tmpdir
+
+    def test_empty_manifest_reports_missing_required_heading(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir_name:
+            root = Path(tmpdir_name)
+            write_text(root, MANIFEST_PATH, "")
+            write_sync_script(root)
+            seed_skill_tree(root, mirrored=True)
+            init_git_repo(root)
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Manifest errors:", output)
+        self.assertIn("Missing required heading: # Silmari Rebrand Manifest", output)
+
+    def test_single_unmanifested_match_reports_file_and_line(self) -> None:
+        manifest_text = build_manifest(
+            audited_rows=[
+                (
+                    "README.md",
+                    "rebranded",
+                    "./scripts/check-silmari-rebrand.sh",
+                )
+            ]
+        )
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+            write_text(root, "README.md", f"Silmari still mentions {LEGACY_BRAND} here.\n")
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Unmanifested identifiers:", output)
+        self.assertIn(
+            f"README.md:1: {LEGACY_BRAND} :: Silmari still mentions {LEGACY_BRAND} here.",
+            output,
+        )
+
+    def test_old_brand_match_in_unaudited_file_reports_missing_audited_row(self) -> None:
+        manifest_text = build_manifest()
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+            write_text(root, "README.md", f"Silmari still mentions {LEGACY_BRAND} here.\n")
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Files with identifiers missing from Audited Files:", output)
+        self.assertIn("README.md", output)
+        self.assertNotIn(f"README.md:1: {LEGACY_BRAND}", output)
+
+    def test_changed_file_coverage_uses_merge_base_without_stack_refs(self) -> None:
+        manifest_text = build_manifest()
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+            write_text(root, "README.md", "Baseline Silmari copy.\n")
+            subprocess.run(
+                ["git", "add", "README.md"],
+                cwd=root,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            subprocess.run(
+                ["git", "commit", "-m", "Add README baseline"],
+                cwd=root,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            subprocess.run(
+                ["git", "checkout", "-b", "feature/no-stack-ref"],
+                cwd=root,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            write_text(root, "README.md", "Updated Silmari copy on feature branch.\n")
+            subprocess.run(
+                ["git", "commit", "-am", "Update README on feature branch"],
+                cwd=root,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Changed files missing from Audited Files:", output)
+        self.assertIn("README.md", output)
+        self.assertNotIn("Unable to determine changed files", output)
+
+    def test_assets_utm_links_csv_is_scanned_for_published_link_targets(self) -> None:
+        manifest_text = build_manifest()
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+            write_text(
+                root,
+                "assets/utm-links.csv",
+                "Link Name,Target URL,Full UTM URL\n"
+                f"Docs,https://{LOWER_LEGACY}.ai/docs/learn,https://{LOWER_LEGACY}.ai/docs/learn?utm_source=github\n",
+            )
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Files with identifiers missing from Audited Files:", output)
+        self.assertIn("assets/utm-links.csv", output)
+
+    def test_repo_under_build_ancestor_still_scans_repo_relative_docs_file(self) -> None:
+        manifest_text = build_manifest(
+            audited_rows=[
+                (
+                    "docs/unmanifested.md",
+                    "rebranded",
+                    "./scripts/check-silmari-rebrand.sh",
+                )
+            ]
+        )
+        build_root = Path("/tmp/build")
+        build_root.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=build_root) as tmpdir_name:
+            root = Path(tmpdir_name) / "repo"
+            write_text(root, MANIFEST_PATH, manifest_text)
+            write_sync_script(root)
+            seed_skill_tree(root, mirrored=True)
+            write_text(
+                root,
+                "docs/unmanifested.md",
+                f"Silmari still mentions {LEGACY_BRAND} under a build ancestor.\n",
+            )
+            init_git_repo(root)
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("docs/unmanifested.md:1", output)
+        self.assertIn(LEGACY_BRAND, output)
+
+    def test_single_exact_preserved_token_is_accepted(self) -> None:
+        fixture_path = "tests/fixture.txt"
+        manifest_text = build_manifest(
+            audited_rows=[
+                (
+                    fixture_path,
+                    "audited-no-change",
+                    "python3 -m pytest tests/test_check_silmari_rebrand.py",
+                )
+            ],
+            preserved_rows=[
+                (
+                    fixture_path,
+                    LEGACY_BRAND,
+                    "test-fixture",
+                    "Fixture asserts legacy product-token handling.",
+                )
+            ],
+        )
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+            write_text(root, fixture_path, f"{LEGACY_BRAND}\n")
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("Silmari rebrand check passed.", output)
+        self.assertIn("validated 1 preserved identifier rows", output)
+
+    def test_exact_preserved_token_covers_only_one_occurrence(self) -> None:
+        fixture_path = "tests/fixture.txt"
+        manifest_text = build_manifest(
+            audited_rows=[
+                (
+                    fixture_path,
+                    "audited-no-change",
+                    "python3 -m pytest tests/test_check_silmari_rebrand.py",
+                )
+            ],
+            preserved_rows=[
+                (
+                    fixture_path,
+                    LEGACY_BRAND,
+                    "test-fixture",
+                    "First fixture occurrence remains to assert compatibility behavior.",
+                )
+            ],
+        )
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+            write_text(root, fixture_path, f"{LEGACY_BRAND}\n{LEGACY_BRAND}\n")
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertNotIn(f"{fixture_path}:1: {LEGACY_BRAND}", output)
+        self.assertIn(f"{fixture_path}:2: {LEGACY_BRAND}", output)
+
+    def test_exact_preserved_token_can_cover_all_occurrences_when_reason_says_so(self) -> None:
+        fixture_path = "tests/fixture.txt"
+        manifest_text = build_manifest(
+            audited_rows=[
+                (
+                    fixture_path,
+                    "audited-no-change",
+                    "python3 -m pytest tests/test_check_silmari_rebrand.py",
+                )
+            ],
+            preserved_rows=[
+                (
+                    fixture_path,
+                    LEGACY_BRAND,
+                    "test-fixture",
+                    "Fixture keeps AgentField as a compatibility assertion and covers all occurrences in this file.",
+                )
+            ],
+        )
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+            write_text(root, fixture_path, f"{LEGACY_BRAND}\n{LEGACY_BRAND}\n")
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("Silmari rebrand check passed.", output)
+
+    def test_negated_all_occurrences_reason_does_not_grant_file_wide_coverage(self) -> None:
+        fixture_path = "tests/fixture.txt"
+        manifest_text = build_manifest(
+            audited_rows=[
+                (
+                    fixture_path,
+                    "audited-no-change",
+                    "python3 -m pytest tests/test_check_silmari_rebrand.py",
+                )
+            ],
+            preserved_rows=[
+                (
+                    fixture_path,
+                    LEGACY_BRAND,
+                    "test-fixture",
+                    "Fixture keeps AgentField as a compatibility assertion but does not cover all occurrences in this file.",
+                )
+            ],
+        )
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+            write_text(root, fixture_path, f"{LEGACY_BRAND}\n{LEGACY_BRAND}\n")
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertNotIn(f"{fixture_path}:1: {LEGACY_BRAND}", output)
+        self.assertIn(f"{fixture_path}:2: {LEGACY_BRAND}", output)
+
+    def test_non_affirmative_all_occurrences_phrase_does_not_grant_file_wide_coverage(
+        self,
+    ) -> None:
+        fixture_path = "tests/fixture.txt"
+        manifest_text = build_manifest(
+            audited_rows=[
+                (
+                    fixture_path,
+                    "audited-no-change",
+                    "python3 -m pytest tests/test_check_silmari_rebrand.py",
+                )
+            ],
+            preserved_rows=[
+                (
+                    fixture_path,
+                    LEGACY_BRAND,
+                    "test-fixture",
+                    "Fixture keeps AgentField as a compatibility assertion but should not say covers all occurrences in this file.",
+                )
+            ],
+        )
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+            write_text(root, fixture_path, f"{LEGACY_BRAND}\n{LEGACY_BRAND}\n")
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertNotIn(f"{fixture_path}:1: {LEGACY_BRAND}", output)
+        self.assertIn(f"{fixture_path}:2: {LEGACY_BRAND}", output)
+
+    def test_enclosing_identifier_is_accepted(self) -> None:
+        fixture_path = "tests/env-fixture.txt"
+        manifest_text = build_manifest(
+            audited_rows=[
+                (
+                    fixture_path,
+                    "audited-no-change",
+                    "python3 -m pytest tests/test_check_silmari_rebrand.py",
+                )
+            ],
+            preserved_rows=[
+                (
+                    fixture_path,
+                    LEGACY_ENV,
+                    "env-var",
+                    "Legacy env var name remains stable for compatibility docs.",
+                )
+            ],
+        )
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+            write_text(root, fixture_path, f"Use {LEGACY_ENV} for configuration.\n")
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("Silmari rebrand check passed.", output)
+
+    def test_enclosing_identifier_is_preferred_before_exact_token_consumption(self) -> None:
+        fixture_path = "tests/import-fixture.txt"
+        manifest_text = build_manifest(
+            audited_rows=[
+                (
+                    fixture_path,
+                    "audited-no-change",
+                    "python3 -m pytest tests/test_check_silmari_rebrand.py",
+                )
+            ],
+            preserved_rows=[
+                (
+                    fixture_path,
+                    LOWER_IMPORT,
+                    "import-module-path",
+                    "Published import path remains stable for compatibility docs.",
+                ),
+                (
+                    fixture_path,
+                    LOWER_LEGACY,
+                    "test-fixture",
+                    "Standalone legacy token remains in fixture copy for scanner coverage.",
+                ),
+            ],
+        )
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+            write_text(
+                root,
+                fixture_path,
+                f"Keep {LOWER_IMPORT} stable while {LOWER_LEGACY} remains in fixture docs.\n",
+            )
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("Silmari rebrand check passed.", output)
+
+    def test_manifest_content_is_excluded_from_brand_scan(self) -> None:
+        manifest_text = build_manifest(
+            audited_rows=[
+                (
+                    "README.md",
+                    "audited-no-change",
+                    "./scripts/check-silmari-rebrand.sh",
+                )
+            ],
+            preserved_rows=[
+                (
+                    "README.md",
+                    LEGACY_ENV,
+                    "env-var",
+                    "Legacy env var name remains stable for compatibility docs.",
+                )
+            ],
+        )
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 0)
+        self.assertNotIn("Unmanifested identifiers:", output)
+
+    def test_manifest_audit_rows_with_old_brand_tokens_are_excluded_from_brand_scan(self) -> None:
+        manifest_text = build_manifest(
+            audited_rows=[
+                (
+                    "skills/agentfield/SKILL.md",
+                    "audited-no-change",
+                    "./scripts/sync-embedded-skills.sh --check",
+                )
+            ]
+        )
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 0)
+        self.assertNotIn("Unmanifested identifiers:", output)
+
+    def test_mirror_drift_reports_scanner_failure(self) -> None:
+        manifest_text = build_manifest()
+        with self.make_repo(manifest_text, mirrored=False) as tmpdir_name:
+            root = Path(tmpdir_name)
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("skill mirror", output.lower())
+        self.assertIn("drift", output.lower())
+
+    def test_unknown_audited_file_action_is_rejected(self) -> None:
+        manifest_text = build_manifest(
+            audited_rows=[
+                ("README.md", "unknown-action", "./scripts/check-silmari-rebrand.sh")
+            ]
+        )
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Unknown audited file action", output)
+
+    def test_unknown_preserved_identifier_category_is_rejected(self) -> None:
+        fixture_path = "tests/fixture.txt"
+        manifest_text = build_manifest(
+            audited_rows=[
+                (
+                    fixture_path,
+                    "audited-no-change",
+                    "python3 -m pytest tests/test_check_silmari_rebrand.py",
+                )
+            ],
+            preserved_rows=[
+                (
+                    fixture_path,
+                    LEGACY_BRAND,
+                    "wrong-category",
+                    "Fixture asserts legacy product-token handling.",
+                )
+            ],
+        )
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Unknown preserved identifier category", output)
+
+    def test_non_concrete_preserved_reason_is_rejected(self) -> None:
+        fixture_path = "tests/fixture.txt"
+        manifest_text = build_manifest(
+            audited_rows=[
+                (
+                    fixture_path,
+                    "audited-no-change",
+                    "python3 -m pytest tests/test_check_silmari_rebrand.py",
+                )
+            ],
+            preserved_rows=[
+                (fixture_path, LEGACY_BRAND, "test-fixture", "Compatibility")
+            ],
+        )
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Reason must be concrete", output)
+
+    def test_codecleanup_passes_require_all_six_required_rows(self) -> None:
+        manifest_text = build_manifest(codecleanup_rows=default_codecleanup_rows()[:-1])
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("CodeCleanup Passes must list the six required pass names in order.", output)
+
+    def test_codecleanup_table_requires_rows(self) -> None:
+        manifest_text = build_manifest(codecleanup_rows=[])
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("CodeCleanup Passes must list the six required pass names in order.", output)
+
+    def test_unknown_codecleanup_result_is_rejected(self) -> None:
+        codecleanup_rows = default_codecleanup_rows()
+        codecleanup_rows[0] = (
+            "Brand surface pass",
+            "pending",
+            "Visible prose still needs review.",
+        )
+        manifest_text = build_manifest(codecleanup_rows=codecleanup_rows)
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Unknown CodeCleanup result for Brand surface pass: pending", output)
+
+    def test_codecleanup_row_requires_notes(self) -> None:
+        codecleanup_rows = default_codecleanup_rows()
+        codecleanup_rows[0] = ("Brand surface pass", "pass", "")
+        manifest_text = build_manifest(codecleanup_rows=codecleanup_rows)
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("CodeCleanup row is missing Notes for Brand surface pass.", output)
+
+    def test_manifest_cannot_self_cover_preserved_identifiers(self) -> None:
+        manifest_text = build_manifest(
+            preserved_rows=[
+                (
+                    MANIFEST_PATH.as_posix(),
+                    LEGACY_BRAND,
+                    "historical-record",
+                    "Legacy branch snapshot keeps AgentField here and covers all occurrences in this file.",
+                )
+            ]
+        )
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(
+            "Preserved identifier rows must not target docs/silmari-rebrand-manifest.md.",
+            output,
+        )
+
+    def test_verification_commands_table_requires_at_least_one_row(self) -> None:
+        manifest_text = build_manifest(verification_rows=[])
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Verification Commands table must contain at least one row.", output)
+
+    def test_not_run_verification_with_fallback_row_is_accepted(self) -> None:
+        manifest_text = build_manifest(
+            verification_rows=[
+                (
+                    "lychee --version",
+                    ".",
+                    "not-run",
+                    "lychee is not installed in PATH on this runner, so the primary link checker could not run.",
+                ),
+                (
+                    "npx --yes markdown-link-check README.md",
+                    ".",
+                    "0",
+                    "Fallback link check ran successfully on README.md.",
+                ),
+            ]
+        )
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("Silmari rebrand check passed.", output)
+
+    def test_not_run_verification_command_requires_dependency_reason(self) -> None:
+        manifest_text = build_manifest(
+            verification_rows=[
+                ("lychee --version", ".", "not-run", "Could not run link checker.")
+            ]
+        )
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(
+            "Verification command row must explain the missing dependency for lychee --version.",
+            output,
+        )
+
+    def test_verification_command_requires_numeric_or_not_run_exit_code(self) -> None:
+        manifest_text = build_manifest(
+            verification_rows=[
+                ("./scripts/check-silmari-rebrand.sh", ".", "zero", "Scanner passed cleanly."),
+            ]
+        )
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(
+            "Verification command row has invalid Exit Code for ./scripts/check-silmari-rebrand.sh: zero",
+            output,
+        )
+
+    def test_malformed_audited_file_row_is_rejected(self) -> None:
+        manifest_text = build_manifest().replace(
+            "| README.md | rebranded | ./scripts/check-silmari-rebrand.sh |\n",
+            "",
+        )
+        manifest_text = manifest_text.replace(
+            "| Path | Action | Verification |\n|---|---|---|",
+            "| Path | Action | Verification |\n|---|---|---|\n| README.md | rebranded |",
+        )
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Malformed audited file row: expected 3 columns.", output)
+
+    def test_malformed_preserved_identifier_row_is_rejected(self) -> None:
+        manifest_text = build_manifest().replace(
+            "| Path | Identifier | Category | Reason |\n|---|---|---|---|",
+            "| Path | Identifier | Category | Reason |\n|---|---|---|---|\n| README.md | AgentField | test-fixture |",
+        )
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Malformed preserved identifier row: expected 4 columns.", output)
+
+
+class ScannerHelperEdgeCaseTests(unittest.TestCase):
+    def test_empty_identifier_produces_no_ranges(self) -> None:
+        module = load_embedded_module()
+
+        self.assertEqual(module.identifier_ranges(f"keep {LOWER_IMPORT} stable", ""), [])
+
+    def test_none_identifier_produces_no_ranges(self) -> None:
+        module = load_embedded_module()
+
+        self.assertEqual(module.identifier_ranges(f"keep {LOWER_IMPORT} stable", None), [])
+
+    def test_empty_reason_does_not_cover_all_occurrences(self) -> None:
+        module = load_embedded_module()
+
+        self.assertFalse(module.reason_covers_all_occurrences(""))
+
+    def test_affirmative_phrase_after_sentence_boundary_covers_all_occurrences(self) -> None:
+        module = load_embedded_module()
+
+        self.assertTrue(
+            module.reason_covers_all_occurrences(
+                "Fixture does not rename runtime identifiers. It covers all occurrences in this file."
+            )
+        )
+
+    def test_enclosing_identifier_covers_match_at_trailing_boundary(self) -> None:
+        module = load_embedded_module()
+        enclosing_identifier = "github.com/Agent-Field/agentfield"
+        line_text = f"Use {enclosing_identifier} in compatibility docs."
+        start = line_text.index(LOWER_LEGACY)
+        match = module.BrandMatch(
+            path="README.md",
+            line_number=1,
+            column_start=start,
+            column_end=start + len(LOWER_LEGACY),
+            match_text=LOWER_LEGACY,
+            line_text=line_text,
+        )
+        row = module.PreservedIdentifier(
+            path="README.md",
+            identifier=enclosing_identifier,
+            category="import-module-path",
+            reason="Go import path stays stable for compatibility docs.",
+        )
+
+        self.assertTrue(module.row_covers_match(match, row))
+
+    def test_enclosing_identifier_covers_match_at_leading_boundary(self) -> None:
+        module = load_embedded_module()
+        line_text = f"{LEGACY_ENV} keeps compatibility docs stable."
+        match = module.BrandMatch(
+            path="README.md",
+            line_number=1,
+            column_start=0,
+            column_end=len("AGENTFIELD"),
+            match_text="AGENTFIELD",
+            line_text=line_text,
+        )
+        row = module.PreservedIdentifier(
+            path="README.md",
+            identifier=LEGACY_ENV,
+            category="env-var",
+            reason="Legacy env var remains stable for compatibility docs.",
+        )
+
+        self.assertTrue(module.row_covers_match(match, row))
+
+    def test_verify_skill_mirror_reports_missing_sync_script(self) -> None:
+        module = load_embedded_module()
+        with tempfile.TemporaryDirectory() as tmpdir_name:
+            root = Path(tmpdir_name)
+
+            ok, message = module.verify_skill_mirror(root)
+
+        self.assertFalse(ok)
+        self.assertIn("unable to run", message)
+        self.assertIn("./scripts/sync-embedded-skills.sh --check", message)
+
+    def test_not_run_dependency_reason_helper_requires_tool_name_and_dependency(self) -> None:
+        module = load_embedded_module()
+
+        self.assertFalse(
+            module.has_not_run_dependency_reason(
+                "lychee --version",
+                "Could not run the checker in this environment.",
+            )
+        )
+        self.assertTrue(
+            module.has_not_run_dependency_reason(
+                "lychee --version",
+                "lychee is not installed in PATH on this runner.",
+            )
+        )
+
+
+class IdentifierCoveragePropertyTests(unittest.TestCase):
+    @given(
+        prefix=st.text().filter(lambda value: "\n" not in value and LOWER_IMPORT not in value),
+        suffix=st.text().filter(lambda value: "\n" not in value and LOWER_IMPORT not in value),
+    )
+    def test_enclosing_identifier_does_not_grant_line_wide_coverage(
+        self, prefix: str, suffix: str
+    ) -> None:
+        module = load_embedded_module()
+        line_text = f"{prefix}{LOWER_LEGACY} product docs keep {LOWER_IMPORT}{suffix}"
+        match = module.BrandMatch(
+            path="README.md",
+            line_number=1,
+            column_start=len(prefix),
+            column_end=len(prefix) + len(LOWER_LEGACY),
+            match_text=LOWER_LEGACY,
+            line_text=line_text,
+        )
+        row = module.PreservedIdentifier(
+            path="README.md",
+            identifier=LOWER_IMPORT,
+            category="import-module-path",
+            reason="Import path stays stable for compatibility docs.",
+        )
+
+        self.assertFalse(module.row_covers_match(match, row))
+
+    @given(
+        changed_files=st.permutations(
+            (
+                "README.md",
+                "docs/ENVIRONMENT_VARIABLES.md",
+                "scripts/check-silmari-rebrand.sh",
+            )
+        ),
+        duplicate_rows=st.integers(min_value=1, max_value=5),
+    )
+    def test_changed_file_order_and_duplicate_preserved_rows_do_not_hide_missing_coverage(
+        self, changed_files: tuple[str, ...], duplicate_rows: int
+    ) -> None:
+        module = load_embedded_module()
+        manifest = module.Manifest(
+            audited_files={
+                "README.md": module.AuditedFile(
+                    path="README.md",
+                    action="rebranded",
+                    verification="./scripts/check-silmari-rebrand.sh",
+                )
+            },
+            preserved_identifiers=[
+                module.PreservedIdentifier(
+                    path="README.md",
+                    identifier=LEGACY_BRAND,
+                    category="historical-record",
+                    reason="Legacy branch snapshot keeps AgentField here and covers all occurrences in this file.",
+                )
+                for _ in range(duplicate_rows)
+            ],
+        )
+
+        view = module.build_audited_file_coverage_view(tuple(changed_files), [], manifest)
+
+        self.assertEqual(
+            set(view.missing_changed_files),
+            {"docs/ENVIRONMENT_VARIABLES.md", "scripts/check-silmari-rebrand.sh"},
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

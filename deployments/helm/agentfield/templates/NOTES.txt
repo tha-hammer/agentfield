@@ -1,6 +1,6 @@
-AgentField is installed.
+Silmari is installed.
 
-Control plane service:
+Silmari control plane service:
   {{ include "agentfield.controlPlane.fullname" . }}:{{ .Values.controlPlane.service.port }}
 
 Port-forward to access the UI locally:

@@ -122,7 +122,7 @@ function GeneralTab() {
         <CardHeader>
           <CardTitle className="text-sm font-medium">API Endpoint</CardTitle>
           <CardDescription className="text-muted-foreground">
-            Point your agents to this URL using the <code className="text-xs font-mono bg-muted px-1 py-0.5 rounded">AGENTFIELD_SERVER</code> environment variable.
+            Point your agents to this URL using the backward-compatible <code className="text-xs font-mono bg-muted px-1 py-0.5 rounded">AGENTFIELD_SERVER</code> environment variable.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
@@ -154,7 +154,7 @@ function GeneralTab() {
         <CardHeader>
           <CardTitle className="text-sm font-medium">Quick Start</CardTitle>
           <CardDescription className="text-muted-foreground">
-            Configure your agent to connect to this instance.
+            Configure your agent to connect to this Silmari instance.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
@@ -463,7 +463,7 @@ function ObservabilityTab() {
                 </Button>
               </div>
               <p className="text-sm text-muted-foreground">
-                If set, requests will include an X-AgentField-Signature header with HMAC-SHA256 signature
+                If set, requests include the legacy HMAC-SHA256 signature header for backward-compatible verification.
               </p>
             </div>
 
@@ -794,7 +794,7 @@ function IdentityTab() {
 
     // Fetch system status and the actual server DID in parallel.
     // The /did/status endpoint only returns operational status — the DID itself
-    // lives at /api/v1/did/agentfield-server (note: v1, not ui/v1).
+    // The backward-compatible DID endpoint lives at /api/v1/did/agentfield-server (note: v1, not ui/v1).
     const statusFetch = getDIDSystemStatus().catch(() => null);
     const serverUrl =
       (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace("/api/ui/v1", "") ||
@@ -938,7 +938,7 @@ function AboutTab() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>About AgentField</CardTitle>
+        <CardTitle>About Silmari</CardTitle>
         <CardDescription className="text-muted-foreground">
           Platform version and runtime information.
         </CardDescription>

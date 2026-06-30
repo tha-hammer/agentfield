@@ -1,7 +1,7 @@
 """
 Docker/Kubernetes-friendly Hello World (Python)
 
-This example is designed to validate the full AgentField execution path:
+This example is designed to validate the full Silmari execution path:
 
 client -> control plane (/api/v1/execute) -> agent callback URL -> response
 
@@ -24,7 +24,7 @@ app = Agent(
 
 
 @app.reasoner()
-async def hello(name: str = "AgentField") -> dict:
+async def hello(name: str = "Silmari") -> dict:
     return {"greeting": f"Hello, {name}!", "node_id": app.node_id}
 
 
@@ -49,4 +49,3 @@ if __name__ == "__main__":
     # For containerized runs, set AGENT_CALLBACK_URL so the control plane can call back:
     #   AGENT_CALLBACK_URL=http://<service-name>:<port>
     app.run(host="0.0.0.0", port=port, auto_port=False)
-

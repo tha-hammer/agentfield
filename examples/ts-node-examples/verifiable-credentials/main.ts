@@ -6,7 +6,7 @@ import { reasonersRouter } from './reasoners.js';
  * Verifiable Credentials Example
  *
  * This example demonstrates how to use DID (Decentralized Identifiers) and
- * Verifiable Credentials (VCs) in AgentField to create cryptographically
+ * Verifiable Credentials (VCs) in Silmari to create cryptographically
  * verifiable audit trails for agent executions.
  *
  * Each reasoner in this example generates a VC that:

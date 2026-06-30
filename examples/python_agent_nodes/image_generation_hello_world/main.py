@@ -153,7 +153,7 @@ def _save_image(image_url: str, destination: Path) -> Path:
         destination.write_bytes(base64.b64decode(b64_data))
         return destination
 
-    request = Request(image_url, headers={"User-Agent": "agentfield-image-runner"})
+    request = Request(image_url, headers={"User-Agent": "silmari-image-runner"})
     with urlopen(request) as response, destination.open("wb") as f:  # nosec
         f.write(response.read())
     return destination

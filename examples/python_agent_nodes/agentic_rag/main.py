@@ -263,7 +263,7 @@ Example: For "Who is A" with exact precision:
 @app.skill()
 async def lazy_semantic_retrieval(question: str, top_k: int = 10) -> List[RankedChunk]:
     """
-    Semantic retrieval powered by AgentField's unified vector memory.
+    Semantic retrieval powered by Silmari's unified vector memory.
     """
     query_embedding = embed_text(question)
     results = await app.memory.similarity_search(query_embedding, top_k=top_k)

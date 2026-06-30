@@ -1,6 +1,6 @@
 # Getting Support
 
-Welcome to AgentField! Here's how to get help:
+Welcome to Silmari! Here's how to get help:
 
 ## Documentation
 

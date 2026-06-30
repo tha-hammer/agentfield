@@ -255,7 +255,11 @@ describe("AccessManagementPage", () => {
     expect(
       screen.getByText("Authorization APIs are not enabled on this server"),
     ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Enable it in Silmari control plane config/i),
+    ).toBeInTheDocument();
     expect(screen.getByText("AGENTFIELD_AUTHORIZATION_ENABLED=true")).toBeInTheDocument();
+    expect(screen.getByText("config/agentfield.yaml")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /knowledge base: tag-based authorization/i })).toHaveAttribute(
       "href",
       "/api/v1/agentic/kb/articles/identity/tag-authorization",

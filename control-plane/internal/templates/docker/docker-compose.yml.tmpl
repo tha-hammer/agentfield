@@ -8,7 +8,8 @@ services:
       - "${AGENTFIELD_HTTP_PORT:-{{.ControlPlanePort}}}:8080"
     volumes:
       - agentfield-data:/data
-    # NOTE: agentfield/control-plane:latest is a distroless image — no sh, no wget, no curl.
+    # NOTE: Silmari uses the legacy-compatible image `agentfield/control-plane:latest`,
+    # which is distroless, so no sh, no wget, no curl.
     # A CMD-based healthcheck cannot run inside the container. The agent SDK retries
     # connection to the control plane on startup, so service_started is sufficient.
 

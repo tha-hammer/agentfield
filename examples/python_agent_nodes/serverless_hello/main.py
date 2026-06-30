@@ -23,7 +23,7 @@ app = Agent(
 
 
 @app.reasoner()
-async def hello(name: str = "AgentField") -> dict:
+async def hello(name: str = "Silmari") -> dict:
     """Return a greeting and echo execution metadata for debugging."""
     ctx = app.ctx
     return {

@@ -75,12 +75,12 @@ export const navigation: NavGroup[] = [
 /** External links shown below Platform nav (opens in new tab). */
 export const resourceLinks: ResourceLinkItem[] = [
   {
-    title: "Docs",
+    title: "Silmari Docs",
     icon: BookOpen,
     href: "https://agentfield.ai/docs",
   },
   {
-    title: "GitHub",
+    title: "Silmari GitHub",
     icon: Github,
     href: "https://github.com/Agent-Field/agentfield/",
   },

@@ -1,5 +1,5 @@
 """
-Hello World Agent - Minimal Agentfield Example
+Hello World Agent - Minimal Silmari Example
 
 Demonstrates:
 - One skill (deterministic function)
@@ -27,7 +27,7 @@ app = Agent(
 @app.skill()
 def get_greeting(name: str) -> dict:
     """Returns a greeting template (deterministic - no AI)"""
-    return {"message": f"Hello, {name}! Welcome to Agentfield."}
+    return {"message": f"Hello, {name}! Welcome to Silmari."}
 
 
 # ============= REASONERS (AI-POWERED) =============

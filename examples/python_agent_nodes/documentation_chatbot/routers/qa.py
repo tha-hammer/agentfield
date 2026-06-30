@@ -67,7 +67,7 @@ You have access to these source keys: {', '.join(citation_keys)}
 - You can combine multiple citations: [A][B] or [A][B][C]
 
 **Example of correct inline citations:**
-"Agentfield uses DIDs for identity [A]. The control plane manages orchestration [B]. You can deploy agents independently [A][B]."
+"Silmari uses DIDs for identity [A]. The control plane manages orchestration [B]. You can deploy agents independently [A][B]."
 
 **IMPORTANT:** Leave the `citations` field empty in your response (return `[]`). The system will inject citation metadata automatically. You only need to use [A], [B], etc. in the answer text.
 
@@ -345,7 +345,7 @@ You have access to these source keys: {', '.join(citation_keys)}
 
 **Question:** 'How do I get started?'
 **Good Answer:**
-To get started with AgentField:
+To get started with Silmari:
 
 1. Install the CLI: `npm install -g agentfield` [A]
 2. Initialize a new project: `af init my-project` [A]
@@ -355,7 +355,7 @@ The initialization creates a basic project structure with example agents you can
 
 **Question:** 'How is IAM treated?'
 **Good Answer:**
-AgentField uses Decentralized Identifiers (DIDs) for identity management [A]. Each agent receives a unique, cryptographically verifiable DID when registered [A]. You can configure IAM policies in the control plane settings under `config/agentfield.yaml` in the `security` section [B].
+Silmari uses Decentralized Identifiers (DIDs) for identity management [A]. Each agent receives a unique, cryptographically verifiable DID when registered [A]. You can configure IAM policies in the control plane settings under `config/agentfield.yaml` in the `security` section [B].
 
 ## Self-Assessment
 

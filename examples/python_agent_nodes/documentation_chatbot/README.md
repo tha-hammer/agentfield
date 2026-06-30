@@ -79,7 +79,7 @@ POST to `/skills/ingest_folder`:
 }
 ```
 
-This chunks every `.md`, `.mdx`, `.rst`, or `.txt` file, embeds them, and stores vectors in AgentField's global memory scope using the two-tier storage strategy.
+This chunks every `.md`, `.mdx`, `.rst`, or `.txt` file, embeds them, and stores vectors in Silmari's global memory scope using the two-tier storage strategy.
 
 ### 4. Ask Questions
 
@@ -207,7 +207,7 @@ This rewards:
 |----------|-------------|---------|
 | `AGENTFIELD_SERVER` | Control plane server URL | `http://localhost:8080` |
 | `DOC_EMBED_MODEL` | FastEmbed model for embeddings | `BAAI/bge-small-en-v1.5` |
-| `AI_MODEL` | Primary LLM (handled by AgentField `AIConfig`) | `openrouter/openai/gpt-4o-mini` |
+| `AI_MODEL` | Primary LLM (handled by Silmari `AIConfig`) | `openrouter/openai/gpt-4o-mini` |
 | `PORT` | Agent server port (optional, uses auto-port if not set) | Auto-assigned |
 
 ## Performance Characteristics
@@ -222,7 +222,7 @@ This rewards:
 ## Next Steps
 
 - Add schedulers/watchers to auto re-ingest docs on git changes
-- Stream answers token-by-token via AgentField streaming APIs
+- Stream answers token-by-token via Silmari streaming APIs
 - Layer evaluators (unit tests) that hit the QA endpoints with canonical Q&A pairs to detect regressions
 - Implement multi-language support for non-English documentation
 - Add support for PDF and DOCX file formats

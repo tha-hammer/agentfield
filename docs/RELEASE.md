@@ -1,10 +1,10 @@
 # Release Process
 
-This document describes how to create releases for AgentField using the **two-tier release system**.
+This document describes how to create releases for Silmari using the **two-tier release system**.
 
 ## Overview
 
-AgentField uses a two-tier release model that separates **staging** (prerelease) from **production** releases:
+Silmari uses a two-tier release model that separates **staging** (prerelease) from **production** releases:
 
 | Environment | Version Format | Python Registry | npm Tag | Docker Tag | GitHub Release | Trigger |
 |-------------|----------------|-----------------|---------|------------|----------------|---------|

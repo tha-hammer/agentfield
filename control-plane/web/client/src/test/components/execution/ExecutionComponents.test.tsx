@@ -148,6 +148,7 @@ describe("execution components", () => {
     expect(screen.getByText("1.0 KB")).toBeInTheDocument();
     expect(screen.getByText("Complete")).toBeInTheDocument();
     expect(screen.getByText("Technical Details")).toBeInTheDocument();
+    expect(screen.getByText("Request ID")).toBeInTheDocument();
     expect(screen.getByText("request-1")).toBeInTheDocument();
 
     rerender(

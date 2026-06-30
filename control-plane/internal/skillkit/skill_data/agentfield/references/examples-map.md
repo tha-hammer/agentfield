@@ -1,6 +1,6 @@
 # Examples Map — Live Builds You Can Grep
 
-These projects live in `code/examples/` of this repo. Each is a real, runnable AgentField multi-agent system. **Pick the closest analog to your problem and grep its code.** Pages describe the API; examples show real composition.
+These projects live in `code/examples/` of this repo. Each is a real, runnable Silmari multi-agent system. **Pick the closest analog to your problem and grep its code.** Pages describe the API; examples show real composition.
 
 For each entry: domain, dominant shape, entry reasoner path, and one sentence on what makes it interesting.
 

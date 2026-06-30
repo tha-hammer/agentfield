@@ -356,7 +356,7 @@ jobs:
           body: |
             ${{ needs.prepare.outputs.environment == 'staging' && '> ⚠️ **This is a staging/pre-release version for testing. Not recommended for production use.**' || '' }}
 
-            ## AgentField ${{ needs.prepare.outputs.version }}
+            ## Silmari ${{ needs.prepare.outputs.version }}
 
             ### Installation
 

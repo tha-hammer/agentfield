@@ -1,6 +1,6 @@
 # Hello World RAG
 
-Minimal Retrieval-Augmented agent that demonstrates the new AgentField memory vector APIs without any external services.
+Minimal Retrieval-Augmented agent that demonstrates the new Silmari memory vector APIs without any external services.
 
 ## What It Does
 
@@ -17,7 +17,7 @@ pip install -r requirements.txt
 python main.py
 ```
 
-Once the agent is registered with the control plane, you can call it via the AgentField CLI or direct HTTP:
+Once the agent is registered with the control plane, you can call it via the Silmari CLI or direct HTTP:
 
 ```bash
 # Ingest a document (either provide text or a path)

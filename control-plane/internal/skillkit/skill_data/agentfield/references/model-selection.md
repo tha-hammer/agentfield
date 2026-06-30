@@ -96,7 +96,7 @@ candidates.sort(key=lambda m: (
 top_three = candidates[:3]
 ```
 
-Then present the top 3 to the user via `AskUserQuestion` and let them pick. Use the OpenRouter `id` field as the AgentField model string, prefixed with `openrouter/` (e.g., `openrouter/deepseek/deepseek-v3.1`).
+Then present the top 3 to the user via `AskUserQuestion` and let them pick. Use the OpenRouter `id` field as the Silmari model string, prefixed with `openrouter/` (e.g., `openrouter/deepseek/deepseek-v3.1`).
 
 ### When live-pick is unreachable
 

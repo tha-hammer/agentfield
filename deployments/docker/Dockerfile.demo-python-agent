@@ -5,7 +5,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Install the local AgentField Python SDK (from this repo) + deps.
+# Install the local Silmari Python SDK package from this repo plus its deps.
 COPY sdk/python /tmp/python-sdk
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir /tmp/python-sdk && \
@@ -16,4 +16,3 @@ COPY examples/python_agent_nodes/docker_hello_world /app
 
 EXPOSE 8001
 CMD ["python", "main.py"]
-

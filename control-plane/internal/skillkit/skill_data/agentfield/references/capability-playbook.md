@@ -14,7 +14,7 @@ This file tells you **when each one pays for itself**, in the language a CTO and
 
 > **ROI% = (value − cost) ÷ cost × 100**
 
-Every capability decision routes through this. The three AgentField coordination primitives move ROI on **both sides of the fraction**:
+Every capability decision routes through this. The three Silmari coordination primitives move ROI on **both sides of the fraction**:
 
 - They **raise value** — reactions happen in seconds not hours, context is never re-derived, events are never missed.
 - They **cut cost** — the control plane already owns the plumbing you would otherwise build, staff, and operate: webhook receivers, HMAC verification, replay tables, a Redis/pub-sub tier, cache invalidation, and an audit trail.
@@ -23,7 +23,7 @@ The trap that *destroys* ROI is always the same: doing expensive work on the wro
 
 ### The cost you delete by adopting the primitive
 
-| Hand-rolled today | AgentField primitive | Cost removed |
+| Hand-rolled today | Silmari primitive | Cost removed |
 |---|---|---|
 | Webhook endpoint + signature verification + replay table + dispatch | **Triggers** | An entire ingress service per provider, and its on-call |
 | Cron loops polling a row to detect change | **Memory events** | Wasted compute every tick + the latency of the poll interval |

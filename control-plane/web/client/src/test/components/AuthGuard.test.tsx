@@ -105,6 +105,11 @@ describe("AuthGuard", () => {
       </AuthGuard>,
     );
 
+    expect(screen.getByText("Silmari")).toBeInTheDocument();
+    expect(
+      screen.getByText("Enter your API key to access the Silmari control plane."),
+    ).toBeInTheDocument();
+
     fireEvent.change(screen.getByLabelText("API Key"), { target: { value: "hax_live_123" } });
     fireEvent.change(screen.getByLabelText(/Admin Token/i), { target: { value: "  root-token  " } });
     fireEvent.click(screen.getByRole("button", { name: "Connect" }));

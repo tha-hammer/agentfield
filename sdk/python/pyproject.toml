@@ -5,11 +5,11 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "agentfield"
 version = "0.1.90-rc.3"
-description = "Python SDK for the AgentField control plane"
+description = "Silmari Python SDK for agent orchestration and control plane integration"
 readme = "README.md"
 license = {text = "Apache-2.0"}
 authors = [
-    {name = "AgentField Maintainers"}
+    {name = "Silmari Maintainers"}
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -37,7 +37,7 @@ dependencies = [
     "fal-client>=0.5.0",
     "cryptography>=41.0"
 ]
-keywords = ["agentfield", "sdk", "agents"]
+keywords = ["silmari", "agentfield", "sdk", "agents"]
 
 [project.urls]
 Homepage = "https://github.com/Agent-Field/agentfield"

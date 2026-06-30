@@ -1,20 +1,20 @@
 # Environment Variables
 
-This repo supports running AgentField in multiple modes (local binary, Docker, Kubernetes). Most configuration is loaded via a YAML config file and can be overridden via environment variables.
+This repo supports running Silmari in multiple modes (local binary, Docker, Kubernetes). Most configuration is loaded via YAML, with `config/agentfield.yaml` and `AGENTFIELD_CONFIG_FILE` kept as first-class legacy-compatible configuration surfaces.
 
-AgentField uses Viper with the prefix `AGENTFIELD` and maps nested config keys using `_` (for example `storage.mode` → `AGENTFIELD_STORAGE_MODE`).
+Silmari uses Viper with the prefix `AGENTFIELD` for backward compatibility and maps nested config keys using `_` (for example `storage.mode` → `AGENTFIELD_STORAGE_MODE`).
 
 ## Control Plane (Server)
 
 ### Core
 
 - `AGENTFIELD_PORT` (optional): HTTP port for the control plane (default: `8080`).
-- `AGENTFIELD_CONFIG_FILE` (optional): Path to `agentfield.yaml` (in containers this is typically `/etc/agentfield/config/agentfield.yaml`).
-- `AGENTFIELD_HOME` (recommended in containers): Base directory where AgentField stores local state (SQLite DB, Bolt DB, keys, logs). In Kubernetes, mount a PVC and set `AGENTFIELD_HOME=/data`.
+- `AGENTFIELD_CONFIG_FILE` (optional): Path to the YAML config file. By default Silmari reads `config/agentfield.yaml`; the env var name remains stable for compatibility. In containers this is typically `/etc/agentfield/config/agentfield.yaml`.
+- `AGENTFIELD_HOME` (recommended in containers): Base directory where Silmari stores local state (SQLite DB, Bolt DB, keys, logs). In Kubernetes, mount a PVC and set `AGENTFIELD_HOME=/data`.
 
 ### Storage
 
-AgentField supports:
+Silmari supports:
 - **local** (SQLite + BoltDB, stored under `AGENTFIELD_HOME`)
 - **postgres** (PostgreSQL + pgvector)
 
@@ -36,8 +36,8 @@ PostgreSQL storage:
   - `AGENTFIELD_STORAGE_POSTGRES_SSLMODE`
 
 Example DSNs:
-- `postgres://agentfield:agentfield@postgres:5432/agentfield?sslmode=disable`
-- `postgresql://agentfield:agentfield@postgres:5432/agentfield?sslmode=disable`
+- `postgres://silmari:silmari@postgres:5432/silmari?sslmode=disable`
+- `postgresql://silmari:silmari@postgres:5432/silmari?sslmode=disable`
 
 ### API Authentication (optional)
 
@@ -52,7 +52,7 @@ If set, the control plane requires an API key for most endpoints.
 
 ### Anonymous Telemetry
 
-Anonymous usage telemetry is enabled by default to help us improve AgentField. It records coarse product signals such as startup, agent registration, SDK language, runtime type, storage mode, and execution status buckets.
+Anonymous usage telemetry is enabled by default to help us improve Silmari. It records coarse product signals such as startup, agent registration, SDK language, runtime type, storage mode, and execution status buckets.
 
 It does not collect prompts, inputs, outputs, logs, secrets, API keys, raw IP addresses, hostnames, user IDs, DIDs, or raw error text.
 
@@ -108,7 +108,7 @@ The same concept applies to **Docker**:
 
 ### Go SDK agents (example: `examples/go_agent_nodes`)
 
-- `AGENTFIELD_URL` (optional): Control plane base URL (example: `http://agentfield:8080`).
+- `AGENTFIELD_URL` (optional): Control plane base URL (example: `http://silmari-control-plane:8080`).
 - `AGENTFIELD_TOKEN` (optional): Bearer token (use this if you enable `AGENTFIELD_API_KEY` on the control plane).
 - `AGENT_NODE_ID` (optional): Node id (default varies by example).
 - `AGENT_LISTEN_ADDR` (optional): Listen address (default: `:8001`).

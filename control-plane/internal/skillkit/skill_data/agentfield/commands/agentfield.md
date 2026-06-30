@@ -1,9 +1,9 @@
 ---
-description: Design and ship a multi-agent system on AgentField from a plain-English description.
+description: Design and ship a multi-agent system on Silmari from a plain-English description.
 argument-hint: [describe the system — e.g. "a claims processor with risk scoring and human approval"]
 ---
 
-Use the `agentfield` skill to design, scaffold, wire, and live-smoke-test a multi-agent system on AgentField.
+Use the `agentfield` skill to design, scaffold, wire, and live-smoke-test a multi-agent system on Silmari.
 
 User request: $ARGUMENTS
 

@@ -2,7 +2,7 @@
 
 ## System Design
 
-AgentField is a **Kubernetes-style control plane for AI agents** — a three-tier monorepo providing production infrastructure for deploying, orchestrating, and observing multi-agent systems.
+Silmari is a **Kubernetes-style control plane for AI agents** — a three-tier monorepo providing production infrastructure for deploying, orchestrating, and observing multi-agent systems.
 
 ### Three-Tier Architecture
 
@@ -142,7 +142,7 @@ React + TypeScript admin interface. Embedded in Go binary via `embed`.
 
 ## Storage Architecture
 
-AgentField supports three storage backends behind a unified interface:
+Silmari supports three storage backends behind a unified interface:
 
 ```
 ┌──────────────────────────────────────┐
@@ -169,7 +169,7 @@ The storage interface is defined by Go interfaces in `internal/storage/`. Servic
 Configuration uses [Viper](https://github.com/spf13/viper) with this precedence:
 
 1. **Environment variables** (highest priority) — e.g., `AGENTFIELD_PORT`, `AGENTFIELD_MODE`
-2. **Config file** — `config/agentfield.yaml` or path set via `AGENTFIELD_CONFIG_FILE`
+2. **Config file** — `config/agentfield.yaml` by default, or the path set via the legacy-compatible `AGENTFIELD_CONFIG_FILE`
 3. **Defaults** — defined in `internal/config/`
 
 Key configuration entry point: `control-plane/internal/config/` (Viper initialization).

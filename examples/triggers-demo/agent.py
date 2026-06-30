@@ -1,5 +1,5 @@
 """
-AgentField triggers demo — sample Python agent.
+Silmari triggers demo — sample Python agent.
 
 Three deterministic reasoners, each wired to a different Source plugin:
 
@@ -284,9 +284,9 @@ if __name__ == "__main__":
     # Banner so the user sees the agent come up. The SDK separately prints
     # the assigned trigger URLs once it registers with the CP.
     print(
-        "AgentField triggers demo — sample agent starting\n"
+        "Silmari triggers demo — sample agent starting\n"
         f"  node_id            = {app.node_id}\n"
-        f"  agentfield_server  = {os.getenv('AGENTFIELD_URL', 'http://localhost:8080')}\n"
+        f"  silmari_server    = {os.getenv('AGENTFIELD_URL', 'http://localhost:8080')}\n"
         f"  callback url       = {os.getenv('AGENT_CALLBACK_URL', f'http://localhost:{port}')}\n"
         "  reasoners          = handle_payment (stripe), handle_pr (github), summarize_issue (github),\n"
         "                       handle_inbound (slack/hmac/bearer via UI), handle_tick (cron)",

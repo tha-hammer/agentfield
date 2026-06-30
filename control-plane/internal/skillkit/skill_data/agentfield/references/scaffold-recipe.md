@@ -1,6 +1,6 @@
 # Scaffold Recipe — File-by-File Generation Contract
 
-Every AgentField build produces this exact set of files. No omissions, no "I'll add that later."
+Every Silmari build produces this exact set of files. No omissions, no "I'll add that later."
 
 **This file is the WHAT and the WHERE.** The HOW (which topology to choose, which patterns to compose) lives in `patterns-emerge.md` and `examples-map.md`. The actual `main.py` content depends on your design — there's no canonical example here because there's no canonical pattern. Pick the shape that emerges from the principles.
 

@@ -12,7 +12,7 @@ const agent = new Agent({
 });
 
 agent.reasoner('hello', async (ctx) => ({
-  greeting: `Hello, ${ctx.input.name ?? 'AgentField'}!`,
+  greeting: `Hello, ${ctx.input.name ?? 'Silmari'}!`,
   runId: ctx.runId,
   executionId: ctx.executionId
 }));

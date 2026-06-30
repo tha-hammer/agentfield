@@ -2,7 +2,7 @@
 Hello World RAG - Minimal vector-backed retrieval example
 
 Demonstrates:
-- Using AgentField memory vectors without any extra services
+- Using Silmari memory vectors without any extra services
 - One skill to ingest documents (path or raw text)
 - One reasoner to answer questions using similarity search + LLM synthesis
 """
@@ -101,7 +101,7 @@ async def ingest_document(
     document_id: str, path: Optional[str] = None, text: Optional[str] = None
 ) -> IngestResult:
     """
-    Store a document's chunks + embeddings into AgentField memory vectors.
+    Store a document's chunks + embeddings into Silmari memory vectors.
     """
     body = _load_source_text(path, text)
     chunks = _chunk_text(body)

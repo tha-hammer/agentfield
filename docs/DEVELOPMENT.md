@@ -1,6 +1,6 @@
 # Development Guide
 
-This document provides instructions for working on the AgentField monorepo locally.
+This document provides instructions for working on the Silmari monorepo locally.
 
 ## Prerequisites
 
@@ -12,8 +12,8 @@ This document provides instructions for working on the AgentField monorepo local
 ## Initial Setup
 
 ```bash
-git clone https://github.com/Agent-Field/agentfield.git
-cd agentfield
+git clone https://github.com/Agent-Field/agentfield.git silmari
+cd silmari
 make install
 ```
 
