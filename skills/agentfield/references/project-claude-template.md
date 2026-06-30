@@ -1,6 +1,6 @@
 # Project `CLAUDE.md` Template
 
-Every generated AgentField project ships with a `CLAUDE.md` at its root. This file is the contract that any *future* coding agent (including a fresh Claude Code session next week) must follow when extending the project.
+Every generated Silmari project ships with a `CLAUDE.md` at its root. This file is the contract that any *future* coding agent (including a fresh Claude Code session next week) must follow when extending the project.
 
 Without this file, the next agent will refactor the system back into a flat chain. With it, the architecture survives.
 
@@ -22,7 +22,7 @@ External callers should hit `<slug>.<entry_reasoner_name>` first.
 ## Architecture at a glance
 
 - **Pattern(s) (vocabulary, not template):** <e.g., parallel hunters + dynamic router>, derived from walking the five principles in the `agentfield` skill
-- **Topology:** one AgentField node (`<slug>`) with <N> reasoners
+- **Topology:** one Silmari node (`<slug>`) with <N> reasoners
 - **Depth from entry to leaf:** <N> layers — every "specialist" is itself an orchestrator calling 2–4 sub-reasoners
 - **Entry reasoner:** `<entry_reasoner_name>` — orchestrates the full pipeline
 - **Internal reasoners:**

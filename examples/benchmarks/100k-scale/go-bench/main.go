@@ -119,7 +119,7 @@ func main() {
 	}
 
 	if !*jsonOutput {
-		fmt.Printf("AgentField Go SDK Benchmark\n")
+		fmt.Printf("Silmari Go SDK Benchmark\n")
 		fmt.Printf("===========================\n")
 		fmt.Printf("Handlers: %d | Iterations: %d | Warmup: %d\n\n", *numHandlers, *iterations, *warmup)
 	}

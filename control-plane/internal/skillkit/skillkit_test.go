@@ -110,7 +110,7 @@ func TestCatalogFunctions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("EntryContent: %v", err)
 	}
-	if !strings.Contains(string(entry), "AgentField") {
+	if !strings.Contains(string(entry), "Silmari") {
 		t.Fatalf("EntryContent missing expected content")
 	}
 

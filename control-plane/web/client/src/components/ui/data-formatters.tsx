@@ -54,7 +54,7 @@ export function LiveElapsedDuration({ startedAt, className }: LiveElapsedDuratio
 
 /**
  * Reusable data formatting components for consistent data display
- * across the AgentField application. These components ensure uniform
+ * across the Silmari admin UI. These components ensure uniform
  * formatting of timestamps, durations, file sizes, and other common data types.
  */
 

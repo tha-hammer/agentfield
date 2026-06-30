@@ -1,6 +1,6 @@
-# AgentField Control Plane
+# Silmari Control Plane
 
-The AgentField control plane orchestrates agent workflows, manages verifiable credentials, serves the admin UI, and exposes REST/gRPC APIs consumed by the SDKs.
+The Silmari control plane orchestrates agent workflows, manages verifiable credentials, serves the admin UI, and exposes REST/gRPC APIs consumed by the SDKs.
 
 ## Which path is for you?
 
@@ -8,7 +8,7 @@ These are three separate setups for three goals — not competing ways to instal
 
 | Goal | Use | Where |
 |---|---|---|
-| Build & run agents / try AgentField | the `af` CLI: `curl -fsSL https://agentfield.ai/install.sh \| bash`, then `af init` / `af dev` | root [`README.md`](../README.md) |
+| Build & run agents / try Silmari | the `af` CLI: `curl -fsSL https://agentfield.ai/install.sh \| bash`, then `af init` / `af dev` | root [`README.md`](../README.md) |
 | Run the control plane (ops) | Docker: `docker run -p 8080:8080 agentfield/control-plane:latest`, or `docker compose -f deployments/docker/docker-compose.yml up` | [`deployments/docker/`](../deployments/docker) |
 | Develop the control plane (this guide) | build from source — Quick Start below | this file + [`docs/DEVELOPMENT.md`](../docs/DEVELOPMENT.md) |
 
@@ -32,12 +32,12 @@ go mod download
 
 # Stand up PostgreSQL matching the default DSN below
 # (skip this if you use SQLite mode — see the note after this block)
-docker run -d --name agentfield-pg -p 5432:5432 \
-  -e POSTGRES_USER=agentfield -e POSTGRES_PASSWORD=agentfield -e POSTGRES_DB=agentfield \
+docker run -d --name silmari-pg -p 5432:5432 \
+  -e POSTGRES_USER=silmari -e POSTGRES_PASSWORD=silmari -e POSTGRES_DB=silmari \
   pgvector/pgvector:pg16
 
 # Run database migrations
-export AGENTFIELD_DATABASE_URL="postgres://agentfield:agentfield@localhost:5432/agentfield?sslmode=disable"
+export AGENTFIELD_DATABASE_URL="postgres://silmari:silmari@localhost:5432/silmari?sslmode=disable"
 goose -dir ./migrations postgres "$AGENTFIELD_DATABASE_URL" up
 
 # Start the control plane
@@ -66,7 +66,7 @@ The server runs at `http://localhost:8080` and will automatically reload when yo
 
 ## Configuration
 
-Environment variables override `config/agentfield.yaml`. Common options:
+Silmari treats YAML and environment variables as peer configuration surfaces: the default file is `config/agentfield.yaml`, `AGENTFIELD_CONFIG_FILE` keeps the legacy-compatible override path stable, and environment variables can override either. Common options:
 
 - `AGENTFIELD_DATABASE_URL` – PostgreSQL DSN
 - `AGENTFIELD_HTTP_ADDR` – HTTP listen address (`0.0.0.0:8080` by default)
@@ -91,7 +91,7 @@ Run the Go server alongside the UI so API calls resolve locally. During producti
 Migrations use [Goose](https://github.com/pressly/goose):
 
 ```bash
-AGENTFIELD_DATABASE_URL=postgres://agentfield:agentfield@localhost:5432/agentfield?sslmode=disable \
+AGENTFIELD_DATABASE_URL=postgres://silmari:silmari@localhost:5432/silmari?sslmode=disable \
 goose -dir ./migrations postgres "$AGENTFIELD_DATABASE_URL" status
 ```
 

@@ -1,6 +1,6 @@
-# AgentField — Specifications & Architecture
+# Silmari — Specifications & Architecture
 
-Comprehensive architecture documentation and technical specifications for the AgentField platform. These docs map the codebase structure, design decisions, data flows, and operational characteristics of the three-tier monorepo.
+Comprehensive architecture documentation and technical specifications for the Silmari platform. These docs map the codebase structure, design decisions, data flows, and operational characteristics of the three-tier monorepo.
 
 ## Document Index
 

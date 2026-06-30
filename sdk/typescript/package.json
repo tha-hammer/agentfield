@@ -1,7 +1,7 @@
 {
   "name": "@agentfield/sdk",
   "version": "0.1.90-rc.3",
-  "description": "AgentField TypeScript SDK",
+  "description": "Silmari TypeScript SDK",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -77,11 +77,12 @@
   },
   "license": "Apache-2.0",
   "keywords": [
+    "silmari",
     "agentfield",
     "ai-agents",
     "llm",
     "multi-agent",
     "orchestration"
   ],
-  "author": "AgentField Team"
+  "author": "Silmari Team"
 }

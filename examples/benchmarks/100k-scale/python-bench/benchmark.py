@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-AgentField Python SDK Benchmark
+Silmari Python SDK Benchmark
 
 Measures: Agent init time, handler registration time (separate), memory footprint, request latency
 
@@ -304,7 +304,7 @@ async def benchmark_request_processing(num_handlers: int, num_requests: int, ver
 
 
 def main():
-    parser = argparse.ArgumentParser(description="AgentField Python SDK Benchmark")
+    parser = argparse.ArgumentParser(description="Silmari Python SDK Benchmark")
     parser.add_argument("--handlers", type=int, default=10000, help="Number of handlers")
     parser.add_argument("--iterations", type=int, default=10, help="Benchmark iterations")
     parser.add_argument("--warmup", type=int, default=2, help="Warmup iterations")
@@ -327,7 +327,7 @@ def main():
     }
 
     if verbose:
-        print("AgentField Python SDK Benchmark (Fixed Methodology)")
+        print("Silmari Python SDK Benchmark (Fixed Methodology)")
         print("====================================================")
         print(f"Handlers: {args.handlers} | Iterations: {args.iterations} | Warmup: {args.warmup}")
         print("\nNOTE: Agent init and handler registration are measured SEPARATELY\n")

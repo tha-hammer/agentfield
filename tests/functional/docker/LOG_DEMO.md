@@ -50,7 +50,7 @@ The compose file uses `/data/...` paths that only exist inside containers. On th
 make log-demo-native-up
 ```
 
-This builds a local `agentfield-server` binary, stores SQLite/Bolt under `/tmp/agentfield-log-demo`, and starts the Python, Go, and Node demo agents on ports **8001-8003**. Stop with `make log-demo-native-down` (or `./scripts/stop-log-demo-native.sh`).
+This builds a local `agentfield-server` binary, stores SQLite/Bolt under `/tmp/agentfield-log-demo` by default, and starts the Python, Go, and Node demo agents on ports **8001-8003**. Override the writable host path with `AGENTFIELD_LOG_DEMO_DATA` if needed. Stop with `make log-demo-native-down` (or `./scripts/stop-log-demo-native.sh`).
 
 Open **http://localhost:8080/ui/agents** and expand:
 

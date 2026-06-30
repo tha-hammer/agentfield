@@ -122,7 +122,7 @@ describe("schemaUtils", () => {
     };
 
     expect(
-      validateFormData({ name: "AgentField", count: 2, enabled: true }, schema)
+      validateFormData({ name: "Silmari", count: 2, enabled: true }, schema)
     ).toEqual({ isValid: true, errors: [] });
 
     const invalid = validateFormData({ count: "many" }, schema);

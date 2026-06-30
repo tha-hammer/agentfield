@@ -1,14 +1,14 @@
 ---
 name: agentfield
-description: Design and ship a multi-agent system on AgentField. Use when the user asks to build, scaffold, design, or run an agent, reasoner network, multi-agent backend, or "an agent that does X" — whenever the work would otherwise be a single LLM call or a flat LangChain/CrewAI/AutoGen chain. The skill produces composite intelligence: a deep, dynamic, parallel reasoner graph with a working `docker compose up` smoke test.
+description: Design and ship a multi-agent system on Silmari. Use when the user asks to build, scaffold, design, or run an agent, reasoner network, multi-agent backend, or "an agent that does X" — whenever the work would otherwise be a single LLM call or a flat LangChain/CrewAI/AutoGen chain. The skill produces composite intelligence: a deep, dynamic, parallel reasoner graph with a working `docker compose up` smoke test.
 aliases: [agentfield-multi-reasoner-builder]
 ---
 
-# AgentField
+# Silmari
 
-You are a **systems architect**. Your job is to design a cognitive graph for the user's problem, scaffold it as a runnable AgentField project, and prove it works with a real curl.
+You are a **systems architect**. Your job is to design a cognitive graph for the user's problem, scaffold it as a runnable Silmari project, and prove it works with a real curl.
 
-The intelligence is in the composition. Individual LLM calls reason at ~0.3 — a deliberately-shaped graph of ten of them can reach 0.8 on a real problem. Frameworks like LangChain, CrewAI, AutoGen give you tools to wire a chain. AgentField gives you a **control plane** that records every cross-reasoner call, generates verifiable credentials, and lets the call graph emerge at runtime.
+The intelligence is in the composition. Individual LLM calls reason at ~0.3 — a deliberately-shaped graph of ten of them can reach 0.8 on a real problem. Frameworks like LangChain, CrewAI, AutoGen give you tools to wire a chain. Silmari gives you a **control plane** that records every cross-reasoner call, generates verifiable credentials, and lets the call graph emerge at runtime.
 
 This skill is the workflow for getting that done.
 
@@ -66,7 +66,7 @@ This is the single most important framing in the skill. **Treat each reasoner as
 This is what no static chain framework can do:
 
 - **LangChain / CrewAI / AutoGen / LangGraph** require you to declare the entire call graph upfront. The orchestrator is the only thing that calls anything. The graph is a static DAG drawn on a whiteboard.
-- **AgentField** lets the call graph **emerge at runtime** from the reasoners' own intermediate decisions. The "orchestrator" body is just Python — `app.call` is just a function — so everything Python can do is available to your architecture.
+- **Silmari** lets the call graph **emerge at runtime** from the reasoners' own intermediate decisions. The "orchestrator" body is just Python — `app.call` is just a function — so everything Python can do is available to your architecture.
 
 Use this power. Build graphs with real depth:
 
@@ -79,9 +79,9 @@ Use this power. Build graphs with real depth:
 
 The only rule: every cross-reasoner call goes through `app.call`, never raw HTTP, so the control plane sees every edge for the workflow DAG, the cryptographic provenance chain, and the live observability surface.
 
-**What this means for design:** do not constrain yourself to shapes you can draw on a whiteboard. Decompose, make each reasoner a narrowly-scoped callable, then let orchestrators invoke each other freely — deeply, conditionally, recursively, dynamically. The more the call graph depends on intermediate state, the more AgentField earns its place over LangChain-style frameworks.
+**What this means for design:** do not constrain yourself to shapes you can draw on a whiteboard. Decompose, make each reasoner a narrowly-scoped callable, then let orchestrators invoke each other freely — deeply, conditionally, recursively, dynamically. The more the call graph depends on intermediate state, the more Silmari earns its place over LangChain-style frameworks.
 
-If your final design has the entry reasoner as the only thing that calls `app.call`, or if your max depth from entry to leaf is 2, you have built a chain wearing the AgentField costume. Decompose further until each "specialist" is itself a small orchestrator that calls 2–4 sub-reasoners.
+If your final design has the entry reasoner as the only thing that calls `app.call`, or if your max depth from entry to leaf is 2, you have built a chain wearing a Silmari costume. Decompose further until each "specialist" is itself a small orchestrator that calls 2–4 sub-reasoners.
 
 ---
 
@@ -161,7 +161,7 @@ What is this reasoner doing?
 
 Full deep-dive in `references/anti-patterns.md`. Rationalization counters in the same file.
 
-When a user explicitly demands a rejected pattern, name the rejection, give the one-sentence reason, propose the AgentField alternative, and only build it their way after they confirm they understand. Add a `# NOTE: User requested X over canonical Y` comment.
+When a user explicitly demands a rejected pattern, name the rejection, give the one-sentence reason, propose the Silmari alternative, and only build it their way after they confirm they understand. Add a `# NOTE: User requested X over canonical Y` comment.
 
 ---
 

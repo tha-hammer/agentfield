@@ -140,7 +140,7 @@ Install a skill into one or more coding-agent targets (Claude Code, Codex, Gemin
 
 ### `af skill print [skill-name]` / `af skill path`
 
-`print` dumps a SKILL.md to stdout; `path` returns the canonical skill store location (`~/.agentfield/skills`).
+`print` dumps a SKILL.md to stdout; `path` returns the canonical skill store location (under `AGENTFIELD_HOME` when set, otherwise the default `af` home skill store).
 
 ---
 

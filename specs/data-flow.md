@@ -1,6 +1,6 @@
 # Data Flow
 
-How data moves through the AgentField system — agent-to-agent communication, workflow execution, memory synchronization, and event streaming.
+How data moves through the Silmari system — agent-to-agent communication, workflow execution, memory synchronization, and event streaming.
 
 ## Agent-to-Agent Communication
 
@@ -46,7 +46,7 @@ Same flow — Go client sends to control plane, control plane routes to target a
 
 ## Workflow Execution DAG
 
-AgentField models multi-agent executions as Directed Acyclic Graphs (DAGs):
+Silmari models multi-agent executions as Directed Acyclic Graphs (DAGs):
 
 ```
         ┌─────────┐
@@ -102,7 +102,7 @@ Intermediate states: `PENDING_APPROVAL` (human-in-the-loop gate).
 
 ## Memory Synchronization
 
-AgentField maintains four memory scopes synchronized through the control plane:
+Silmari maintains four memory scopes synchronized through the control plane:
 
 ```
 ┌──────────────────────────────────────────┐

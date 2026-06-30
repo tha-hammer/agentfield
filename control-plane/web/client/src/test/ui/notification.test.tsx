@@ -45,7 +45,7 @@ describe("notification helpers", () => {
     notificationState.error.mockReset();
     notificationState.warning.mockReset();
     notificationState.info.mockReset();
-    document.title = "AgentField";
+    document.title = "Silmari";
   });
 
   it("resolves event kinds and returns the mapped glyph", () => {
@@ -71,14 +71,14 @@ describe("notification helpers", () => {
 
     expect(result.current.notifications).toHaveLength(1);
     expect(result.current.unreadCount).toBe(1);
-    expect(document.title).toBe("(1) AgentField");
+    expect(document.title).toBe("(1) Silmari");
     expect(notificationState.success).toHaveBeenCalledTimes(1);
 
     act(() => {
       result.current.markRead(id);
     });
     expect(result.current.unreadCount).toBe(0);
-    expect(document.title).toBe("AgentField");
+    expect(document.title).toBe("Silmari");
 
     act(() => {
       result.current.removeNotification(id);

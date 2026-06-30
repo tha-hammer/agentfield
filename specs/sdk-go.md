@@ -1,6 +1,6 @@
 # Go SDK
 
-The AgentField Go SDK enables building agents in Go that connect to the AgentField control plane. Uses the standard library `net/http` and provides agent lifecycle management, skill registration, LLM harness integration, DID/VC identity, and cross-agent communication.
+The Silmari Go SDK enables building agents in Go that connect to the Silmari control plane. Uses the standard library `net/http` and provides agent lifecycle management, skill registration, LLM harness integration, DID/VC identity, and cross-agent communication.
 
 **Module path:** `github.com/Agent-Field/agentfield/sdk/go`
 
@@ -135,7 +135,7 @@ Execution cancellation support. Allows in-flight executions to be cancelled via 
 
 ## Client Module (`client/`)
 
-HTTP client for the AgentField control plane API. Handles:
+HTTP client for the Silmari control plane API. Handles:
 - Agent registration and heartbeat
 - Cross-agent execution calls
 - Memory operations

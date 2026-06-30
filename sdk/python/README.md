@@ -1,6 +1,6 @@
-# AgentField Python SDK
+# Silmari Python SDK
 
-The AgentField SDK provides a production-ready Python interface for registering agents, executing workflows, and integrating with the AgentField control plane.
+The Silmari Python SDK provides a production-ready interface for registering agents, executing workflows, and integrating with the Silmari control plane while keeping the published Python package and import path stable.
 
 ## Installation
 
@@ -11,8 +11,8 @@ pip install agentfield
 To work on the SDK locally:
 
 ```bash
-git clone https://github.com/Agent-Field/agentfield.git
-cd agentfield/sdk/python
+git clone https://github.com/Agent-Field/agentfield.git silmari-sdk
+cd silmari-sdk/sdk/python
 python -m pip install -e .[dev]
 ```
 

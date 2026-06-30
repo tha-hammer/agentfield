@@ -97,7 +97,7 @@ When in doubt, use async. The cost is one extra polling loop in the smoke test �
 | `POST /api/v1/execute/<target>` | Sync. 90s timeout. |
 | `POST /api/v1/execute/async/<target>` | Async. Returns `execution_id`. **Canonical for multi-reasoner.** |
 | `GET /api/v1/executions/<id>` | Status + result of an async execution. `running` → `succeeded` / `failed`. |
-| `GET /api/v1/did/workflow/<workflow_id>/vc-chain` | Verifiable credential chain — the AgentField showpiece. |
+| `GET /api/v1/did/workflow/<workflow_id>/vc-chain` | Verifiable credential chain — the Silmari showpiece. |
 
 **Rule of thumb:** prefer the endpoint whose semantics are stable across versions. "Does my reasoner exist?" is a durable question. "Is my node healthy according to filter parameters X/Y/Z?" is version-dependent.
 

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-AgentField is a Kubernetes-style control plane for AI agents. It provides production infrastructure for deploying, orchestrating, and observing multi-agent systems with cryptographic identity and audit trails.
+Silmari is a Kubernetes-style control plane for AI agents. It provides production infrastructure for deploying, orchestrating, and observing multi-agent systems with developer-facing observability, cryptographic identity, and audit trails.
 
 **Architecture:** Three-tier monorepo
 - **Control Plane** (Go): Orchestration server providing REST/gRPC APIs, workflow execution, observability, and cryptographic identity
@@ -156,7 +156,7 @@ The UI dev server proxies API requests to the control plane. In production, the 
 - `embedded/` - Embedded assets (web UI dist)
 
 **Configuration:**
-- Environment variables take precedence over `config/agentfield.yaml`
+- Environment variables take precedence over Silmari's legacy-compatible `config/agentfield.yaml`
 - See `control-plane/.env.example` for all options
 - Key modes: `AGENTFIELD_MODE=local` (SQLite/BoltDB) vs `AGENTFIELD_STORAGE_MODE=postgresql` (cloud)
 
@@ -249,7 +249,7 @@ Storage interface is unified—services call storage layer methods, storage laye
 
 ### Configuration Precedence
 1. Environment variables (highest priority)
-2. Config file (`config/agentfield.yaml` or `AGENTFIELD_CONFIG_FILE` path)
+2. Legacy-compatible config file (`config/agentfield.yaml` or `AGENTFIELD_CONFIG_FILE` path)
 3. Defaults in code
 
 ### Agent-to-Agent Communication

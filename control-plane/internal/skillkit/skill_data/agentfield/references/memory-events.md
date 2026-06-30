@@ -4,7 +4,7 @@ Reasoners are the unit of intelligence. Triggers are the unit of arrival. **Memo
 
 Pick memory events when the system is **state-driven**: "when the risk score for any account crosses a threshold, re-underwrite"; "when warehouse stock for a SKU drops, re-plan fulfillment". The producer just writes to shared memory; the consumer subscribes to a key pattern and fires on the write. The two reasoners never reference each other — they're coupled only through the key namespace.
 
-This is the capability no static chain framework has: a LangGraph/CrewAI DAG must declare the edge from producer to consumer at build time. AgentField lets the edge **emerge from a memory write at runtime**.
+This is the capability no static chain framework has: a LangGraph/CrewAI DAG must declare the edge from producer to consumer at build time. Silmari lets the edge **emerge from a memory write at runtime**.
 
 This guide is the **local, offline** reference. It does not require a network fetch.
 

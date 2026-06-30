@@ -42,7 +42,7 @@ if __name__ == "__main__":
     print("  - Parallel execution planning")
     print("  - Web search integration (Tavily)")
     print("  - Citation tracking and structured findings")
-    print("  - Elegant and simple AgentField primitives")
+    print("  - Elegant and simple Silmari primitives")
 
     port_env = os.getenv("PORT")
     if port_env is None:

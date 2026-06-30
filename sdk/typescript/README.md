@@ -1,6 +1,6 @@
-# AgentField TypeScript SDK
+# Silmari TypeScript SDK
 
-The TypeScript SDK provides an idiomatic Node.js interface for building and running AgentField agents. It mirrors the Python SDK APIs, including AI, memory, discovery, and MCP tooling.
+The Silmari TypeScript SDK provides an idiomatic Node.js interface for building and running agents with Silmari. It mirrors the Python SDK APIs, including AI, memory, discovery, and MCP tooling, while keeping the published npm package stable.
 
 ## Installing
 ```bash
@@ -85,7 +85,7 @@ See `examples/ts_agent_nodes/tool_calling/` for a complete orchestrator + worker
 
 ## Execution Notes
 
-Log execution progress with `ctx.note(message: string, tags?: string[])` for fire-and-forget debugging in the AgentField UI.
+Log execution progress with `ctx.note(message: string, tags?: string[])` for fire-and-forget debugging in the Silmari UI.
 
 ```ts
 agent.reasoner('process', async (ctx) => {
@@ -96,7 +96,7 @@ agent.reasoner('process', async (ctx) => {
 });
 ```
 
-**Use `note()` for AgentField UI tracking, `console.log()` for local debugging.**
+**Use `note()` for Silmari UI tracking, `console.log()` for local debugging.**
 
 ## Human-in-the-Loop Approvals
 
@@ -116,7 +116,7 @@ agent.reasoner<{ task: string }, { status: string }>('deploy', async (ctx) => {
   const approvalRequestId = `req-${ctx.executionId}`;
 
   // Create the human-facing approval request in your approval service first,
-  // then pass its ID/URL to AgentField so the execution transitions to "waiting".
+  // then pass its ID/URL to Silmari so the execution transitions to "waiting".
   await approvalClient.requestApproval(ctx.executionId, {
     approvalRequestId,
     approvalRequestUrl: `https://approvals.example.com/review/${approvalRequestId}`,

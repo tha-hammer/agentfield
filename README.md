@@ -1,6 +1,6 @@
 <div align="center">
 
-# AgentField — The AI Backend
+# Silmari — The AI Backend
 
 ### **Build and scale AI agents like APIs. Deploy, observe, and prove.**
 
@@ -13,8 +13,8 @@
 [![Last Commit](https://img.shields.io/github/last-commit/Agent-Field/agentfield?style=flat&logo=git&logoColor=e8e5dc&color=0c0b09&labelColor=8b7355)](https://github.com/Agent-Field/agentfield/commits/main)
 [![Discord](https://img.shields.io/badge/discord-join%20us-0c0b09.svg?style=flat&labelColor=8b7355&logo=discord&logoColor=e8e5dc)](https://discord.gg/aBHaXMkpqh)
 
-<!-- All outbound agentfield.ai links must use UTM parameters, not direct URLs. See assets/utm-links.csv for the full list — target URLs there are for verification and reference only, always use the UTM version in the README. Update both the README and the CSV when adding or changing links. -->
-**[Docs](https://agentfield.ai/docs/learn?utm_source=github-readme&utm_campaign=github-readme&utm_id=github-readme-docs)** · **[Quick Start](https://agentfield.ai/docs/learn/quickstart?utm_source=github-readme&utm_campaign=github-readme&utm_id=github-readme-quickstart)** · **[Python SDK](https://agentfield.ai/docs/reference/sdks/python?utm_source=github-readme&utm_campaign=github-readme&utm_id=github-readme-python-sdk)** · **[Go SDK](https://agentfield.ai/docs/reference/sdks/go?utm_source=github-readme&utm_campaign=github-readme&utm_id=github-readme-go-sdk)** · **[TypeScript SDK](https://agentfield.ai/docs/reference/sdks/typescript?utm_source=github-readme&utm_campaign=github-readme&utm_id=github-readme-typescript-sdk)** · **[REST API](https://agentfield.ai/docs/reference/sdks/rest-api?utm_source=github-readme&utm_campaign=github-readme&utm_id=github-readme-rest-api)** · **[Examples](#built-with-agentfield)** · **[Discord](https://discord.gg/aBHaXMkpqh)**
+<!-- All outbound legacy agentfield.ai links must use UTM parameters, not direct URLs. See assets/utm-links.csv for the full list — target URLs there are for verification and reference only, always use the UTM version in the README. Update both the README and the CSV when adding or changing Silmari links. -->
+**[Docs](https://agentfield.ai/docs/learn?utm_source=github-readme&utm_campaign=github-readme&utm_id=github-readme-docs)** · **[Quick Start](https://agentfield.ai/docs/learn/quickstart?utm_source=github-readme&utm_campaign=github-readme&utm_id=github-readme-quickstart)** · **[Python SDK](https://agentfield.ai/docs/reference/sdks/python?utm_source=github-readme&utm_campaign=github-readme&utm_id=github-readme-python-sdk)** · **[Go SDK](https://agentfield.ai/docs/reference/sdks/go?utm_source=github-readme&utm_campaign=github-readme&utm_id=github-readme-go-sdk)** · **[TypeScript SDK](https://agentfield.ai/docs/reference/sdks/typescript?utm_source=github-readme&utm_campaign=github-readme&utm_id=github-readme-typescript-sdk)** · **[REST API](https://agentfield.ai/docs/reference/sdks/rest-api?utm_source=github-readme&utm_campaign=github-readme&utm_id=github-readme-rest-api)** · **[Examples](#built-with-silmari)** · **[Discord](https://discord.gg/aBHaXMkpqh)**
 
 </div>
 
@@ -24,7 +24,7 @@
 </a>
 </div>
 
-AgentField is an open-source control plane that lets you build AI agents callable by any service in your stack - frontends, backends, other agents, cron jobs - just like any other API. You write agent logic in Python, Go, or TypeScript. AgentField turns it into production infrastructure: routing, coordination, memory, async execution, and cryptographic audit trails. Every function becomes a REST endpoint. Every agent gets a cryptographic identity. Every decision is traceable.
+Silmari is an open-source control plane that lets you build AI agents callable by any service in your stack - frontends, backends, other agents, cron jobs - just like any other API. You write agent logic in Python, Go, or TypeScript. Silmari turns it into production infrastructure: routing, coordination, memory, async execution, developer-facing observability, and cryptographic audit trails. Every function becomes a REST endpoint. Every agent gets a cryptographic identity. Every decision is traceable.
 
 <div align="center">
 
@@ -42,7 +42,7 @@ https://github.com/user-attachments/assets/9fb7b1cf-26de-4b9b-9ba2-917252cc26ec
 curl -fsSL https://agentfield.ai/install.sh | bash
 ```
 
-Then in your coding agent, paste any spec with /agentfield :
+Then in your coding agent, paste any spec with the legacy-compatible `/agentfield` command:
 
 ```text
 /agentfield Build a claims processor with risk scoring, pattern detection,
@@ -136,11 +136,11 @@ docker run -p 8080:8080 agentfield/control-plane:latest
 
 </details>
 
-## How AgentField fits in your stack
+## How Silmari fits in your stack
 
-Most agent tools help you **write** agent logic. AgentField is what **runs** it in production — the operating layer that makes agents callable by software, durable across failures, governed by policy, and provable by audit.
+Most agent tools help you **write** agent logic. Silmari is the open-source runtime layer that makes agents callable by software, durable across failures, observable by developers, and governed by policy.
 
-|  | **Frameworks**<br><sub>LangChain · CrewAI · PydanticAI · OpenAI Agents SDK</sub> | **Workflow engines**<br><sub>Temporal · Airflow</sub> | **Visual builders**<br><sub>n8n · Zapier</sub> | **AgentField** |
+|  | **Frameworks**<br><sub>LangChain · CrewAI · PydanticAI · OpenAI Agents SDK</sub> | **Workflow engines**<br><sub>Temporal · Airflow</sub> | **Visual builders**<br><sub>n8n · Zapier</sub> | **Silmari** |
 |---|:-:|:-:|:-:|:-:|
 | Build agent logic (prompts, tools, structured output) | ● | — | — | ● |
 | Callable production ready REST APIs out-of-box | — | ◐ | ● | ● |
@@ -151,12 +151,12 @@ Most agent tools help you **write** agent logic. AgentField is what **runs** it 
 | Tamper-proof, verifiable audit per execution | — | — | — | **●** |
 | Harness orchestration (Claude Code · Codex · CLI) | — | — | — | **●** |
 | Identity and Access Management (IAM) for agents | — | — | — | ● |
-| Fleet observability (DAGs · metrics · traces) | — | ◐ | — | ● |
+| Developer observability (DAGs · metrics · traces) | — | ◐ | — | ● |
 | Multi-language SDKs (Python · Go · TypeScript) | ◐ | ● | — | ● |
 
 <sub>● full · ◐ partial · — not the focus</sub>
 
-**Use a framework when you're proving behavior.** Use AgentField when agents need to be production systems — callable by software, coordinating across services, surviving failures, and governed under audit.
+**Use a framework when you're proving behavior.** Use Silmari when agents need to be production systems — callable by software, coordinating across services, surviving failures, and governed under audit.
 
 [Full comparison & decision guide →](https://agentfield.ai/docs/learn/vs-frameworks?utm_source=github-readme&utm_campaign=github-readme&utm_id=github-readme-vs-frameworks)
 
@@ -329,7 +329,7 @@ Most agent tools help you **write** agent logic. AgentField is what **runs** it 
 
 </details>
 
-## Built With AgentField
+## Built With Silmari
 
 <table>
   <tr>
@@ -408,27 +408,27 @@ Most agent tools help you **write** agent logic. AgentField is what **runs** it 
 
 [See all examples →](https://www.agentfield.ai/examples?utm_source=github-readme&utm_campaign=github-readme&utm_id=github-readme-see-all-examples)
 
-Built something with AgentField? [Submit your project to be featured on the examples page](https://github.com/Agent-Field/agentfield/issues/new?template=community-project.md).
+Built something with Silmari? [Submit your project to be featured on the examples page](https://github.com/Agent-Field/agentfield/issues/new?template=community-project.md).
 
 ## See It In Action
 
 <div align="center">
-<img src="assets/UI.png" alt="AgentField Dashboard" width="100%" />
+<img src="assets/UI.png" alt="Silmari dashboard" width="100%" />
 <br/>
-<sub>Real-time workflow DAGs · Execution traces · Agent fleet management · Audit trails</sub>
+<sub>Real-time workflow DAGs · Execution traces · Runtime health · Audit trails</sub>
 </div>
 
 ## Architecture
 
 <div align="center">
-<img src="assets/arch.png" alt="AgentField Architecture" width="100%" />
+<img src="assets/arch.png" alt="Silmari architecture" width="100%" />
 </div>
 
 The control plane is a stateless Go service. Agents connect from anywhere - your laptop, Docker, Kubernetes. They register capabilities, the control plane routes calls between them, tracks execution as DAGs, and enforces policies. [Full architecture docs →](https://agentfield.ai/docs/learn/architecture?utm_source=github-readme&utm_campaign=github-readme&utm_id=github-readme-architecture)
 
 ## Learn More
 
-The thinking behind AgentField - essays on AI backends, harness orchestration, and the infrastructure production agents actually need.
+The thinking behind Silmari - essays on AI backends, harness orchestration, and the infrastructure production agents actually need.
 
 <table>
   <tr>
@@ -498,7 +498,7 @@ The thinking behind AgentField - essays on AI backends, harness orchestration, a
 
 ### Documentation
 
-- **[vs Agent Frameworks](https://agentfield.ai/docs/learn/vs-frameworks?utm_source=github-readme&utm_campaign=github-readme&utm_id=github-readme-vs-frameworks)** - How AgentField compares to LangChain, CrewAI, and workflow engines
+- **[Compare Silmari vs Agent Frameworks](https://agentfield.ai/docs/learn/vs-frameworks?utm_source=github-readme&utm_campaign=github-readme&utm_id=github-readme-vs-frameworks)** - How Silmari compares to LangChain, CrewAI, and workflow engines
 - **[Full Documentation](https://agentfield.ai/docs/learn?utm_source=github-readme&utm_campaign=github-readme&utm_id=github-readme-full-docs)**
 
 ## Community

@@ -31,7 +31,7 @@ python examples/python_agent_nodes/deep_research/main.py
 curl -X POST http://localhost:8080/reasoners/planning_execute_deep_research \
   -H "Content-Type: application/json" \
   -d '{
-    "research_question": "What is AgentField.ai?",
+    "research_question": "What is Silmari?",
     "max_depth": 3,
     "max_tasks_per_level": 5
   }'

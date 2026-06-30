@@ -1,6 +1,6 @@
 # Helm (Kubernetes)
 
-This chart installs the AgentField control plane and optional demo agents.
+This chart installs the Silmari control plane and optional demo agents.
 
 ## Quick start (recommended)
 

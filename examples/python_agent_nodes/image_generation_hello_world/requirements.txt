@@ -1,4 +1,4 @@
-# AgentField SDK with AI capabilities
+# Silmari SDK with AI capabilities
 agentfield
 
 # LiteLLM for multi-provider LLM support (required for image generation)

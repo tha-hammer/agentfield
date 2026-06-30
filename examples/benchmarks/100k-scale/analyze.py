@@ -3,7 +3,7 @@
 Agent Framework Benchmark Visualization
 
 Creates a single, clean, publication-quality figure comparing frameworks.
-AgentField SDKs shown in blue family (visually grouped), external frameworks in distinct colors.
+Silmari SDKs shown in blue family (visually grouped), external frameworks in distinct colors.
 """
 
 import json
@@ -28,9 +28,9 @@ plt.rcParams.update({
     "grid.linewidth": 0.5,
 })
 
-# Color palette: AgentField SDKs in blue gradient, external frameworks in distinct colors
+# Color palette: Silmari SDKs in blue gradient, external frameworks in distinct colors
 COLORS = {
-    # AgentField SDKs - Blue family (visually grouped)
+    # Silmari SDKs - Blue family (visually grouped)
     "AgentField_Go": "#0D2137",         # Deep navy
     "AgentField_TypeScript": "#1A5276", # Medium blue
     "AgentField_Python": "#3498DB",     # Bright blue
@@ -41,9 +41,9 @@ COLORS = {
 }
 
 LABELS = {
-    "AgentField_Go": "AgentField (Go)",
-    "AgentField_TypeScript": "AgentField (TS)",
-    "AgentField_Python": "AgentField (Python)",
+    "AgentField_Go": "Silmari (Go)",
+    "AgentField_TypeScript": "Silmari (TS)",
+    "AgentField_Python": "Silmari (Python)",
     "LangChain_Python": "LangChain",
     "CrewAI_Python": "CrewAI",
     "Mastra_TypeScript": "Mastra",
@@ -77,9 +77,9 @@ def create_benchmark_figure(results: dict, output_dir: Path):
     Create a single clean figure with 4 key metrics.
     """
     fig, axes = plt.subplots(2, 2, figsize=(14, 10))
-    fig.suptitle("Agent Framework Benchmark Comparison", fontsize=16, fontweight="bold", y=0.95)
+    fig.suptitle("Silmari Benchmark Comparison", fontsize=16, fontweight="bold", y=0.95)
 
-    # Framework order: AgentField SDKs first (grouped), then external
+    # Framework order: Silmari SDKs first (grouped), then external
     frameworks = [
         "AgentField_Go",
         "AgentField_TypeScript",

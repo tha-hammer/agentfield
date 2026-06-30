@@ -1,6 +1,6 @@
 # Security
 
-AgentField's security model provides cryptographic identity, verifiable audit trails, and access control for multi-agent systems. The implementation uses **W3C Decentralized Identifiers (DIDs)** and **Verifiable Credentials (VCs)** under the hood.
+Silmari's security model provides cryptographic identity, verifiable audit trails, and access control for multi-agent systems. The implementation uses **W3C Decentralized Identifiers (DIDs)** and **Verifiable Credentials (VCs)** under the hood.
 
 ## Architecture
 
@@ -36,7 +36,7 @@ AgentField's security model provides cryptographic identity, verifiable audit tr
 
 ## Decentralized Identity (DID)
 
-AgentField implements the W3C DID standard for agent identity. Each agent can have a unique DID that serves as its cryptographic identity in the system.
+Silmari implements the W3C DID standard for agent identity. Each agent can have a unique DID that serves as its cryptographic identity in the system.
 
 ### DID System Components
 
@@ -66,7 +66,7 @@ When enabled, the agent automatically initializes its DID during `Initialize()` 
 
 ## Verifiable Credentials (VCs)
 
-AgentField generates W3C Verifiable Credentials for agent executions, creating a cryptographically verifiable record of what ran, who ran it, and how a workflow evolved.
+Silmari generates W3C Verifiable Credentials for agent executions, creating a cryptographically verifiable record of what ran, who ran it, and how a workflow evolved.
 
 ### VC Generation
 
@@ -132,7 +132,7 @@ Each execution links to its parent, forming an append-only cryptographic chain. 
 
 ## Access Control & IAM
 
-AgentField implements first-class IAM for AI backends:
+Silmari implements first-class IAM for AI backends:
 
 ### Model
 
@@ -161,7 +161,7 @@ Access policies control which agents can call which reasoners and access which m
 
 ## Outbound API Identity
 
-Agents calling external APIs need identity too. AgentField provides outbound API identity so external services can verify which agent made a call:
+Agents calling external APIs need identity too. Silmari provides outbound API identity so external services can verify which agent made a call:
 
 - Agents can present DIDs when calling external services
 - External services can verify agent identity via control plane's DID resolution endpoint

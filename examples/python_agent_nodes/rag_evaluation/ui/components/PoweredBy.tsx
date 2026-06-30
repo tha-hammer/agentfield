@@ -13,8 +13,8 @@ export function PoweredBy({ className }: { className?: string }) {
       >
         <span>Powered by</span>
         <Image
-          src="/agentfield-logo-dark.svg"
-          alt="AgentField"
+          src="/silmari-logo-dark.svg"
+          alt="Silmari"
           width={80}
           height={16}
           className="opacity-80 hover:opacity-100 transition-opacity"

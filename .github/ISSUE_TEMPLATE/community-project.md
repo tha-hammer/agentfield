@@ -1,14 +1,14 @@
 ---
 name: "🌍 Community Project Submission"
-about: Submit your AgentField project for the public examples page
+about: Submit your Silmari project for the public examples page
 title: "[Community Project] "
 labels: ["community-project", "needs-review"]
 assignees: []
 ---
 
-Thanks for building with AgentField. Use this issue to submit a project for consideration on the public examples page:
+Thanks for building with Silmari. Use this issue to submit a project for consideration on the public examples page:
 
-https://www.agentfield.ai/examples
+[Silmari examples page](https://www.agentfield.ai/examples)
 
 We review submissions for relevance, quality, and clarity before listing them. Accepted projects may be added by a maintainer or through a follow-up PR.
 
@@ -38,10 +38,10 @@ We review submissions for relevance, quality, and clarity before listing them. A
 **What does it do?**
 <!-- 2-3 sentences about what your project does and the problem it solves -->
 
-**AgentField usage proof:**
-<!-- Link to a README section, source file, demo, or docs showing how AgentField is used -->
+**Silmari usage proof:**
+<!-- Link to a README section, source file, demo, or docs showing how Silmari is used -->
 
-**Which AgentField features does it use?**
+**Which Silmari features does it use?**
 <!-- Check all that apply -->
 - [ ] Reasoners (@app.reasoner)
 - [ ] Skills (@app.skill)
@@ -78,9 +78,9 @@ We review submissions for relevance, quality, and clarity before listing them. A
 <!-- How should we credit you? -->
 
 **Permission to feature:**
-- [ ] AgentField may list this project on https://www.agentfield.ai/examples
-- [ ] AgentField may use the submitted project name, description, attribution, and screenshot/demo media for the examples listing
+- [ ] Silmari may list this project on the [Silmari examples page](https://www.agentfield.ai/examples)
+- [ ] Silmari may use the submitted project name, description, attribution, and screenshot/demo media for the examples listing
 
 ---
 
-*Projects submitted here may be featured on https://www.agentfield.ai/examples. New submissions are labeled `needs-review`; accepted submissions may be relabeled `website-update` when they are ready to add to the website.*
+*Projects submitted here may be featured on the [Silmari examples page](https://www.agentfield.ai/examples). New submissions are labeled `needs-review`; accepted submissions may be relabeled `website-update` when they are ready to add to the website.*

@@ -1,4 +1,4 @@
-# Live Docs — agentfield.ai is the source of truth
+# Live Docs — Silmari currently publishes them at agentfield.ai
 
 The SDK and the control plane evolve. This skill ships with a frozen snapshot in `primitives-snapshot.md` for the offline case, but **the live docs are authoritative**. Fetch them first, every time.
 
@@ -6,7 +6,7 @@ The SDK and the control plane evolve. This skill ships with a frozen snapshot in
 
 ## The endpoints
 
-agentfield.ai publishes machine-readable docs at four levels of detail. Pick the cheapest one that answers your question.
+Silmari publishes machine-readable docs at `agentfield.ai` at four levels of detail. Pick the cheapest one that answers your question.
 
 | Endpoint | Size | When to fetch |
 |---|---|---|
@@ -37,7 +37,7 @@ agentfield.ai publishes machine-readable docs at four levels of detail. Pick the
    → Or just pull /llms-full.txt once if you'll need a wide surface
 ```
 
-**Cache.** Write the responses to `~/.agentfield/cache/<filename>` with a 24-hour TTL. Skip re-fetch if the file is newer than 24h AND the `Contract-Version` matches what you saw last time.
+**Cache.** Write the responses to your `AGENTFIELD_HOME` cache directory (or the default `af` home cache directory when `AGENTFIELD_HOME` is unset) with a 24-hour TTL. Skip re-fetch if the file is newer than 24h AND the `Contract-Version` matches what you saw last time.
 
 ---
 
@@ -48,7 +48,7 @@ The top-level structure of `llms.txt` lists these page categories:
 | Page | Slug | When you'd read it |
 |---|---|---|
 | Quickstart | `/learn/quickstart` | First-time scaffold |
-| Features | `/learn/features` | When the user asks "what does AgentField actually give me?" |
+| Features | `/learn/features` | When the user asks "what does Silmari actually give me?" |
 | Python SDK | `/reference/sdks/python` | Every Python build |
 | TypeScript SDK | `/reference/sdks/typescript` | TS builds |
 | Go SDK | `/reference/sdks/go` | Go builds |
@@ -85,7 +85,7 @@ Things that **used to** live in the bundled references but now live live:
 
 Read those local files first for coordination work; only fetch the live page if you suspect the surface drifted (the local guides note their verification basis). For *how to use* these capabilities and their ROI/vertical fit, see **`references/capability-playbook.md`**.
 
-The offline `primitives-snapshot.md` carries a frozen version of this content. **Use it only when `agentfield.ai` is unreachable.** Stamp every snapshot read with a warning in your output: "(offline snapshot from <date> — may be stale)".
+The offline `primitives-snapshot.md` carries a frozen version of this content. **Use it only when the published `agentfield.ai` docs are unreachable.** Stamp every snapshot read with a warning in your output: "(offline snapshot from <date> — may be stale)".
 
 ---
 
@@ -110,7 +110,7 @@ When designing, you should pick **one live example whose problem shape resembles
 
 In order of preference:
 
-1. Read the cached copy under `~/.agentfield/cache/`.
+1. Read the cached copy from your `AGENTFIELD_HOME` cache directory, or from the default `af` home cache directory when `AGENTFIELD_HOME` is unset.
 2. Read `references/primitives-snapshot.md` — frozen offline fallback.
 3. `af agent kb topics` / `af agent kb search "<topic>"` / `af agent kb guide --goal "<intent>"` — the af binary embeds a knowledge base of goal-oriented dev guides. See `references/cli-toolkit.md`.
 4. Grep `code/examples/` for the closest analog and read the actual code.

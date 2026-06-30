@@ -539,7 +539,9 @@ describe("WorkflowDAG graph components", () => {
       expect(onReady).toHaveBeenCalledTimes(1);
     });
 
-    expect(screen.getByText("react-flow-nodes:2")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("react-flow-nodes:2")).toBeInTheDocument();
+    });
 
     const controls = onReady.mock.calls[0][0] as {
       fitToView: (options?: { padding?: number }) => void;

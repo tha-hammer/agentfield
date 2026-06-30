@@ -123,7 +123,8 @@ function AccessManagementPageInner() {
           <AlertDescription className="space-y-2 text-sm">
             <p>
               Policy and tag-approval admin routes are only registered when VC
-              authorization is turned on. Enable it in control plane config,
+              authorization is turned on. Enable it in Silmari control plane
+              config,
               for example:
             </p>
             <ul className="list-disc pl-4 text-xs font-mono text-muted-foreground">
@@ -135,7 +136,7 @@ function AccessManagementPageInner() {
             </ul>
             <p className="text-xs text-muted-foreground">
               See <code className="rounded bg-muted px-1">control-plane/.env.example</code>{" "}
-              and your <code className="rounded bg-muted px-1">agentfield.yaml</code>{" "}
+              and your <code className="rounded bg-muted px-1">config/agentfield.yaml</code>{" "}
               <span className="font-sans">features.did.authorization</span> block.
             </p>
             <a
@@ -156,7 +157,7 @@ function AccessManagementPageInner() {
           <div className="flex items-center gap-1">
             <CardTitle className="text-sm font-medium">Browser admin token</CardTitle>
             <HintIcon label="About the admin token">
-              Same secret as server config (<code className="font-mono">admin_token</code> or{" "}
+              Same secret as Silmari server config (<code className="font-mono">admin_token</code> or{" "}
               <code className="font-mono">AGENTFIELD_AUTHORIZATION_ADMIN_TOKEN</code>). Not in the DB
               or Settings—only this browser. Sends <code className="font-mono">X-Admin-Token</code> when
               set.

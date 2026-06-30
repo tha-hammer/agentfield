@@ -7,7 +7,7 @@ RESULTS_DIR="$SCRIPT_DIR/results"
 mkdir -p "$RESULTS_DIR"
 
 echo "=============================================="
-echo "AgentField Scale Benchmark Suite"
+echo "Silmari Scale Benchmark Suite"
 echo "=============================================="
 echo ""
 

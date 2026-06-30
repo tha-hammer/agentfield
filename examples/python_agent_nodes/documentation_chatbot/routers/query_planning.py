@@ -40,7 +40,7 @@ async def plan_queries(question: str) -> QueryPlan:
         user=(
             f"Question: {question}\n\n"
             "Generate 3-5 diverse search queries that cover different angles of this question. "
-            "Use your knowledge of the product (AgentField) to include relevant technical terms. "
+            "Use your knowledge of the product (Silmari) to include relevant technical terms. "
             "Also specify the strategy: 'broad' (general exploration), 'specific' (targeted search), "
             "or 'mixed' (combination of both)."
         ),

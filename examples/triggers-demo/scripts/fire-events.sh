@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Fires signed test events at the local AgentField control plane so the
+# Fires signed test events at the local Silmari control plane so the
 # triggers-demo can be exercised end-to-end without standing up a real Stripe
 # or GitHub provider.
 #
@@ -268,7 +268,7 @@ post_event "stripe payment_intent.succeeded" \
 # ---------------------------------------------------------------------------
 
 github_body=$(cat <<'JSON'
-{"action":"opened","number":42,"pull_request":{"id":1234567890,"number":42,"state":"open","title":"AgentField triggers demo","html_url":"https://github.com/demo-org/demo-repo/pull/42","user":{"login":"demo-user","id":1000,"type":"User"},"draft":false,"merged":false},"repository":{"id":654321,"name":"demo-repo","full_name":"demo-org/demo-repo","private":false},"sender":{"login":"demo-user","type":"User"}}
+{"action":"opened","number":42,"pull_request":{"id":1234567890,"number":42,"state":"open","title":"Silmari triggers demo","html_url":"https://github.com/demo-org/demo-repo/pull/42","user":{"login":"demo-user","id":1000,"type":"User"},"draft":false,"merged":false},"repository":{"id":654321,"name":"demo-repo","full_name":"demo-org/demo-repo","private":false},"sender":{"login":"demo-user","type":"User"}}
 JSON
 )
 

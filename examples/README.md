@@ -1,6 +1,6 @@
-# AgentField Examples
+# Silmari Examples
 
-This directory contains example agents demonstrating AgentField's capabilities across multiple programming languages and use cases.
+This directory contains example agents demonstrating Silmari's capabilities across multiple programming languages and use cases.
 
 ## Quick Reference Table
 

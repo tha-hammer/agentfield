@@ -11,7 +11,7 @@
 
 ## 1. Summary
 
-This RFC proposes a new execution-observability model for AgentField where the execution detail page becomes the primary debugging surface for live and recent execution behavior.
+This RFC proposes a new execution-observability model for Silmari where the execution detail page becomes the primary debugging surface for live and recent execution behavior.
 
 The model separates observability into three distinct layers:
 

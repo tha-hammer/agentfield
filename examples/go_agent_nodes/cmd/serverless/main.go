@@ -34,7 +34,7 @@ func main() {
 	}
 
 	srv.RegisterReasoner("hello", func(ctx context.Context, input map[string]any) (any, error) {
-		name := strings.TrimSpace(defaultString(toString(input["name"]), "AgentField"))
+		name := strings.TrimSpace(defaultString(toString(input["name"]), "Silmari"))
 		return map[string]any{
 			"greeting": "Hello, " + name + "!",
 			"name":     name,

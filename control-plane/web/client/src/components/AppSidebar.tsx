@@ -44,7 +44,7 @@ function SidebarLogo() {
         <SidebarMenuButton
           asChild
           size="lg"
-          tooltip="AgentField"
+          tooltip="Silmari"
           className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
         >
           <Link to="/dashboard">

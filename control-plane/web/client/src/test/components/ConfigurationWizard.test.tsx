@@ -69,7 +69,7 @@ describe("ConfigurationWizard", () => {
     name: "Example package",
     version: "1.2.3",
     description: "Example description",
-    author: "AgentField",
+    author: "Silmari",
     tags: ["ops", "alpha"],
   };
 
@@ -99,6 +99,7 @@ describe("ConfigurationWizard", () => {
 
     expect(screen.getByRole("heading", { name: "Package Overview" })).toBeInTheDocument();
     expect(screen.getByText("Example package")).toBeInTheDocument();
+    expect(screen.getByText("Author: Silmari")).toBeInTheDocument();
     expect(screen.getByText("ops")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /next/i }));

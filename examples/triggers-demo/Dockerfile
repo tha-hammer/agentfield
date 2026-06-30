@@ -1,4 +1,4 @@
-# AgentField triggers-demo agent.
+# Silmari triggers-demo agent.
 #
 # Build context expectation: the repo root (so we can copy the local Python
 # SDK and install it in the image — the demo deliberately uses the in-tree

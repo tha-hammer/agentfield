@@ -2,7 +2,7 @@
 
 The hard rejections from `SKILL.md` in one-line form. Load when tempted to take a shortcut or when the user pushes back on a rejection.
 
-When the user (or your own drift) reaches for one of these, name the rule, give the one-sentence reason, propose the AgentField alternative. Don't apologize, don't equivocate.
+When the user (or your own drift) reaches for one of these, name the rule, give the one-sentence reason, propose the Silmari alternative. Don't apologize, don't equivocate.
 
 ---
 
@@ -12,7 +12,7 @@ When the user (or your own drift) reaches for one of these, name the rule, give 
 |---|---|---|
 | `httpx.post(other_agent_url, ...)` | `app.call(f"{app.node_id}.X", ...)` | The CP needs to see every call for DAG / VCs / replay / observability. Direct HTTP makes the system invisible. |
 | One giant reasoner doing 5 things | 5 reasoners + orchestrator with `app.call` + `asyncio.gather` | Granular decomposition is the forcing function for parallelism, observability, replayability. A monolithic reasoner is a script with extra steps. |
-| Static linear chain when the path depends on findings | Dynamic routing on intermediate state | Dynamic routing IS the meta-level intelligence that distinguishes AgentField. A static chain can be written in 30 lines of LangChain. |
+| Static linear chain when the path depends on findings | Dynamic routing on intermediate state | Dynamic routing IS the meta-level intelligence that distinguishes Silmari. A static chain can be written in 30 lines of LangChain. |
 | `app.ai(prompt=full_50_page_doc)` | Chunked-loop reasoner OR `app.ai(tools=[...])` OR `app.harness` | `.ai()` is single-shot. It cannot adapt or navigate. Stuffing a long doc truncates silently or blows the window. |
 | `while not confident: ...` (no cap) | `for _ in range(MAX): ...` with explicit break | Unbounded loops are how you get a $400 bug report. |
 | `app.ai(user=str(prev.model_dump()))` | `app.ai(user=format_as_prose(prev))` | LLMs reason over prose, not serialized JSON. JSON between code-and-LLM is fine; JSON between two LLMs is a smell. |
@@ -21,7 +21,7 @@ When the user (or your own drift) reaches for one of these, name the rule, give 
 | Multi-container fleet for what one node would do | One agent node, many reasoners | Reasoners are cheaper than containers. Only use multi-container when there's a real boundary (separate teams / languages / scaling / trust domains). |
 | `AIConfig(model="gpt-4o")` (hardcoded) | `AIConfig(model=os.getenv("AI_MODEL", "<default>"))` + per-request `model=` override | Users need to A/B test models per request without rebuilding the container. |
 | `app.call("slug.X", ...)` (hardcoded node id) | `app.call(f"{app.node_id}.X", ...)` | Rename via `AGENT_NODE_ID` breaks hardcoded calls. |
-| `.ai()` schema with no `confident` field, no fallback | Schema includes `confident: bool`, call site checks and escalates | A confidently-wrong propagated answer is the most expensive bug an AgentField system can ship. |
+| `.ai()` schema with no `confident` field, no fallback | Schema includes `confident: bool`, call site checks and escalates | A confidently-wrong propagated answer is the most expensive bug a Silmari system can ship. |
 | `app.harness(provider="claude-code")` in default scaffold | `app.ai(tools=[...])` or chunked-loop reasoner | Default container has no `claude` CLI. Will crash on first run. Use harness only if `af doctor` reports `harness_usable: true` AND Dockerfile installs the CLI AND main.py has `shutil.which()` guard. |
 | Long multi-step reasoning **inside** a triggered reasoner | Triggered reasoner is a router; fan out to `@app.reasoner` specialists via `app.call` + `asyncio.gather` | Triggers are entry surfaces. Keep them thin. |
 | Hardcoded webhook secret | `secret_env="STRIPE_WEBHOOK_SECRET"` | CP reads env at request time; value never leaves the host. |
@@ -43,7 +43,7 @@ When you (or the user) reach for one of these, recognize it and refuse.
 | "Just for the demo, a chain is fine" | The demo IS the proof. A weak demo proves nothing. |
 | "The LLM is smart enough to handle the whole document in one call" | The LLM is 0.3-grade. The architecture is 0.8-grade. Don't mix them up. |
 | "I'll add the harness later if it doesn't work" | You'll never know it doesn't work — `.ai()` will silently truncate. Start with the right primitive. |
-| "Routing is overkill, the workflow is always the same" | Then the workflow doesn't justify AgentField. Tell the user honestly. |
+| "Routing is overkill, the workflow is always the same" | Then the workflow doesn't justify Silmari. Tell the user honestly. |
 | "I'll skip the curl smoke test, the user will figure it out" | The user invoked a skill. The whole point is that they don't have to figure it out. |
 | "CLAUDE.md is bureaucratic, the code is self-documenting" | Code documents WHAT. CLAUDE.md documents WHY this is the architecture and what NOT to undo. The next agent needs both. |
 | "I'll ask 5 questions to be safe" | Ask 1–3 narrow ones only when the answer changes the architecture. State assumptions for the rest. |
@@ -60,7 +60,7 @@ Honor it — but only after you've named the rejection, explained why in one sen
 
 ```python
 # NOTE: User explicitly requested static chain over dynamic routing despite
-# the canonical AgentField pattern being dynamic. See README "Tradeoffs" section.
+# the canonical Silmari pattern being dynamic. See README "Tradeoffs" section.
 ```
 
 The point is to refuse drift, not be a tyrant. Conscious choices are fine. Drift is not.

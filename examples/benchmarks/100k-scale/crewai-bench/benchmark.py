@@ -2,7 +2,7 @@
 """
 CrewAI Benchmark
 
-Measures equivalent operations to AgentField for fair comparison.
+Measures equivalent operations to Silmari for fair comparison.
 Uses CrewAI's tool registration as the comparable operation.
 """
 

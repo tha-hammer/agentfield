@@ -1,6 +1,6 @@
-# AgentField Railway Deployment
+# Silmari Railway Deployment
 
-Deploy AgentField control plane with PostgreSQL and agent nodes on Railway using Docker images.
+Deploy the Silmari control plane with PostgreSQL and agent nodes on Railway using Docker images.
 
 ## Architecture
 
@@ -129,8 +129,8 @@ export AGENTFIELD_API_KEY=your-api-key
 af run
 
 # Or run an example directly
-git clone https://github.com/Agent-Field/agentfield.git
-cd agentfield/examples/ts-node-examples/init-example
+git clone https://github.com/Agent-Field/agentfield.git silmari-source
+cd silmari-source/examples/ts-node-examples/init-example
 npm install
 AGENTFIELD_URL=https://your-control-plane.up.railway.app \
 AGENTFIELD_API_KEY=your-api-key \
@@ -142,14 +142,14 @@ npm start
 For local development with Docker Compose:
 
 ```bash
-git clone https://github.com/Agent-Field/agentfield.git
-cd agentfield/deployments/docker
+git clone https://github.com/Agent-Field/agentfield.git silmari-source
+cd silmari-source/deployments/docker
 docker compose up
 ```
 
 ## Resources
 
-- [Documentation](https://github.com/Agent-Field/agentfield)
-- [Examples](https://github.com/Agent-Field/agentfield/tree/main/examples)
+- [Silmari repository](https://github.com/Agent-Field/agentfield)
+- [Silmari examples](https://github.com/Agent-Field/agentfield/tree/main/examples)
 - [Python SDK](https://pypi.org/project/agentfield/)
 - [TypeScript SDK](https://www.npmjs.com/package/@agentfield/sdk)

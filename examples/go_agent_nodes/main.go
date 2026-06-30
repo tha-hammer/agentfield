@@ -106,7 +106,7 @@ func main() {
 	hello.RegisterReasoner("demo_echo", func(ctx context.Context, input map[string]any) (any, error) {
 		message := strings.TrimSpace(fmt.Sprintf("%v", input["message"]))
 		if message == "" || message == "<nil>" {
-			message = "Agentfield"
+			message = "Silmari"
 		}
 
 		if hasControlPlane {

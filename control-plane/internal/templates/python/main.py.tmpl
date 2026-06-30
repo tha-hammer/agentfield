@@ -1,9 +1,8 @@
-"""{{.ProjectName}} — AgentField agent node.
+"""{{.ProjectName}} - Silmari agent node.
 
-When you build a multi-agent system, REWRITE this file and the reasoners
-package per the agentfield skill's scaffold-recipe. This template ships
-with one minimal entry reasoner so the scaffold runs end-to-end on
-day one.
+When you build a multi-agent system, rewrite this file and the reasoners
+package per the Silmari scaffold recipe. This template ships with one
+minimal entry reasoner so the scaffold runs end-to-end on day one.
 """
 
 import os
@@ -27,6 +26,6 @@ app = Agent(
 app.include_router(reasoners_router)
 
 if __name__ == "__main__":
-    # app.run() auto-detects CLI vs server mode (sdk/python/agentfield/agent.py:4194).
+    # app.run() auto-detects CLI vs server mode inside the Python SDK runtime.
     # auto_port=False keeps the port deterministic so the README curl works.
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "8001")), auto_port=False)

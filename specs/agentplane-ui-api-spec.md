@@ -1,12 +1,12 @@
-# AgentPlane UI-API Specification
+# Silmari UI API Specification
 
-**Purpose:** the exact HTTP surface AgentPlane must expose so the **existing** `control-plane/web/client`
+**Purpose:** the exact HTTP surface the Silmari UI API must expose so the **existing** `control-plane/web/client`
 UI is **copied in unchanged** and works. Derived from the UI's actual calls + the Go spec
 (`control-plane/internal/server/routes_ui.go`, handlers under `control-plane/internal/handlers/ui/`).
 
 **UI base URL:** `/api/ui/v1` (hard-coded; overridable via `VITE_API_BASE_URL`). A few flows call `/api/v1/*` directly.
 
-**Status legend:** ✅ implemented in AgentPlane · ♻️ exists under `/api/v1` (alias/reuse) · ❌ missing
+**Status legend:** ✅ implemented in Silmari · ♻️ exists under `/api/v1` (alias/reuse) · ❌ missing
 
 **Totals:** `/api/ui/v1` = 74 · `/api/ui/v2` = 2 · **core UI-API = 76**. Plus UI-observed extras (§3) and `/api/v1` extras the UI calls (§4).
 
@@ -193,11 +193,11 @@ Go route file / identity service). Confirm exact handler + shape, then implement
 
 ## Conformance approach
 
-Build each AgentPlane controller to match the Go handler's response **exactly** (same JSON keys,
+Build each Silmari controller to match the Go handler's response **exactly** (same JSON keys,
 status codes, error shapes), validated the same way Phase A validated `/execute` — diff against the
 Go handler output. The UI is the consumer of record: any shape mismatch breaks a page.
 
 **Drop-in gate:** the unedited `web/client` builds, loads at `/ui/`, and every page's `/api/ui/v1`
 call returns a Go-shaped 2xx (no 404/501 on a path the UI needs); the 6 SSE panels stream live.
 
-See also: `thoughts/searchable/shared/plans/agentplane-ui-api-worklist.md` (build sequence U1–U8).
+See also the historical planning note `thoughts/searchable/shared/plans/agentplane-ui-api-worklist.md` (build sequence U1–U8).

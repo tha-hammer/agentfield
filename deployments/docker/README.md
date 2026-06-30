@@ -1,6 +1,6 @@
 # Docker (local)
 
-This folder contains a small Docker Compose setup for evaluating AgentField locally:
+This folder contains a small Docker Compose setup for evaluating Silmari locally:
 
 - Control plane (UI + REST API)
 - PostgreSQL (pgvector)
@@ -48,11 +48,11 @@ curl -s http://localhost:8080/api/v1/did/workflow/$run_id/vc-chain | head -c 120
 
 ## Defaults (PostgreSQL)
 
-- User / password / database: `agentfield` / `agentfield` / `agentfield`
+The bundled `docker-compose.yml` keeps its default PostgreSQL credentials and database names for compatibility with the example stack.
 
 ## Anonymous Telemetry
 
-The Docker stack enables anonymous usage telemetry by default to help us improve AgentField. It records coarse product signals such as startup, agent registration, SDK language, runtime type, and execution status buckets.
+The Docker stack enables anonymous usage telemetry by default to help us improve Silmari. It records coarse product signals such as startup, agent registration, SDK language, runtime type, and execution status buckets.
 
 It does not collect prompts, inputs, outputs, logs, secrets, API keys, raw IP addresses, hostnames, user IDs, DIDs, or raw error text. Disable it with:
 

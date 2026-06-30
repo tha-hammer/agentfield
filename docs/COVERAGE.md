@@ -1,6 +1,6 @@
 # Coverage Guide
 
-AgentField assumes most of its code is written, tested, and reviewed by
+Silmari assumes most of its code is written, tested, and reviewed by
 AI coding agents. The coverage infrastructure is therefore designed
 around two goals:
 
@@ -155,7 +155,7 @@ the two required secrets are documented in `.github/workflows/coverage.yml`:
 
 ## Why a single blended number at all
 
-AgentField historically reported only per-surface numbers because a
+Silmari historically reported only per-surface numbers because a
 single monorepo percentage is easy to game. That is still the canonical
 view — the table in every PR comment lists every surface with a colour
 and an arrow.

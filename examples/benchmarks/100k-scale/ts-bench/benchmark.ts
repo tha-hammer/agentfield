@@ -1,5 +1,5 @@
 /**
- * AgentField TypeScript SDK Benchmark
+ * Silmari TypeScript SDK Benchmark
  *
  * Measures: registration time, memory footprint, cold start, request latency
  */
@@ -267,7 +267,7 @@ async function main() {
   };
 
   if (verbose) {
-    console.log('AgentField TypeScript SDK Benchmark');
+    console.log('Silmari TypeScript SDK Benchmark');
     console.log('====================================');
     console.log(`Handlers: ${numHandlers} | Iterations: ${iterations} | Warmup: ${warmup}\n`);
   }

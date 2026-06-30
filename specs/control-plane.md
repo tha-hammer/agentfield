@@ -1,6 +1,6 @@
 # Control Plane
 
-The central orchestration server for AgentField. Written in **Go** using the **Gin** web framework. It provides REST/gRPC APIs, workflow execution, agent discovery, cryptographic identity, and observability.
+The central orchestration server for Silmari. Written in **Go** using the **Gin** web framework. It provides REST/gRPC APIs, workflow execution, agent discovery, cryptographic identity, and observability.
 
 ## Entry Points
 
@@ -146,7 +146,7 @@ The event bus is the backbone of observability — workflow state changes, node 
 
 ## MCP Integration
 
-Model Context Protocol integration enables AgentField to interoperate with MCP-compatible tools and services. The integration layer provides MCP server/client capabilities for tool discovery and execution.
+Model Context Protocol integration enables Silmari to interoperate with MCP-compatible tools and services. The integration layer provides MCP server/client capabilities for tool discovery and execution.
 
 **Code reference:** `control-plane/internal/mcp/` — MCP protocol integration
 
@@ -155,7 +155,7 @@ Model Context Protocol integration enables AgentField to interoperate with MCP-c
 Uses [Viper](https://github.com/spf13/viper) for configuration with this precedence:
 
 1. Environment variables (highest)
-2. Config file (`config/agentfield.yaml`)
+2. Config file (`config/agentfield.yaml` by default, or another path via the legacy-compatible `AGENTFIELD_CONFIG_FILE`)
 3. Code defaults (lowest)
 
 **Reference:** `control-plane/.env.example` documents all supported variables.

@@ -1,8 +1,8 @@
 # Kubernetes (Kustomize)
 
-Plain Kubernetes manifests for evaluating AgentField without Helm.
+Plain Kubernetes manifests for evaluating Silmari without Helm.
 
-If you want a values-driven install, use `deployments/helm/agentfield`.
+If you want a values-driven install, use the [Helm chart docs](../helm/agentfield/README.md).
 
 ## Choose an overlay
 

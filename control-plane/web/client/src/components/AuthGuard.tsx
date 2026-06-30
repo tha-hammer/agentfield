@@ -61,7 +61,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
             <img src={logoDark} alt="" width={48} height={48} className="hidden size-12 rounded-xl object-cover dark:block" />
           </span>
           <div>
-            <h1 className="text-lg font-semibold tracking-tight">AgentField</h1>
+            <h1 className="text-lg font-semibold tracking-tight">Silmari</h1>
             <p className="text-sm text-muted-foreground">Control Plane</p>
           </div>
         </div>
@@ -71,7 +71,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
           <CardHeader className="space-y-1 pb-4">
             <CardTitle className="text-base">Authenticate</CardTitle>
             <CardDescription>
-              Enter your API key to access the control plane dashboard.
+              Enter your API key to access the Silmari control plane.
             </CardDescription>
           </CardHeader>
           <CardContent>

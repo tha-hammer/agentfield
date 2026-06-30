@@ -1,4 +1,4 @@
-# `.harness()` — First-Class Coding Agent Integration for AgentField
+# `.harness()` — First-Class Coding Agent Integration for Silmari
 
 > **Status**: Design Proposal  
 > **Author**: Architecture brainstorm  

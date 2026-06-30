@@ -58,7 +58,7 @@ function resolveHeaderCrumbs(
 ): { mode: "hidden" } | { mode: "trail"; crumbs: HeaderCrumb[] } {
   const section = longestSectionPath(pathname);
   if (!section) {
-    return { mode: "trail", crumbs: [{ label: "AgentField" }] };
+    return { mode: "trail", crumbs: [{ label: "Silmari" }] };
   }
 
   const sectionTitle = routeNames[section]!;

@@ -1,6 +1,6 @@
 # Python SDK
 
-The AgentField Python SDK enables building AI agents that connect to the AgentField control plane. Built on **FastAPI/Uvicorn**, it provides agent lifecycle management, reasoner registration, cross-agent memory, AI model integration, and cryptographic identity.
+The Silmari Python SDK enables building AI agents that connect to the Silmari control plane. Built on **FastAPI/Uvicorn**, it provides agent lifecycle management, reasoner registration, cross-agent memory, AI model integration, and cryptographic identity.
 
 **Package root:** `sdk/python/agentfield/`
 
@@ -107,7 +107,7 @@ Per-execution state management. Provides:
 
 ### Client (`client.py`)
 
-HTTP client for communicating with the AgentField control plane:
+HTTP client for communicating with the Silmari control plane:
 - Agent registration
 - Cross-agent calls (`app.call("other_agent.reasoner", ...)`)
 - Memory operations
