@@ -116,6 +116,7 @@ This manifest records the completed Silmari first-party rebrand on `integration/
 | control-plane/web/client/src/test/pages/AccessManagementPage.test.tsx | rebranded-with-preserved-identifiers | `cd control-plane/web/client && npm run test` |
 | control-plane/web/client/src/test/pages/AgentsPage.test.tsx | audited-no-change | ./scripts/check-silmari-rebrand.sh |
 | control-plane/web/client/src/test/pages/NewSettingsPage.restored.test.tsx | rebranded-with-preserved-identifiers | `cd control-plane/web/client && npm run test` |
+| control-plane/web/client/src/test/pages/triggers-pages.test.tsx | rebranded | `cd control-plane/web/client && npm run test` |
 | control-plane/web/client/src/test/services/didApi.test.ts | audited-no-change | ./scripts/check-silmari-rebrand.sh |
 | control-plane/web/client/src/test/services/identityApi.test.ts | audited-no-change | ./scripts/check-silmari-rebrand.sh |
 | control-plane/web/client/src/test/services/observabilityWebhookApi.test.ts | audited-no-change | ./scripts/check-silmari-rebrand.sh |
@@ -1949,7 +1950,7 @@ This manifest records the completed Silmari first-party rebrand on `integration/
 | Mirror and generated-template pass | pass | The embedded skill mirror is byte-identical with `skills/agentfield`, and targeted `control-plane/internal/templates` plus `control-plane/internal/skillkit` Go tests passed. |
 | Link and asset pass | pass | Published external links resolved under the fallback Markdown link check; the only non-zero result was the expected `http://localhost:8080` local-demo target with no server running. |
 | Formatting and lint pass | pass | Web and SDK TypeScript lint checks exited cleanly; the web client reported only pre-existing warnings under the checked-in suppressions baseline. |
-| Verification pass | pass | The full branch, manifest, scanner, mirror, README, template, web, Go, Python, TypeScript, aggregate, and clean-tree matrix is recorded below; runner-specific CGO, cache, and inherited env issues were neutralized with a non-root wrapper and are now evidence rather than blockers. |
+| Verification pass | pass | The full branch, manifest, scanner, mirror, README, template, web, Go, Python, TypeScript, aggregate, and clean-tree matrix is recorded below; the triggers-page empty-state assertion was stabilized, direct root-run Go and aggregate failures were recorded, and non-root reruns with isolated caches and inherited AgentField server vars unset passed. |
 
 
 ## Verification Commands
@@ -1959,8 +1960,8 @@ This manifest records the completed Silmari first-party rebrand on `integration/
 | `test "$(git rev-parse --abbrev-ref HEAD)" = "integration/silmari-rebrand-agentfield"` | `.` | 0 | Passed: verification and commit work ran on the required integration branch. |
 | `test -f docs/silmari-rebrand-manifest.md` | `.` | 0 | Passed: the required manifest exists in the branch-local docs tree. |
 | `python3 - <<'PY' (required manifest headings assertion)` | `.` | 0 | Passed: all required manifest headings are present, including Audited Files, Preserved Non-Silmari Identifiers, CodeCleanup Passes, Verification Commands, and Deferred Or Excluded. |
-| `git log -1 --pretty=%s (latest commit subject pattern assertion)` | `.` | 0 | Passed: the latest local commit subject matched the required Silmari/rebrand pattern. |
-| `lychee --version` | `.` | not-run | `lychee` is not installed in PATH on this runner, so the primary link checker could not run and the fallback Markdown link check was used instead. |
+| `git log -1 --pretty=%s (latest commit subject pattern assertion)` | `.` | 0 | Passed: the latest local commit subject matched the required Silmari/rebrand pattern before the final verification-only recommit. |
+| `lychee --version` | `.` | 127 | `lychee` is not installed in PATH on this runner, so the primary link checker could not run and the fallback Markdown link check was used instead. |
 | `npx --yes markdown-link-check README.md docs/**/*.md specs/*.md examples/**/*.md deployments/**/*.md skills/**/*.md` | `.` | 1 | Fallback link check examined the scoped Markdown corpus and only flagged `http://localhost:8080`, which is an expected local-demo target when no local server is running. |
 | `git diff --check` | `.` | 0 | No whitespace or patch-formatting issues remain in the rebrand worktree changes. |
 | `./scripts/sync-embedded-skills.sh --check` | `.` | 0 | Embedded skills are in sync with the canonical `skills/agentfield` source tree. |
@@ -1975,21 +1976,23 @@ This manifest records the completed Silmari first-party rebrand on `integration/
 | `./scripts/check-silmari-rebrand.sh` | `.` | 0 | Passed: scanned 1336 files, audited 167 changed files, validated 1327 preserved identifier rows, and confirmed skill mirror parity. |
 | `grep -q '^name = "agentfield"' sdk/python/pyproject.toml && grep -q '"name": "@agentfield/sdk"' sdk/typescript/package.json && grep -q '^module github.com/Agent-Field/agentfield/sdk/go' sdk/go/go.mod && grep -q 'from agentfield import Agent' control-plane/internal/templates/python/main.py.tmpl && grep -q '"@agentfield/sdk"' control-plane/internal/templates/typescript/package.json.tmpl` | `.` | 0 | Passed: package names, module paths, and generated template imports stayed on the published AgentField compatibility surfaces. |
 | `python3 - <<'PY' (changed-file coverage assertion)` | `.` | 0 | Passed: every changed in-scope rebrand file is represented in the manifest Audited Files table. |
-| `python3 - <<'PY' (runtime-sensitive file boundary assertion)` | `.` | 0 | Passed: the rebrand diff stayed within the documented documentation, template, skill, SDK metadata, and admin UI boundary. |
+| `python3 - <<'PY' (runtime-sensitive file boundary assertion)` | `.` | 1 | Documented mismatch: the PRD allowlist still omits broader rebrand-support files already on this branch, including `.gitignore`, scanner and manifest regression tests, `scripts/collect_silmari_rebrand_inventory.py`, SkillKit rebrand tests, and `thoughts/searchable/shared/plans/2026-06-29-silmari-rebrand-baseline-inventory.json`. |
 | `python3 -m pytest tests/test_check_silmari_rebrand.py tests/test_collect_silmari_rebrand_inventory.py` | `.` | 0 | Passed: 64 scanner and manifest inventory regression tests. |
 | `python3 -m pytest tests/test_docs_specs_branding.py` | `.` | 0 | Passed: 27 docs/spec manifest regression tests, including compatibility identifier and YAML-config assertions. |
 | `python3 -m pytest examples/tests/test_silmari_branding.py` | `.` | 0 | Passed: 18 example-surface branding regression tests. |
 | go test ./internal/templates/... | control-plane | 0 | Passed; generated README branding, compatibility identifiers, and template error assertions all succeeded. |
 | `go test ./internal/templates/... ./internal/skillkit/...` | `control-plane` | 0 | Passed targeted rebrand coverage for generated templates and the embedded skill mirror packages. |
-| `go test ./...` | `control-plane` | 0 | Passed when rerun through a non-root wrapper with `CGO_ENABLED=1`, writable caches under `/tmp/af-nonroot-home`, and `AGENTFIELD_SERVER` plus `AGENTFIELD_SERVER_URL` unset so SQLite-backed and localhost-sensitive tests saw the intended environment. |
+| `go test ./...` | `control-plane` | 1 | Initial root-run failure was isolated to `internal/packages`: `TestGitHubInstallerErrorCasesFinal/updateRegistry-ReadOnly` expects a permission error that root bypasses on a `0444` temp registry file. |
+| `runuser -u nobody -- env HOME=/tmp/af-rb12-nobody-full/home GOCACHE=/tmp/af-rb12-nobody-full/go-cache GOPATH=/tmp/af-rb12-nobody-full/go NPM_CONFIG_CACHE=/tmp/af-rb12-nobody-full/npm-cache CGO_ENABLED=1 bash -lc 'unset AGENTFIELD_SERVER AGENTFIELD_SERVER_URL; cd control-plane && go test ./...'` | `.` | 0 | Passed all control-plane packages in a non-root shell with isolated caches and inherited AgentField server vars unset. |
 | `go test ./...` | `sdk/go` | 0 | Passed all 6 Go SDK packages. |
 | `python3 -m pytest` | `sdk/python` | 0 | Passed: 1619 tests, 4 skipped, 12 deselected, and only the existing warnings baseline remained. |
 | `npm run lint` | `sdk/typescript` | 0 | Passed `tsc --noEmit` for the TypeScript SDK workspace. |
 | `CI=1 npm run test:core` | `sdk/typescript` | 0 | Passed: 65 test files and 609 tests. |
 | `npm run lint` | `control-plane/web/client` | 0 | Passed with the checked-in suppressions baseline; only pre-existing warnings remained in unrelated files. |
-| `npm run test` | `control-plane/web/client` | 0 | Passed: 131 test files and 662 tests after stabilizing the async Workflow DAG node-count assertion. |
+| `npm run test` | `control-plane/web/client` | 0 | Passed: 131 test files and 662 tests after waiting for the trigger sheet's async empty-events state before asserting the empty rebrand copy. |
 | `npm run build` | `control-plane/web/client` | 0 | Production build succeeded; Vite only reported the existing browser-data and chunk-size warnings. |
-| `./scripts/test-all.sh` | `.` | 0 | Passed when rerun through the same non-root CGO-enabled wrapper, writable caches, custom `COVERAGE_FILE`, and unset `AGENTFIELD_SERVER` plus `AGENTFIELD_SERVER_URL`; control-plane, SDK, web, and aggregate suites all completed successfully. |
+| `./scripts/test-all.sh` | `.` | 1 | Initial root-run failure matched the direct control-plane Go failure: `internal/packages` expected a read-only permission error that root bypassed. |
+| `runuser -u nobody -- env HOME=/tmp/af-rb12-nobody-aggregate/home GOCACHE=/tmp/af-rb12-nobody-aggregate/go-cache GOPATH=/tmp/af-rb12-nobody-aggregate/go NPM_CONFIG_CACHE=/tmp/af-rb12-nobody-aggregate/npm-cache CGO_ENABLED=1 COVERAGE_FILE=/tmp/af-rb12-nobody-aggregate/.coverage bash -lc 'unset AGENTFIELD_SERVER AGENTFIELD_SERVER_URL; ./scripts/test-all.sh'` | `.` | 0 | Passed the aggregate suite in a non-root shell: control-plane Go, Go SDK, Python SDK, TypeScript core, and 131 web test files all completed successfully. |
 | `python3 - <<'PY' (verification logging assertion)` | `.` | 0 | Passed: the manifest Verification Commands table includes scanner, mirror, Go, web, Python, TypeScript, and aggregate evidence rows. |
 | `git diff --exit-code` | `.` | 0 | Passed: post-commit tracked changes are clean. |
 | `git diff --cached --exit-code` | `.` | 0 | Passed: no staged changes remain after the local rebrand commit. |
