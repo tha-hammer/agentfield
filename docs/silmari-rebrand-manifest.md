@@ -7,6 +7,7 @@ The branch does not yet contain the full stacked surface rebrand history, so rem
 ## Audited Files
 | Path | Action | Verification |
 |---|---|---|
+| .gitignore | audited-no-change | visual review |
 | .github/BRANCH_PROTECTION.md | audited-no-change | ./scripts/check-silmari-rebrand.sh |
 | .github/ISSUE_TEMPLATE/community-project.md | audited-no-change | ./scripts/check-silmari-rebrand.sh |
 | .github/ISSUE_TEMPLATE/feature_request.md | audited-no-change | ./scripts/check-silmari-rebrand.sh |
@@ -25,6 +26,7 @@ The branch does not yet contain the full stacked surface rebrand history, so rem
 | README.md | audited-no-change | ./scripts/check-silmari-rebrand.sh |
 | SECURITY.md | audited-no-change | ./scripts/check-silmari-rebrand.sh |
 | SUPPORT.md | audited-no-change | ./scripts/check-silmari-rebrand.sh |
+| assets/utm-links.csv | audited-no-change | ./scripts/check-silmari-rebrand.sh |
 | control-plane/README.md | audited-no-change | ./scripts/check-silmari-rebrand.sh |
 | control-plane/internal/skillkit/skill_data/agentfield/SKILL.md | excluded-runtime-compatibility | ./scripts/check-silmari-rebrand.sh |
 | control-plane/internal/skillkit/skill_data/agentfield/commands/agentfield.md | excluded-runtime-compatibility | ./scripts/check-silmari-rebrand.sh |
@@ -626,6 +628,7 @@ The branch does not yet contain the full stacked surface rebrand history, so rem
 | SECURITY.md | agentfield.ai | published-link-target | Published URL target remains agentfield.ai until a verified Silmari replacement exists; covers all occurrences in this file. |
 | SUPPORT.md | AgentField | historical-record | Legacy branch snapshot intentionally keeps AgentField visible while stacked rebrand surfaces are reconciled; covers all occurrences in this file. |
 | SUPPORT.md | agentfield.ai | published-link-target | Published URL target remains agentfield.ai until a verified Silmari replacement exists; covers all occurrences in this file. |
+| assets/utm-links.csv | agentfield.ai | published-link-target | Published UTM inventory targets remain on agentfield.ai until verified Silmari replacements exist; covers all occurrences in this file. |
 | control-plane/README.md | AGENTFIELD | env-var | Environment variable token remains AGENTFIELD for backward-compatible configuration examples; covers all occurrences in this file. |
 | control-plane/README.md | AgentField | historical-record | Legacy branch snapshot intentionally keeps AgentField visible while stacked rebrand surfaces are reconciled; covers all occurrences in this file. |
 | control-plane/README.md | agentfield | skill-or-repo-slug | Repository or skill slug compatibility keeps agentfield stable for existing paths and references; covers all occurrences in this file. |
@@ -1522,12 +1525,12 @@ The branch does not yet contain the full stacked surface rebrand history, so rem
 | Command | Working Directory | Exit Code | Result |
 |---|---|---|---|
 | lychee --version | . | not-run | lychee is not installed in PATH on this runner, so the primary link checker could not run. |
-| npx --yes markdown-link-check docs/silmari-rebrand-manifest.md | . | 0 | Fallback link check ran successfully; the manifest currently contains no hyperlinks. |
+| npx --yes markdown-link-check docs/silmari-rebrand-manifest.md | . | 1 | Fallback link check flagged the literal `http://localhost:8080` compatibility target recorded in the manifest inventory. |
 | npx --yes markdown-link-check README.md | . | 1 | Fallback link check examined 77 links and only flagged http://localhost:8080 because no local demo server was running during verification. |
-| python3 -m pytest tests/test_check_silmari_rebrand.py | . | 0 | Passed 32 scanner contract and property tests covering changed-file coverage, preserved-row validation, and manifest self-scan exclusions. |
+| python3 -m pytest tests/test_check_silmari_rebrand.py | . | 0 | Passed 40 scanner contract and property tests covering merge-base changed-file auditing, assets/utm-links scanning, preserved-row validation, and manifest self-scan exclusions. |
 | python3 -m pytest tests/test_collect_silmari_rebrand_inventory.py | . | 0 | Passed 24 inventory regression tests after the manifest reconciliation changes. |
 | ./scripts/sync-embedded-skills.sh --check | . | 0 | Embedded skills are in sync with the source skill tree. |
-| ./scripts/check-silmari-rebrand.sh | . | 0 | Passed with 1333 scanned files, 6 changed files, and 914 preserved identifier rows. |
+| ./scripts/check-silmari-rebrand.sh | . | 0 | Passed with 1334 scanned files, 7 changed files, and 915 preserved identifier rows. |
 
 ## Deferred Or Excluded
 - docs/silmari-rebrand-manifest.md remains validation input and is excluded from old-brand match scanning.

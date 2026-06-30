@@ -40,6 +40,41 @@ def markdown_table(headers: tuple[str, ...], rows: list[tuple[str, ...]]) -> str
     return "\n".join([header, separator, *body])
 
 
+def default_codecleanup_rows() -> list[tuple[str, str, str]]:
+    return [
+        (
+            "Brand surface pass",
+            "not-applicable",
+            "Later rebrand slices update visible prose and UI copy.",
+        ),
+        (
+            "Compatibility pass",
+            "pass",
+            "The scanner enforces allowed preserved-identifier categories.",
+        ),
+        (
+            "Mirror and generated-template pass",
+            "pass",
+            "The scanner checks embedded skill mirror parity.",
+        ),
+        (
+            "Link and asset pass",
+            "not-applicable",
+            "Link and asset relabeling lands in later slices.",
+        ),
+        (
+            "Formatting and lint pass",
+            "pass",
+            "The validation slice keeps manifest, scanner, and tests formatted.",
+        ),
+        (
+            "Verification pass",
+            "pass",
+            "Contract tests exercise the scanner behaviors for this slice.",
+        ),
+    ]
+
+
 def build_manifest(
     *,
     summary: str = "Contract coverage for the manifest and scanner slice.",
@@ -54,38 +89,7 @@ def build_manifest(
     if preserved_rows is None:
         preserved_rows = []
     if codecleanup_rows is None:
-        codecleanup_rows = [
-            (
-                "Brand surface pass",
-                "not-applicable",
-                "Later rebrand slices update visible prose and UI copy.",
-            ),
-            (
-                "Compatibility pass",
-                "pass",
-                "The scanner enforces allowed preserved-identifier categories.",
-            ),
-            (
-                "Mirror and generated-template pass",
-                "pass",
-                "The scanner checks embedded skill mirror parity.",
-            ),
-            (
-                "Link and asset pass",
-                "not-applicable",
-                "Link and asset relabeling lands in later slices.",
-            ),
-            (
-                "Formatting and lint pass",
-                "pass",
-                "The validation slice keeps manifest, scanner, and tests formatted.",
-            ),
-            (
-                "Verification pass",
-                "pass",
-                "Contract tests exercise the scanner behaviors for this slice.",
-            ),
-        ]
+        codecleanup_rows = default_codecleanup_rows()
     if verification_rows is None:
         verification_rows = [
             (
@@ -168,6 +172,44 @@ def seed_skill_tree(root: Path, *, mirrored: bool) -> None:
     write_text(root, SKILL_MIRROR_REL, mirror_body)
 
 
+def init_git_repo(root: Path) -> None:
+    subprocess.run(
+        ["git", "init", "-b", "main"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "Codex Test"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.email", "codex@example.com"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    subprocess.run(
+        ["git", "add", "."],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    subprocess.run(
+        ["git", "commit", "-m", "Initial test state"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+
 def copy_public_cli(root: Path) -> None:
     write_text(root, Path("scripts") / SCRIPT_PATH.name, SCRIPT_PATH.read_text(encoding="utf-8"))
     (root / "scripts" / SCRIPT_PATH.name).chmod(
@@ -207,6 +249,7 @@ class CheckSilmariRebrandContractTests(unittest.TestCase):
         write_text(root, MANIFEST_PATH, manifest_text)
         write_sync_script(root)
         seed_skill_tree(root, mirrored=mirrored)
+        init_git_repo(root)
         return tmpdir
 
     def test_empty_manifest_reports_missing_required_heading(self) -> None:
@@ -215,6 +258,7 @@ class CheckSilmariRebrandContractTests(unittest.TestCase):
             write_text(root, MANIFEST_PATH, "")
             write_sync_script(root)
             seed_skill_tree(root, mirrored=True)
+            init_git_repo(root)
 
             result = run_cli(root)
 
@@ -261,6 +305,67 @@ class CheckSilmariRebrandContractTests(unittest.TestCase):
         self.assertIn("README.md", output)
         self.assertNotIn(f"README.md:1: {LEGACY_BRAND}", output)
 
+    def test_changed_file_coverage_uses_merge_base_without_stack_refs(self) -> None:
+        manifest_text = build_manifest()
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+            write_text(root, "README.md", "Baseline Silmari copy.\n")
+            subprocess.run(
+                ["git", "add", "README.md"],
+                cwd=root,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            subprocess.run(
+                ["git", "commit", "-m", "Add README baseline"],
+                cwd=root,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            subprocess.run(
+                ["git", "checkout", "-b", "feature/no-stack-ref"],
+                cwd=root,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            write_text(root, "README.md", "Updated Silmari copy on feature branch.\n")
+            subprocess.run(
+                ["git", "commit", "-am", "Update README on feature branch"],
+                cwd=root,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Changed files missing from Audited Files:", output)
+        self.assertIn("README.md", output)
+        self.assertNotIn("Unable to determine changed files", output)
+
+    def test_assets_utm_links_csv_is_scanned_for_published_link_targets(self) -> None:
+        manifest_text = build_manifest()
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+            write_text(
+                root,
+                "assets/utm-links.csv",
+                "Link Name,Target URL,Full UTM URL\n"
+                f"Docs,https://{LOWER_LEGACY}.ai/docs/learn,https://{LOWER_LEGACY}.ai/docs/learn?utm_source=github\n",
+            )
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Files with identifiers missing from Audited Files:", output)
+        self.assertIn("assets/utm-links.csv", output)
+
     def test_repo_under_build_ancestor_still_scans_repo_relative_docs_file(self) -> None:
         manifest_text = build_manifest(
             audited_rows=[
@@ -283,6 +388,7 @@ class CheckSilmariRebrandContractTests(unittest.TestCase):
                 "docs/unmanifested.md",
                 f"Silmari still mentions {LEGACY_BRAND} under a build ancestor.\n",
             )
+            init_git_repo(root)
 
             result = run_cli(root)
 
@@ -634,6 +740,58 @@ class CheckSilmariRebrandContractTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("Reason must be concrete", output)
 
+    def test_codecleanup_passes_require_all_six_required_rows(self) -> None:
+        manifest_text = build_manifest(codecleanup_rows=default_codecleanup_rows()[:-1])
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("CodeCleanup Passes must list the six required pass names in order.", output)
+
+    def test_codecleanup_table_requires_rows(self) -> None:
+        manifest_text = build_manifest(codecleanup_rows=[])
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("CodeCleanup Passes must list the six required pass names in order.", output)
+
+    def test_unknown_codecleanup_result_is_rejected(self) -> None:
+        codecleanup_rows = default_codecleanup_rows()
+        codecleanup_rows[0] = (
+            "Brand surface pass",
+            "pending",
+            "Visible prose still needs review.",
+        )
+        manifest_text = build_manifest(codecleanup_rows=codecleanup_rows)
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Unknown CodeCleanup result for Brand surface pass: pending", output)
+
+    def test_codecleanup_row_requires_notes(self) -> None:
+        codecleanup_rows = default_codecleanup_rows()
+        codecleanup_rows[0] = ("Brand surface pass", "pass", "")
+        manifest_text = build_manifest(codecleanup_rows=codecleanup_rows)
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("CodeCleanup row is missing Notes for Brand surface pass.", output)
+
     def test_manifest_cannot_self_cover_preserved_identifiers(self) -> None:
         manifest_text = build_manifest(
             preserved_rows=[
@@ -668,6 +826,32 @@ class CheckSilmariRebrandContractTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("Verification Commands table must contain at least one row.", output)
 
+    def test_not_run_verification_with_fallback_row_is_accepted(self) -> None:
+        manifest_text = build_manifest(
+            verification_rows=[
+                (
+                    "lychee --version",
+                    ".",
+                    "not-run",
+                    "lychee is not installed in PATH on this runner, so the primary link checker could not run.",
+                ),
+                (
+                    "npx --yes markdown-link-check README.md",
+                    ".",
+                    "0",
+                    "Fallback link check ran successfully on README.md.",
+                ),
+            ]
+        )
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("Silmari rebrand check passed.", output)
+
     def test_not_run_verification_command_requires_dependency_reason(self) -> None:
         manifest_text = build_manifest(
             verification_rows=[
@@ -683,6 +867,24 @@ class CheckSilmariRebrandContractTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn(
             "Verification command row must explain the missing dependency for lychee --version.",
+            output,
+        )
+
+    def test_verification_command_requires_numeric_or_not_run_exit_code(self) -> None:
+        manifest_text = build_manifest(
+            verification_rows=[
+                ("./scripts/check-silmari-rebrand.sh", ".", "zero", "Scanner passed cleanly."),
+            ]
+        )
+        with self.make_repo(manifest_text) as tmpdir_name:
+            root = Path(tmpdir_name)
+
+            result = run_cli(root)
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(
+            "Verification command row has invalid Exit Code for ./scripts/check-silmari-rebrand.sh: zero",
             output,
         )
 

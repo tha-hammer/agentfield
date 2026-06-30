@@ -65,6 +65,7 @@ SCAN_ROOTS = (
     "SECURITY.md",
     "CLAUDE.md",
     ".github",
+    "assets/utm-links.csv",
     "docs",
     "specs",
     "examples",
@@ -124,12 +125,6 @@ REQUIRED_CODECLEANUP_PASSES = (
 )
 
 ALLOWED_PASS_RESULTS = {"pass", "fail", "not-applicable"}
-
-REBRAND_STACK_BASE_REFS = (
-    "integration/b9915df1-silmari-rebrand-agentfield",
-    "issue/b9915df1-02-manifest-scanner-vertical-slice",
-)
-
 
 @dataclass(frozen=True)
 class AuditedFile:
@@ -513,7 +508,7 @@ def validate_manifest_shape(text: str, manifest: Manifest) -> list[str]:
             errors.append(f"Unknown CodeCleanup result for {pass_name}: {result}")
         if not notes:
             errors.append(f"CodeCleanup row is missing Notes for {pass_name}.")
-    if codecleanup_rows and tuple(seen_passes) != REQUIRED_CODECLEANUP_PASSES:
+    if tuple(seen_passes) != REQUIRED_CODECLEANUP_PASSES:
         errors.append("CodeCleanup Passes must list the six required pass names in order.")
 
     _, verification_rows, table_errors = validate_table_shape(
@@ -778,38 +773,24 @@ def build_preserved_identifier_coverage_view(
     )
 
 
-def discover_changed_file_base_ref(repo_root: Path) -> str | None:
-    for ref in REBRAND_STACK_BASE_REFS:
-        ref_proc = subprocess.run(
-            ["git", "rev-parse", "--verify", "--quiet", ref],
-            cwd=repo_root,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if ref_proc.returncode != 0:
-            continue
-
-        head_proc = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=repo_root,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if head_proc.returncode != 0:
-            return None
-
-        if ref_proc.stdout.strip() == head_proc.stdout.strip():
-            continue
-        return ref
-    return None
-
-
 def collect_changed_files(repo_root: Path) -> tuple[str, ...]:
-    base_ref = discover_changed_file_base_ref(repo_root)
-    if base_ref is None:
-        return ()
+    base_proc = subprocess.run(
+        ["git", "merge-base", "HEAD", "main"],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if base_proc.returncode != 0:
+        detail = base_proc.stderr.strip() or base_proc.stdout.strip() or "git merge-base HEAD main failed"
+        raise RuntimeError(
+            f"Unable to determine changed files from git merge-base HEAD main: {detail}"
+        )
+    base_ref = base_proc.stdout.strip()
+    if not base_ref:
+        raise RuntimeError(
+            "Unable to determine changed files from git merge-base HEAD main: no merge base was returned."
+        )
 
     diff_proc = subprocess.run(
         ["git", "diff", "--name-only", f"{base_ref}..HEAD"],
@@ -819,7 +800,10 @@ def collect_changed_files(repo_root: Path) -> tuple[str, ...]:
         check=False,
     )
     if diff_proc.returncode != 0:
-        return ()
+        detail = diff_proc.stderr.strip() or diff_proc.stdout.strip() or "git diff failed"
+        raise RuntimeError(
+            f"Unable to determine changed files from git diff --name-only {base_ref}..HEAD: {detail}"
+        )
 
     return tuple(
         sorted(
@@ -931,7 +915,11 @@ def main(repo_root: Path) -> int:
 
     scan_files = collect_scan_files(repo_root)
     matches = find_brand_matches(repo_root, scan_files)
-    changed_files = collect_changed_files(repo_root)
+    try:
+        changed_files = collect_changed_files(repo_root)
+    except RuntimeError as exc:
+        changed_files = ()
+        manifest_errors.append(str(exc))
     audited_view = build_audited_file_coverage_view(changed_files, matches, manifest)
     coverage_view = build_preserved_identifier_coverage_view(
         matches, manifest, len(scan_files)
