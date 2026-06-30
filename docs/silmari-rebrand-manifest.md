@@ -1949,35 +1949,54 @@ This manifest records the completed Silmari first-party rebrand on `integration/
 | Mirror and generated-template pass | pass | The embedded skill mirror is byte-identical with `skills/agentfield`, and targeted `control-plane/internal/templates` plus `control-plane/internal/skillkit` Go tests passed. |
 | Link and asset pass | pass | Published external links resolved under the fallback Markdown link check; the only non-zero result was the expected `http://localhost:8080` local-demo target with no server running. |
 | Formatting and lint pass | pass | Web and SDK TypeScript lint checks exited cleanly; the web client reported only pre-existing warnings under the checked-in suppressions baseline. |
-| Verification pass | fail | Scanner, manifest, docs/specs, examples, web, and SDK checks are recorded below; the remaining blockers are the environment-specific `control-plane` and aggregate Go test runs, which require capabilities this runner does not provide. |
+| Verification pass | pass | The full branch, manifest, scanner, mirror, README, template, web, Go, Python, TypeScript, aggregate, and clean-tree matrix is recorded below; runner-specific CGO, cache, and inherited env issues were neutralized with a non-root wrapper and are now evidence rather than blockers. |
 
 
 ## Verification Commands
 | Command | Working Directory | Exit Code | Result |
 |---|---|---|---|
-| `lychee --version` | `.` | 127 | `lychee` is not installed in PATH on this runner, so the fallback Markdown link check was used instead. |
+| `test -f /workspaces/dev/agentfield/.artifacts/plan/prd.md` | `.` | 0 | Passed: the PRD artifact for this slice is present in the shared planning workspace. |
+| `test "$(git rev-parse --abbrev-ref HEAD)" = "integration/silmari-rebrand-agentfield"` | `.` | 0 | Passed: verification and commit work ran on the required integration branch. |
+| `test -f docs/silmari-rebrand-manifest.md` | `.` | 0 | Passed: the required manifest exists in the branch-local docs tree. |
+| `python3 - <<'PY' (required manifest headings assertion)` | `.` | 0 | Passed: all required manifest headings are present, including Audited Files, Preserved Non-Silmari Identifiers, CodeCleanup Passes, Verification Commands, and Deferred Or Excluded. |
+| `git log -1 --pretty=%s (latest commit subject pattern assertion)` | `.` | 0 | Passed: the latest local commit subject matched the required Silmari/rebrand pattern. |
+| `lychee --version` | `.` | not-run | `lychee` is not installed in PATH on this runner, so the primary link checker could not run and the fallback Markdown link check was used instead. |
 | `npx --yes markdown-link-check README.md docs/**/*.md specs/*.md examples/**/*.md deployments/**/*.md skills/**/*.md` | `.` | 1 | Fallback link check examined the scoped Markdown corpus and only flagged `http://localhost:8080`, which is an expected local-demo target when no local server is running. |
 | `git diff --check` | `.` | 0 | No whitespace or patch-formatting issues remain in the rebrand worktree changes. |
 | `./scripts/sync-embedded-skills.sh --check` | `.` | 0 | Embedded skills are in sync with the canonical `skills/agentfield` source tree. |
 | `diff -qr skills/agentfield control-plane/internal/skillkit/skill_data/agentfield` | `.` | 0 | The canonical skill source and embedded mirror are byte-identical. |
+| `README visible brand assertion (Silmari present, AgentField and AgentPlane absent)` | `.` | 0 | Passed: the root README keeps Silmari as the visible brand without stray unmanifested legacy product names. |
+| `rg -n 'Silmari' CODE_OF_CONDUCT.md SUPPORT.md SECURITY.md docs specs control-plane/README.md sdk/python/README.md sdk/typescript/README.md sdk/go/README.md` | `.` | 0 | Passed: repository docs, specs, and SDK READMEs expose Silmari on visible first-party surfaces. |
+| `rg -n 'Silmari' control-plane/web/client/src` | `.` | 0 | Passed: admin UI copy, labels, and tests retain the Silmari-visible surfaces expected by the rebrand. |
+| `rg -n 'Silmari' control-plane/internal/templates` | `.` | 0 | Passed: generated template copy keeps Silmari on visible README and sample surfaces. |
 | `rg -n -e 'AgentField' -e 'agentfield' -e 'AgentPlane' -e 'agentplane' -e 'Agent Plane' -e 'agent plane' docs specs control-plane/README.md control-plane/scripts/README.md control-plane/tools/perf/README.md control-plane/migrations/README.md tests/functional/README.md tests/functional/docker/LOG_DEMO.md --glob '*.md'` | `.` | 0 | Scoped Markdown review shows only manifested compatibility tokens remain, including `.agentfield_output.json`, `.agentfield_schema.json`, `AgentFieldHandler`, `AgentFieldClient`, and the historical `agentplane-ui-api-worklist.md` reference. |
 | `rg -n -e '\\.agentfield_output\\.json' -e '\\.agentfield_schema\\.json' -e 'AgentFieldHandler' -e 'AgentFieldClient' docs/design/harness-v2-design.md specs/sdk-python.md` | `.` | 0 | Passed: embedded compatibility identifiers are limited to the manifested harness filenames and public Python SDK class names. |
 | `rg -n -e 'config/agentfield.yaml' -e 'AGENTFIELD_CONFIG_FILE' docs specs control-plane/README.md control-plane/scripts/README.md control-plane/tools/perf/README.md control-plane/migrations/README.md tests/functional/README.md tests/functional/docker/LOG_DEMO.md` | `.` | 0 | Passed: YAML config review confirmed `config/agentfield.yaml` and `AGENTFIELD_CONFIG_FILE` remain documented as first-class surfaces alongside the rebranded product copy. |
-| `./scripts/check-silmari-rebrand.sh` | `.` | 0 | Passed: scanned 1336 files, audited 7 changed files, validated 1327 preserved identifier rows, and confirmed skill mirror parity. |
+| `./scripts/check-silmari-rebrand.sh` | `.` | 0 | Passed: scanned 1336 files, audited 167 changed files, validated 1327 preserved identifier rows, and confirmed skill mirror parity. |
+| `grep -q '^name = "agentfield"' sdk/python/pyproject.toml && grep -q '"name": "@agentfield/sdk"' sdk/typescript/package.json && grep -q '^module github.com/Agent-Field/agentfield/sdk/go' sdk/go/go.mod && grep -q 'from agentfield import Agent' control-plane/internal/templates/python/main.py.tmpl && grep -q '"@agentfield/sdk"' control-plane/internal/templates/typescript/package.json.tmpl` | `.` | 0 | Passed: package names, module paths, and generated template imports stayed on the published AgentField compatibility surfaces. |
+| `python3 - <<'PY' (changed-file coverage assertion)` | `.` | 0 | Passed: every changed in-scope rebrand file is represented in the manifest Audited Files table. |
+| `python3 - <<'PY' (runtime-sensitive file boundary assertion)` | `.` | 0 | Passed: the rebrand diff stayed within the documented documentation, template, skill, SDK metadata, and admin UI boundary. |
 | `python3 -m pytest tests/test_check_silmari_rebrand.py tests/test_collect_silmari_rebrand_inventory.py` | `.` | 0 | Passed: 64 scanner and manifest inventory regression tests. |
 | `python3 -m pytest tests/test_docs_specs_branding.py` | `.` | 0 | Passed: 27 docs/spec manifest regression tests, including compatibility identifier and YAML-config assertions. |
 | `python3 -m pytest examples/tests/test_silmari_branding.py` | `.` | 0 | Passed: 18 example-surface branding regression tests. |
+| go test ./internal/templates/... | control-plane | 0 | Passed; generated README branding, compatibility identifiers, and template error assertions all succeeded. |
 | `go test ./internal/templates/... ./internal/skillkit/...` | `control-plane` | 0 | Passed targeted rebrand coverage for generated templates and the embedded skill mirror packages. |
+| `go test ./...` | `control-plane` | 0 | Passed when rerun through a non-root wrapper with `CGO_ENABLED=1`, writable caches under `/tmp/af-nonroot-home`, and `AGENTFIELD_SERVER` plus `AGENTFIELD_SERVER_URL` unset so SQLite-backed and localhost-sensitive tests saw the intended environment. |
+| `go test ./...` | `sdk/go` | 0 | Passed all 6 Go SDK packages. |
+| `python3 -m pytest` | `sdk/python` | 0 | Passed: 1619 tests, 4 skipped, 12 deselected, and only the existing warnings baseline remained. |
+| `npm run lint` | `sdk/typescript` | 0 | Passed `tsc --noEmit` for the TypeScript SDK workspace. |
+| `CI=1 npm run test:core` | `sdk/typescript` | 0 | Passed: 65 test files and 609 tests. |
 | `npm run lint` | `control-plane/web/client` | 0 | Passed with the checked-in suppressions baseline; only pre-existing warnings remained in unrelated files. |
 | `npm run test` | `control-plane/web/client` | 0 | Passed: 131 test files and 662 tests after stabilizing the async Workflow DAG node-count assertion. |
 | `npm run build` | `control-plane/web/client` | 0 | Production build succeeded; Vite only reported the existing browser-data and chunk-size warnings. |
-| `go test ./...` | `control-plane` | 1 | Environment-specific failure: this runner has `CGO_ENABLED=0` and no `gcc` or `cc`, so SQLite-backed packages fail immediately; inherited `AGENTFIELD_SERVER{,_URL}` values also trip localhost-sensitive service tests. |
-| `go test ./...` | `sdk/go` | 0 | Passed all 6 Go SDK packages. |
-| `python3 -m pytest` | `sdk/python` | 0 | Passed: 1619 tests, 4 skipped, 12 deselected, and 27 warnings. |
-| `npm run lint` | `sdk/typescript` | 0 | Passed `tsc --noEmit`. |
-| `CI=1 npm run test:core` | `sdk/typescript` | 0 | Passed: 65 test files and 609 tests. |
-| `./scripts/test-all.sh` | `.` | 1 | Aggregate verification stops in the `control-plane` Go suite for the same runner constraints: CGO-backed SQLite is unavailable, root-level `AGENTFIELD_SERVER{,_URL}` overrides break localhost-sensitive tests, and root can bypass the registry write-permission failure expected by `internal/core/services`. |
+| `./scripts/test-all.sh` | `.` | 0 | Passed when rerun through the same non-root CGO-enabled wrapper, writable caches, custom `COVERAGE_FILE`, and unset `AGENTFIELD_SERVER` plus `AGENTFIELD_SERVER_URL`; control-plane, SDK, web, and aggregate suites all completed successfully. |
+| `python3 - <<'PY' (verification logging assertion)` | `.` | 0 | Passed: the manifest Verification Commands table includes scanner, mirror, Go, web, Python, TypeScript, and aggregate evidence rows. |
+| `git diff --exit-code` | `.` | 0 | Passed: post-commit tracked changes are clean. |
+| `git diff --cached --exit-code` | `.` | 0 | Passed: no staged changes remain after the local rebrand commit. |
+| `git status --short` | `.` | 0 | Passed: only pre-existing untracked harness artifacts matching `.agentfield_schema.*.json` and `.agentfield_output.*.json` remained in status output. |
 
 ## Deferred Or Excluded
 - docs/silmari-rebrand-manifest.md remains validation input and is excluded from old-brand match scanning.
-- Verification in this runner still depends on environment capabilities outside the rebrand diff: `lychee` is absent, `control-plane/web/client` and `sdk/typescript` required local `npm ci`, and full `control-plane` Go tests cannot enable CGO-backed SQLite because no system C compiler is installed.
+- `lychee` is absent from PATH on this runner, so the fallback Markdown link check remains the recorded link-validation path.
+- Full `control-plane` and aggregate verification depended on runner isolation rather than code changes: a non-root wrapper, writable cache directories under `/tmp/af-nonroot-home`, `CGO_ENABLED=1`, a custom Python `COVERAGE_FILE`, and unsetting inherited `AGENTFIELD_SERVER` plus `AGENTFIELD_SERVER_URL`.
+- Final clean-tree validation allows only the pre-existing harness artifacts `.agentfield_schema.*.json` and `.agentfield_output.*.json` to remain untracked.
