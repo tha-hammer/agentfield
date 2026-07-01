@@ -6,6 +6,173 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.90-rc.4] - 2026-07-01
+
+
+### Added
+
+- Feat(harness+docs): idle-timeout harness guard, goal-preserving Go retry, agentfield capability docs
+
+Harness:
+- python _cli.py: add idle_timeout to run_cli — kills a CLI that produces no
+  stdout/stderr for N seconds (catches silent LLM-stream stalls before the
+  total wall-clock cap); opencode provider wired + tests.
+- go runner.go: preserve the original goal/task on non-crash schema retries
+  (port of Python PR #637) so the agent doesn't lose its goal on correction.
+
+Docs/skills:
+- new agentfield references: capability-playbook, memory-events, shared-memory
+  (mirrored into control-plane skillkit); SKILL.md / live-docs / triggers updates.
+- control-plane README, web client, CONTRIBUTING, DEVELOPMENT touch-ups.
+
+Specs & thoughts:
+- specs/ architecture + per-component docs.
+- thoughts/ handoffs, agentplane parity/ui-api worklists, research notes.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (379d3b1)
+
+
+
+### Chores
+
+- Chore: capture silmari rebrand baseline inventory (7921bfc)
+
+- Chore: ignore worktrees (8c2a485)
+
+- Chore: add main.py entrypoint stub and .cw9 crawl workspace
+
+- main.py: uv-init entrypoint stub.
+- .cw9/: CW9 crawl workspace (config, dag, schemas, crawl.db cache).
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (0435735)
+
+- Chore: add .github/github-buddy.yml with CLA sweep config (#633)
+
+Pins the CLA status context to "license/cla" so github-buddy's
+cla_reminder_sweep reads this repo's hosted cla-assistant.io commit
+status correctly. This differs from github-buddy's own repo, which uses
+the self-hosted contributor-assistant action (a check-run named "cla").
+
+Only takes effect once the repo is added to the GITHUB_BUDDY_CLA_REPOS
+roster on the github-buddy deployment.
+
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (49f9a21)
+
+
+
+### Documentation
+
+- Docs: fix silmari manifest merge-base coverage (ee34e5a)
+
+- Docs: reconcile Silmari manifest scanner coverage (4dbd504)
+
+- Docs: tighten silmari scanner occurrence reasons (fab2c52)
+
+- Docs: fix silmari scanner negated occurrence reason (8d219d2)
+
+- Docs: fix silmari scanner occurrence coverage (2d88648)
+
+- Docs: fix silmari rebrand scanner regressions (084ff86)
+
+- Docs: add silmari rebrand scanner slice (ef460cb)
+
+- Docs: fix silmari rebrand inventory baseline (798eddc)
+
+- Docs(research): file SWE-AF coding-loop false-green bug
+
+Code-reviewer/QA crash returned approved=True/non-blocking, so sandbox
+failures (bwrap namespace) were rubber-stamped and a zero-implementation
+run reported completed/approved. Evidence from run-0055a5c7; fix landed in
+SWE-AF branch fix/coding-loop-false-green-on-agent-crash.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (42537fd)
+
+- Docs(plan): fold BAML plan review fixes into TDD plan
+
+Addresses all four findings from the 2026-06-08 plan review plus the Go
+toolchain gate:
+- C1: SDK target venv is sdk/python/.venv (py3.12), not the repo-root
+  py3.14 venv; B-A1 installs baml-py there and re-verifies symbols
+  (Resolved Decisions §7).
+- I1: deserialize preserves the public ValueError contract (re-raises
+  "Could not parse structured response: ..."); the :814-827 parse-retry
+  loop is kept, only the :788-810 ladder is deleted (Resolved Decisions §6).
+- I2: B-C1 try_parse_from_text returns a schema-typed instance via
+  deserialize, symmetric with B-B2.
+- I3: corrected drifted citations (request.go:456, runner.go:410,
+  _runner.py:355/471).
+- Go toolchain: bump sdk/go/go.mod 1.21 -> 1.24 to satisfy BAML's
+  go 1.24.0 directive (firm B-D1 green gate).
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (673e9d3)
+
+
+
+### Fixed
+
+- Fix(codex): grant workspace-write sandbox + close stdin
+
+codex exec defaults to a read-only sandbox, which silently rejects
+the Write tool call that the structured-output contract requires.
+The output file was never created → PM fails.
+
+- Replace deprecated --full-auto with --sandbox workspace-write
+  (unconditional; file-write contract always needs write access)
+- Drop the permission_mode=='auto' gate (dead code after this change)
+- Add --skip-git-repo-check so the provider is not cwd-sensitive
+- Close stdin (DEVNULL) in run_cli so the 'Reading additional input
+  from stdin...' codex behavior cannot block the subprocess
+
+Verified: codex exec with new flags writes .agentfield_output.json,
+RC=0, no sandbox rejection. 12/12 provider unit tests pass.
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com> (c35737f)
+
+- Fix(sdk): make agent call timeout configurable (AGENTFIELD_CALL_TIMEOUT)
+
+The Agent http client hardcoded a 15s timeout for all cross-node calls,
+which aborts LLM reasoner calls (30-120s) mid-flight. Default to 10m and
+allow override via AGENTFIELD_CALL_TIMEOUT (Go duration or bare seconds).
+Found while running the SWE-AF Go node live.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (a80afeb)
+
+- Fix(harness): preserve original goal on non-crash schema retries
+
+_handle_schema_with_retry rebuilt the retry prompt from
+build_followup_prompt() alone on the non-crash branch, dropping the
+original goal/task. The agent then retried blind and could emit
+placeholder output (e.g. a "no goal supplied" PRD) that poisoned every
+downstream reasoner. Prepend options["_original_prompt"] (already
+populated in run()) so retries carry both the goal and the schema
+correction. The crash branch already preserved the goal.
+
+Adds test_schema_retry_preserves_original_goal_in_prompt which drives a
+non-crash schema-invalid first attempt and asserts the retry prompt
+still contains the original goal.
+
+Fixes #636
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (e5947cb)
+
+
+
+### Other
+
+- Add baseline browser mapping dependency (214a28b)
+
+- Document execution timeout progress signals (399bdf7)
+
+- Record Silmari post-commit verification evidence (22614c8)
+
+- Stabilize Silmari verification evidence (c981432)
+
+- Record Silmari rebrand verification evidence (48cf013)
+
+- Record Silmari rebrand verification evidence (22eb2a3)
+
+- Finalize Silmari rebrand verification (21a6ce1)
+
 ## [0.1.90-rc.3] - 2026-06-08
 
 
