@@ -6,6 +6,36 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.97-rc.4] - 2026-07-03
+
+
+### Chores
+
+- Chore: remove dead identity UI surface and unreferenced docker-perf config (#618)
+
+Salvage of the safe, zero-regression subset of #618. Removes genuinely dead
+code only:
+
+- control-plane/internal/handlers/ui/identity.go (+2 tests): the DID Explorer /
+  Credentials UI backend. Its sole frontend consumer (identityApi.ts) has no
+  callers, and the DID Explorer pages were already removed — App.tsx redirects
+  /identity/dids and /identity/credentials to /settings. No live consumer.
+- web/client/src/services/identityApi.ts (+ test): orphaned frontend service.
+- control-plane/config/docker-perf.yaml: unreferenced by any Makefile/CI/compose.
+
+Deliberately EXCLUDES the regression-inducing parts of the original PR:
+the /admin/public-key alias removal (breaks all-SDK offline VC verification),
+node lifecycle + /actions/claim endpoints, legacy reasoner execute endpoints,
+the broken root compose.yaml, and storage-mode/telemetry config flips.
+
+Validation: go build/vet clean; go test ./... green (control-plane); web-ui
+npm build clean; web-ui coverage 84.78% (baseline 84.79%, floor 84.0).
+
+Co-authored-by pocesar via original PR #618.
+
+Co-authored-by: Abir Abbas <abirabbas1998@gmail.com>
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (615baa6)
+
 ## [0.1.97-rc.3] - 2026-07-03
 
 
