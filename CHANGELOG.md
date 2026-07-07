@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.104-rc.2] - 2026-07-07
+
+
+### Fixed
+
+- Fix(cli): don't dump usage/help block on runtime errors (#736)
+
+When a command failed at runtime — e.g. `af run <node>` hitting a
+readiness timeout — cobra printed the full usage/help block (flags,
+global flags, etc.) after the error. Usage text is meant for
+mis-invocation, not runtime failures, so it was pure noise on top of the
+actual error the user cares about.
+
+Set SilenceUsage on the root command (cobra suppresses the usage block
+for any subcommand when the root has this set). The error itself still
+propagates — main.go surfaces it — so nothing is hidden; only the
+irrelevant usage wall is gone. Genuine bad-invocation errors (wrong arg
+count, unknown flag) still print their concise error message.
+
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (fac34e1)
+
 ## [0.1.104-rc.1] - 2026-07-07
 
 
