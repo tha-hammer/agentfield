@@ -6,6 +6,45 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.105-rc.1] - 2026-07-08
+
+
+### Fixed
+
+- Fix(af run): eliminate port race that killed healthy nodes on startup (#737)
+
+`af run <node>` intermittently failed with 'agent node did not become ready
+within 10s' — worst for import-heavy nodes like pr-af. Root cause is a
+check-then-exec race between the runner and the SDK:
+
+1. The runner probes a free port, releases the probe, exports PORT=N, then
+   polls ONLY port N for readiness.
+2. If N is momentarily unavailable when the child binds, the SDK SILENTLY
+   moves to the next free port (N+1) — a port the runner never learns about.
+   The runner then polls the dead port N until timeout and kills a node that
+   actually came up fine on N+1.
+3. The 10s readiness window is also too short for nodes with large import
+   graphs, independent of the race.
+
+Fix (regression-safe, gated):
+- Runner exports AGENTFIELD_STRICT_PORT=1 alongside PORT.
+- SDK, only when that signal is set, binds the injected PORT authoritatively:
+  if it is unavailable it exits with a clear error instead of silently
+  bumping, so the runner and node can never disagree about the port. Absent
+  the signal (standalone `python -m <node>.app`, manual PORT=...), the old
+  lenient auto-bump behavior is unchanged — no regression.
+- Readiness timeout is now 30s and configurable via
+  AGENTFIELD_NODE_READY_TIMEOUT (whole seconds).
+- Guard PortManager's reserved-ports map with a mutex (it was read/written
+  without synchronization).
+
+Verified: with the patched control plane + SDK, all four reference nodes
+(swe-planner, cloudsecurity-af, sec-af, pr-af) start on their assigned ports
+and pass health; pr-af — previously failing almost every run — now binds its
+assigned port every time.
+
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (23d9086)
+
 ## [0.1.104] - 2026-07-08
 
 ## [0.1.104-rc.2] - 2026-07-07
