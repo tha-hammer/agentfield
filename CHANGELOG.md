@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.107-rc.3] - 2026-07-09
+
+
+### Added
+
+- Feat(control-plane): af install support for Go agent nodes (#745)
+
+PackageMetadata gains an explicit language field with go.mod detection
+fallback (additive to config v1; Python manifests unchanged).
+entrypoint.build compiles the node at install time via a resolved Go
+toolchain (pyinterp-style discovery with actionable missing/too-old
+errors); af run launches the built binary with identical port,
+healthcheck, secret, and env semantics. Out-of-tree replace directives
+are refused with vendoring guidance, with an AGENTFIELD_GO_REPLACE
+override for dev installs. Service-layer install/start paths route
+through the shared dispatcher so both code paths stay in lockstep.
+
+Co-authored-by: Claude Fable 5 <noreply@anthropic.com> (10cfe8a)
+
 ## [0.1.107-rc.2] - 2026-07-09
 
 
