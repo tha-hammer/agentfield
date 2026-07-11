@@ -115,7 +115,19 @@ func CancelExecutionHandler(store ExecutionStore) gin.HandlerFunc {
 			}
 		}
 
-		events.PublishExecutionCancelled(executionID, exec.RunID, exec.AgentNodeID, map[string]interface{}{"reason": reason})
+		// Publish the cancel on the durable+injected+global path so injected-side
+		// consumers (e.g. the sync awaiter) observe it — previously cancel went
+		// to the global bus ONLY, so they missed it (the split-brain). The global
+		// bus is still reached for the cancel dispatcher and other global consumers.
+		publishExecutionEventDurable(reqCtx, store, events.ExecutionEvent{
+			Type:        events.ExecutionCancelledEvent,
+			ExecutionID: executionID,
+			WorkflowID:  exec.RunID,
+			AgentNodeID: exec.AgentNodeID,
+			Status:      types.ExecutionStatusCancelled,
+			Timestamp:   time.Now(),
+			Data:        map[string]interface{}{"reason": reason},
+		})
 
 		payload, marshalErr := json.Marshal(map[string]interface{}{
 			"reason": reason,

@@ -70,6 +70,7 @@ type AgentFieldServer struct {
 	llmHealthMonitor *services.LLMHealthMonitor
 	// Cleanup service
 	cleanupService         *handlers.ExecutionCleanupService
+	eventOutboxRotator     *handlers.EventOutboxRotator
 	payloadStore           services.PayloadStore
 	registryWatcherCancel  context.CancelFunc
 	adminGRPCServer        *grpc.Server
@@ -454,6 +455,13 @@ func NewAgentFieldServer(cfg *config.Config) (*AgentFieldServer, error) {
 	// Initialize execution cleanup service
 	cleanupService := handlers.NewExecutionCleanupService(storageProvider, cfg.AgentField.ExecutionCleanup)
 
+	// Initialize durable event outbox rotator. Only wired when the store
+	// implements the outbox surface (local SQLite / postgres LocalStorage).
+	var eventOutboxRotator *handlers.EventOutboxRotator
+	if pruner, ok := storageProvider.(handlers.OutboxPruner); ok {
+		eventOutboxRotator = handlers.NewEventOutboxRotator(pruner, cfg.AgentField.EventOutbox)
+	}
+
 	adminPort := cfg.AgentField.Port + 100
 	if envPort := os.Getenv("AGENTFIELD_ADMIN_GRPC_PORT"); envPort != "" {
 		if parsedPort, parseErr := strconv.Atoi(envPort); parseErr == nil {
@@ -495,6 +503,7 @@ func NewAgentFieldServer(cfg *config.Config) (*AgentFieldServer, error) {
 		agentfieldHome:         agentfieldHome,
 		llmHealthMonitor:       llmHealthMonitor,
 		cleanupService:         cleanupService,
+		eventOutboxRotator:     eventOutboxRotator,
 		payloadStore:           payloadStore,
 		webhookDispatcher:      webhookDispatcher,
 		observabilityForwarder: observabilityForwarder,
@@ -581,6 +590,13 @@ func (s *AgentFieldServer) Start() error {
 	if err := s.cleanupService.Start(ctx); err != nil {
 		logger.Logger.Error().Err(err).Msg("Failed to start execution cleanup service")
 		// Don't fail server startup if cleanup service fails to start
+	}
+
+	// Start durable event outbox rotator in background (no-op when disabled).
+	if s.eventOutboxRotator != nil {
+		if err := s.eventOutboxRotator.Start(ctx); err != nil {
+			logger.Logger.Error().Err(err).Msg("Failed to start event outbox rotator")
+		}
 	}
 
 	// Start cancel dispatcher: forwards bus ExecutionCancelledEvent to
@@ -716,6 +732,13 @@ func (s *AgentFieldServer) Stop() error {
 	if s.cleanupService != nil {
 		if err := s.cleanupService.Stop(); err != nil {
 			logger.Logger.Error().Err(err).Msg("Failed to stop execution cleanup service")
+		}
+	}
+
+	// Stop event outbox rotator
+	if s.eventOutboxRotator != nil {
+		if err := s.eventOutboxRotator.Stop(); err != nil {
+			logger.Logger.Error().Err(err).Msg("Failed to stop event outbox rotator")
 		}
 	}
 

@@ -60,6 +60,34 @@ type AgentFieldConfig struct {
 	Approval         ApprovalConfig         `yaml:"approval" mapstructure:"approval"`
 	NodeLogProxy     NodeLogProxyConfig     `yaml:"node_log_proxy" mapstructure:"node_log_proxy"`
 	ExecutionLogs    ExecutionLogsConfig    `yaml:"execution_logs" mapstructure:"execution_logs"`
+	EventOutbox      EventOutboxConfig      `yaml:"event_outbox" mapstructure:"event_outbox"`
+}
+
+// EventOutboxConfig governs rotation of the durable event outbox. A zero
+// RetentionMaxAge or RetentionMaxRows disables that cap (0 = unlimited), per the
+// EffectiveExecutionLogs idiom.
+type EventOutboxConfig struct {
+	Enabled          bool          `yaml:"enabled" mapstructure:"enabled" default:"false"`
+	RetentionMaxAge  time.Duration `yaml:"retention_max_age" mapstructure:"retention_max_age" default:"48h"`
+	RetentionMaxRows int           `yaml:"retention_max_rows" mapstructure:"retention_max_rows" default:"100000"`
+	PruneInterval    time.Duration `yaml:"prune_interval" mapstructure:"prune_interval" default:"5m"`
+}
+
+// EffectiveEventOutbox returns outbox rotation settings with a safe non-zero
+// PruneInterval. RetentionMaxAge/RetentionMaxRows of 0 mean "cap disabled" and
+// are left as-is.
+func EffectiveEventOutbox(c EventOutboxConfig) EventOutboxConfig {
+	out := c
+	if out.PruneInterval <= 0 {
+		out.PruneInterval = 5 * time.Minute
+	}
+	if out.RetentionMaxAge < 0 {
+		out.RetentionMaxAge = 0
+	}
+	if out.RetentionMaxRows < 0 {
+		out.RetentionMaxRows = 0
+	}
+	return out
 }
 
 // RegistrationConfig governs validation of agent-supplied registration endpoints.
@@ -589,6 +617,26 @@ func ApplyEnvOverrides(cfg *Config) {
 	if val := os.Getenv("AGENTFIELD_APPROVAL_DEFAULT_EXPIRY_HOURS"); val != "" {
 		if i, err := strconv.Atoi(val); err == nil {
 			cfg.AgentField.Approval.DefaultExpiryHours = i
+		}
+	}
+
+	// Durable event outbox rotation overrides.
+	if val := os.Getenv("AGENTFIELD_EVENT_OUTBOX_ENABLED"); val != "" {
+		cfg.AgentField.EventOutbox.Enabled = val == "true" || val == "1"
+	}
+	if val := os.Getenv("AGENTFIELD_EVENT_OUTBOX_RETENTION_MAX_AGE"); val != "" {
+		if d, err := time.ParseDuration(val); err == nil {
+			cfg.AgentField.EventOutbox.RetentionMaxAge = d
+		}
+	}
+	if val := os.Getenv("AGENTFIELD_EVENT_OUTBOX_RETENTION_MAX_ROWS"); val != "" {
+		if i, err := strconv.Atoi(val); err == nil {
+			cfg.AgentField.EventOutbox.RetentionMaxRows = i
+		}
+	}
+	if val := os.Getenv("AGENTFIELD_EVENT_OUTBOX_PRUNE_INTERVAL"); val != "" {
+		if d, err := time.ParseDuration(val); err == nil {
+			cfg.AgentField.EventOutbox.PruneInterval = d
 		}
 	}
 

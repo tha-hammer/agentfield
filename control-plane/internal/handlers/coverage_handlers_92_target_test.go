@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/Agent-Field/agentfield/control-plane/internal/config"
+	"github.com/Agent-Field/agentfield/control-plane/internal/events"
 	"github.com/Agent-Field/agentfield/control-plane/internal/services"
 	"github.com/Agent-Field/agentfield/control-plane/internal/storage"
 	"github.com/Agent-Field/agentfield/control-plane/pkg/types"
@@ -144,6 +145,12 @@ func (s *cancelHandlerErrorStorage) UpdateWorkflowExecution(_ context.Context, _
 func (s *cancelHandlerErrorStorage) StoreWorkflowExecutionEvent(_ context.Context, event *types.WorkflowExecutionEvent) error {
 	s.storedWorkflowEvent = event
 	return s.storeEventErr
+}
+
+// GetExecutionEventBus overrides the embedded nil StorageProvider so the cancel
+// handler's durable-publish path can call it safely (nil bus -> global fallback).
+func (s *cancelHandlerErrorStorage) GetExecutionEventBus() *events.ExecutionEventBus {
+	return nil
 }
 
 type workflowEventStoreStub struct {
