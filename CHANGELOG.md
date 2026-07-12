@@ -6,6 +6,45 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.90-rc.5] - 2026-07-12
+
+
+### Added
+
+- Feat(events): durable event outbox + cursor catch-up + log rotation
+
+Replace the drop-happy, in-memory, split-brained event bus with a durable,
+sequence-numbered event outbox that consumers read via a cursor (at-least-once
+catch-up), unified onto one path and rotated to keep storage capped.
+
+Phase 1 — durable outbox + cursor:
+- EventOutbox{,Cursor}Model + migration 034 (Postgres) + GORM registration (SQLite)
+- AppendEventOutbox (monotonic seq), ReadEventOutboxAfter (cursor), durability
+- DurableExecutionBus: persist-first publish; on append error returns the error
+  and counts it (outbox_append_failed_total) instead of a silent live-only send
+- Disconnected-consumer catch-up closure (read via production cursor API)
+
+Phase 2 — rotation:
+- PruneEventOutbox age+count caps; unread pruning is bounded, counted
+  (OverflowUnread), and logged (never silent) via a consumer low-water mark
+- EventOutboxRotator lifecycle + EventOutboxConfig (env+YAML) + server wiring
+
+Phase 3 — split-brain (surgical, additive):
+- publishExecutionEventDurable persists + publishes on BOTH the injected and
+  global buses; cancel now reaches injected-side consumers (was global-only).
+  Global bus retained so its four consumers keep working.
+- Sync awaiter recovers a dropped terminal event from the durable outbox
+  (HasTerminalOutboxEvent) instead of returning a false timeout.
+
+Design notes: outbox methods are concrete *LocalStorage methods consumed via
+minimal package-local interfaces (no StorageProvider bloat / mock churn);
+EventOutboxRecord lives in pkg/types to avoid the storage->events cycle.
+
+Tests: behavior-first TDD, both closures include red-at-seam; full handlers,
+services, and observability suites pass with no regressions.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (3a2e387)
+
 ## [0.1.90-rc.4] - 2026-07-01
 
 
