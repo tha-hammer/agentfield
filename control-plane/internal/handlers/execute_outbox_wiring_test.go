@@ -120,3 +120,49 @@ func TestCompleteExecution_SkipsResearchCompletedForOtherNodes(t *testing.T) {
 	assert.Equal(t, 0, store.appendCount)
 	assert.Nil(t, store.lastRecord)
 }
+
+func TestCompleteExecution_ExecutionNotFound(t *testing.T) {
+	agent := &types.AgentNode{ID: "agent-1"}
+	store := newTestExecutionStorage(agent)
+	controller := newExecutionController(store, nil, nil, time.Second, "")
+	// No CreateExecutionRecord call: the completionUpdater sees current == nil.
+
+	plan := &preparedExecution{
+		exec:   &types.Execution{ExecutionID: "exec-missing", RunID: "run-missing"},
+		agent:  agent,
+		target: &parsedTarget{NodeID: agent.ID, TargetName: "reasoner-a"},
+	}
+
+	err := controller.completeExecution(context.Background(), plan, []byte(`{"ok":true}`), 10*time.Millisecond)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not found")
+}
+
+func TestCompleteExecution_SkipsWhenAlreadyCancelled(t *testing.T) {
+	agent := &types.AgentNode{ID: "agent-1"}
+	store := newTestExecutionStorage(agent)
+	controller := newExecutionController(store, nil, nil, time.Second, "")
+
+	now := time.Now().UTC()
+	require.NoError(t, store.CreateExecutionRecord(context.Background(), &types.Execution{
+		ExecutionID: "exec-cancelled-race",
+		RunID:       "run-cancelled-race",
+		AgentNodeID: agent.ID,
+		Status:      types.ExecutionStatusCancelled,
+		CreatedAt:   now,
+		StartedAt:   now,
+		UpdatedAt:   now,
+	}))
+
+	plan := &preparedExecution{
+		exec:   &types.Execution{ExecutionID: "exec-cancelled-race", RunID: "run-cancelled-race"},
+		agent:  agent,
+		target: &parsedTarget{NodeID: agent.ID, TargetName: "reasoner-a"},
+	}
+
+	require.NoError(t, controller.completeExecution(context.Background(), plan, []byte(`{"ok":true}`), 10*time.Millisecond))
+
+	record, err := store.GetExecutionRecord(context.Background(), "exec-cancelled-race")
+	require.NoError(t, err)
+	assert.Equal(t, types.ExecutionStatusCancelled, record.Status) // guard preserved cancelled status
+}

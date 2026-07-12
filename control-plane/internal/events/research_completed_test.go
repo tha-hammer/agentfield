@@ -133,6 +133,11 @@ func TestBuildResearchCompletedEvent_ResearchPackageBodyAbsentFromData(t *testin
 	require.NotContains(t, string(raw), "the full body")
 }
 
+func TestBuildResearchCompletedEvent_NilExecution(t *testing.T) {
+	_, err := events.BuildResearchCompletedEvent(nil, "ce-fixed", time.Now())
+	require.Error(t, err)
+}
+
 // ─────────────────────────── succeeded-only emit ───────────────────────────
 
 func TestBuildResearchCompletedEvent_EmittedForSucceededOnly(t *testing.T) {

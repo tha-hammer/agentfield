@@ -183,3 +183,84 @@ var errAppendBoom = errBoom{}
 type errBoom struct{}
 
 func (errBoom) Error() string { return "boom: outbox build failed" }
+
+// TestAppendEventOutboxTx_DefaultsEmptyPayload proves an empty Payload defaults to "{}" rather
+// than persisting an empty string (event_outbox.payload is NOT NULL DEFAULT '{}').
+func TestAppendEventOutboxTx_DefaultsEmptyPayload(t *testing.T) {
+	ls, ctx := newOutboxTxTestStorage(t)
+
+	tx, err := ls.requireSQLDB().BeginTx(ctx, nil)
+	require.NoError(t, err)
+
+	_, err = ls.AppendEventOutboxTx(ctx, tx, EventOutboxRecord{
+		EventType:   "research.completed",
+		ExecutionID: "exec-empty-payload",
+	})
+	require.NoError(t, err)
+	require.NoError(t, tx.Commit())
+
+	rows, err := ls.ReadEventOutboxAfter(ctx, 0, 100)
+	require.NoError(t, err)
+	require.Len(t, rows, 1)
+	require.Equal(t, "{}", rows[0].Payload)
+}
+
+// TestAppendEventOutboxTx_PostgresRETURNINGBranch drives the postgres code path (INSERT ...
+// RETURNING seq) directly: mattn/go-sqlite3 (v1.14+) supports RETURNING, so wrapping the SAME
+// real, on-disk *sql.Tx with mode="postgres" exercises that branch's actual SQL + Scan behavior
+// without needing a live postgres connection — the branch is selected purely on tx.mode, so this
+// is the real code, not a stand-in.
+func TestAppendEventOutboxTx_PostgresRETURNINGBranch(t *testing.T) {
+	ls, ctx := newOutboxTxTestStorage(t)
+
+	rawTx, err := ls.requireSQLDB().BeginTx(ctx, nil)
+	require.NoError(t, err)
+	pgTx := newSQLTx(rawTx.Tx, "postgres")
+
+	seq, err := ls.AppendEventOutboxTx(ctx, pgTx, EventOutboxRecord{
+		EventType:   "research.completed",
+		ExecutionID: "exec-pg-branch",
+		Payload:     `{"type":"research.completed"}`,
+	})
+	require.NoError(t, err)
+	require.Greater(t, seq, int64(0))
+	require.NoError(t, pgTx.Commit())
+
+	rows, err := ls.ReadEventOutboxAfter(ctx, 0, 100)
+	require.NoError(t, err)
+	require.Len(t, rows, 1)
+	require.Equal(t, "exec-pg-branch", rows[0].ExecutionID)
+}
+
+// TestAppendEventOutboxTx_ErrorsOnDeadTx proves both the postgres (Scan) and local (ExecContext)
+// error-wrapping branches surface a real error: a tx already committed can no longer accept
+// writes, so the underlying driver call fails and AppendEventOutboxTx wraps it rather than
+// panicking or silently dropping it.
+func TestAppendEventOutboxTx_ErrorsOnDeadTx(t *testing.T) {
+	ls, ctx := newOutboxTxTestStorage(t)
+
+	t.Run("local mode", func(t *testing.T) {
+		tx, err := ls.requireSQLDB().BeginTx(ctx, nil)
+		require.NoError(t, err)
+		require.NoError(t, tx.Commit()) // tx is now dead
+
+		_, err = ls.AppendEventOutboxTx(ctx, tx, EventOutboxRecord{
+			EventType:   "research.completed",
+			ExecutionID: "exec-dead-tx-local",
+		})
+		require.Error(t, err)
+	})
+
+	t.Run("postgres mode", func(t *testing.T) {
+		rawTx, err := ls.requireSQLDB().BeginTx(ctx, nil)
+		require.NoError(t, err)
+		require.NoError(t, rawTx.Commit()) // tx is now dead
+		pgTx := newSQLTx(rawTx.Tx, "postgres")
+
+		_, err = ls.AppendEventOutboxTx(ctx, pgTx, EventOutboxRecord{
+			EventType:   "research.completed",
+			ExecutionID: "exec-dead-tx-pg",
+		})
+		require.Error(t, err)
+	})
+}

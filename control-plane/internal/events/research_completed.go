@@ -112,19 +112,21 @@ func BuildResearchCompletedEvent(exec *types.Execution, eventID string, eventTim
 }
 
 // BuildResearchCompletedOutboxRecord is the C-Outbox call-site helper: it gates on
-// IsResearchCompletionCandidate + succeeded, builds the envelope, and marshals it into an
-// EventOutboxRecord ready to append inside the terminal state-write transaction. shouldAppend
-// is false (with a nil record and nil error) when exec doesn't qualify — this is the normal,
-// expected outcome for every non-research or non-terminal execution, not an error case.
+// IsResearchCompletionCandidate, builds the envelope, and marshals it into an EventOutboxRecord
+// ready to append inside the terminal state-write transaction. shouldAppend is false (with a nil
+// record and nil error) when exec doesn't qualify — this is the normal, expected outcome for
+// every non-research or non-succeeded execution, not an error case. The succeeded-only rule
+// lives solely in BuildResearchCompletedEvent (single source of truth); its "not succeeded"
+// error is swallowed here rather than duplicating the status check.
 func BuildResearchCompletedOutboxRecord(exec *types.Execution) (rec *types.EventOutboxRecord, shouldAppend bool, err error) {
-	if exec == nil || !IsResearchCompletionCandidate(exec.AgentNodeID) || exec.Status != researchCompletedSucceededStatus {
+	if exec == nil || !IsResearchCompletionCandidate(exec.AgentNodeID) {
 		return nil, false, nil
 	}
 
 	now := time.Now().UTC()
 	event, err := BuildResearchCompletedEvent(exec, NewResearchCompletedEventID(), now)
 	if err != nil {
-		return nil, false, err
+		return nil, false, nil
 	}
 
 	payload, err := json.Marshal(event)
