@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/Agent-Field/agentfield/control-plane/internal/logger"
@@ -66,6 +67,52 @@ func (ls *LocalStorage) AppendEventOutbox(ctx context.Context, rec EventOutboxRe
 		return 0, err
 	}
 	return model.Seq, nil
+}
+
+// AppendEventOutboxTx persists an event on the CALLER's transaction and returns its assigned
+// monotonic seq. Unlike AppendEventOutbox (which appends via GORM on its own connection), this
+// uses raw SQL against tx directly — the only way to guarantee the append commits or rolls back
+// atomically with the caller's other writes on that same *sql.Tx (C-Outbox: the durable outbox
+// append must land in the SAME transaction as the producer's state change). Only usable from
+// within package storage, since *sqlTx is unexported by design: callers must obtain the tx from
+// this package's own BeginTx path, never construct one independently.
+func (ls *LocalStorage) AppendEventOutboxTx(ctx context.Context, tx *sqlTx, rec EventOutboxRecord) (int64, error) {
+	payload := rec.Payload
+	if payload == "" {
+		payload = "{}"
+	}
+	createdAt := rec.CreatedAt
+	if createdAt.IsZero() {
+		createdAt = time.Now().UTC()
+	}
+
+	if tx.mode == "postgres" {
+		row := tx.QueryRowContext(ctx, `
+			INSERT INTO event_outbox (event_type, execution_id, workflow_id, agent_node_id, payload, created_at)
+			VALUES (?, ?, ?, ?, ?, ?)
+			RETURNING seq`,
+			rec.EventType, rec.ExecutionID, rec.WorkflowID, rec.AgentNodeID, payload, createdAt,
+		)
+		var seq int64
+		if err := row.Scan(&seq); err != nil {
+			return 0, fmt.Errorf("insert event_outbox in tx: %w", err)
+		}
+		return seq, nil
+	}
+
+	result, err := tx.ExecContext(ctx, `
+		INSERT INTO event_outbox (event_type, execution_id, workflow_id, agent_node_id, payload, created_at)
+		VALUES (?, ?, ?, ?, ?, ?)`,
+		rec.EventType, rec.ExecutionID, rec.WorkflowID, rec.AgentNodeID, payload, createdAt,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("insert event_outbox in tx: %w", err)
+	}
+	seq, err := result.LastInsertId()
+	if err != nil {
+		return 0, fmt.Errorf("last insert id for event_outbox: %w", err)
+	}
+	return seq, nil
 }
 
 // ReadEventOutboxAfter returns events with seq strictly greater than afterSeq,

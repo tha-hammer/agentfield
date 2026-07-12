@@ -44,6 +44,19 @@ type ExecutionStore interface {
 	GetExecutionEventBus() *events.ExecutionEventBus
 }
 
+// ExecutionOutboxUpdater is an optional capability an ExecutionStore may implement to append a
+// durably-outboxed event in the SAME transaction as the terminal execution state write
+// (C-Outbox — specs/cross-app-handoff.pattern.md §4). *storage.LocalStorage implements it; test
+// doubles that don't fall back to plain UpdateExecutionRecord (see completeExecution).
+type ExecutionOutboxUpdater interface {
+	UpdateExecutionRecordWithOutbox(
+		ctx context.Context,
+		executionID string,
+		updater func(*types.Execution) (*types.Execution, error),
+		outboxBuilder func(updated *types.Execution) (*types.EventOutboxRecord, bool, error),
+	) (*types.Execution, error)
+}
+
 // ExecuteRequest represents an execution request from an agent client.
 type ExecuteRequest struct {
 	Input   map[string]interface{} `json:"input"`
@@ -1328,34 +1341,48 @@ func (c *executionController) completeExecution(ctx context.Context, plan *prepa
 
 	resultURI := c.savePayload(ctx, result)
 
+	var alreadyCancelledForUpdate bool
+	completionUpdater := func(current *types.Execution) (*types.Execution, error) {
+		if current == nil {
+			return nil, fmt.Errorf("execution %s not found", plan.exec.ExecutionID)
+		}
+		// Guard: don't overwrite if already cancelled (e.g. by approval rejection webhook)
+		// or waiting for approval — the approval webhook handler manages the transition.
+		if current.Status == types.ExecutionStatusCancelled || current.Status == types.ExecutionStatusWaiting {
+			logger.Logger.Info().
+				Str("execution_id", plan.exec.ExecutionID).
+				Str("current_status", string(current.Status)).
+				Msg("skipping completion update; execution already cancelled or waiting for approval")
+			alreadyCancelledForUpdate = true
+			return current, nil
+		}
+		now := time.Now().UTC()
+		current.Status = types.ExecutionStatusSucceeded
+		current.ResultPayload = json.RawMessage(result)
+		current.ErrorMessage = nil
+		current.CompletedAt = pointerTime(now)
+		duration := elapsed.Milliseconds()
+		current.DurationMS = &duration
+		current.UpdatedAt = now
+		current.ResultURI = resultURI
+		return current, nil
+	}
+
 	var lastErr error
 	var alreadyCancelled bool
 	for attempt := 0; attempt < 5; attempt++ {
-		updated, err := c.store.UpdateExecutionRecord(ctx, plan.exec.ExecutionID, func(current *types.Execution) (*types.Execution, error) {
-			if current == nil {
-				return nil, fmt.Errorf("execution %s not found", plan.exec.ExecutionID)
-			}
-			// Guard: don't overwrite if already cancelled (e.g. by approval rejection webhook)
-			// or waiting for approval — the approval webhook handler manages the transition.
-			if current.Status == types.ExecutionStatusCancelled || current.Status == types.ExecutionStatusWaiting {
-				logger.Logger.Info().
-					Str("execution_id", plan.exec.ExecutionID).
-					Str("current_status", string(current.Status)).
-					Msg("skipping completion update; execution already cancelled or waiting for approval")
-				alreadyCancelled = true
-				return current, nil
-			}
-			now := time.Now().UTC()
-			current.Status = types.ExecutionStatusSucceeded
-			current.ResultPayload = json.RawMessage(result)
-			current.ErrorMessage = nil
-			current.CompletedAt = pointerTime(now)
-			duration := elapsed.Milliseconds()
-			current.DurationMS = &duration
-			current.UpdatedAt = now
-			current.ResultURI = resultURI
-			return current, nil
-		})
+		alreadyCancelledForUpdate = false
+		var updated *types.Execution
+		var err error
+		if outboxStore, ok := c.store.(ExecutionOutboxUpdater); ok {
+			updated, err = outboxStore.UpdateExecutionRecordWithOutbox(ctx, plan.exec.ExecutionID, completionUpdater,
+				func(updatedExec *types.Execution) (*types.EventOutboxRecord, bool, error) {
+					return events.BuildResearchCompletedOutboxRecord(updatedExec)
+				})
+		} else {
+			updated, err = c.store.UpdateExecutionRecord(ctx, plan.exec.ExecutionID, completionUpdater)
+		}
+		alreadyCancelled = alreadyCancelledForUpdate
 		if err == nil {
 			if alreadyCancelled {
 				return nil

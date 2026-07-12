@@ -1,0 +1,15 @@
+{
+  "data": {
+    "document_id": "doc_42",
+    "prompt": "Why is formal domain ownership important in distributed systems?",
+    "result_ref": "pkg://deep-research/runs/exec_9/result",
+    "status": "completed",
+    "title": "Domain Ownership in Distributed Systems"
+  },
+  "dataschema": "com.silmari.research.completed/v1",
+  "id": "PLACEHOLDER",
+  "source": "deep-research",
+  "specversion": "1.0",
+  "subject": "exec_9",
+  "type": "com.silmari.research.completed"
+}

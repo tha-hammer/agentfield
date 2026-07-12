@@ -112,6 +112,20 @@ func (ls *LocalStorage) GetExecutionRecord(ctx context.Context, executionID stri
 // UpdateExecutionRecord applies an update callback atomically. The callback mutates a
 // types.Execution copy and the result gets persisted.
 func (ls *LocalStorage) UpdateExecutionRecord(ctx context.Context, executionID string, updater func(*types.Execution) (*types.Execution, error)) (*types.Execution, error) {
+	return ls.UpdateExecutionRecordWithOutbox(ctx, executionID, updater, nil)
+}
+
+// UpdateExecutionRecordWithOutbox is UpdateExecutionRecord plus an optional C-Outbox hook:
+// when outboxBuilder is non-nil and the update produced a new state (updated != nil),
+// outboxBuilder runs against that post-update state and, if it says shouldAppend, its record
+// is appended to event_outbox on the SAME *sql.Tx as the state write, before commit — so the
+// state transition and the event append are atomic (both land, or neither does).
+func (ls *LocalStorage) UpdateExecutionRecordWithOutbox(
+	ctx context.Context,
+	executionID string,
+	updater func(*types.Execution) (*types.Execution, error),
+	outboxBuilder func(updated *types.Execution) (rec *types.EventOutboxRecord, shouldAppend bool, err error),
+) (*types.Execution, error) {
 	if updater == nil {
 		return nil, fmt.Errorf("nil updater")
 	}
@@ -211,6 +225,18 @@ func (ls *LocalStorage) UpdateExecutionRecord(ctx context.Context, executionID s
 	)
 	if err != nil {
 		return nil, fmt.Errorf("update execution: %w", err)
+	}
+
+	if outboxBuilder != nil {
+		outboxRec, shouldAppend, err := outboxBuilder(updated)
+		if err != nil {
+			return nil, fmt.Errorf("build outbox record for execution update: %w", err)
+		}
+		if shouldAppend {
+			if _, err := ls.AppendEventOutboxTx(ctx, tx, *outboxRec); err != nil {
+				return nil, fmt.Errorf("append event outbox in tx: %w", err)
+			}
+		}
 	}
 
 	if err := tx.Commit(); err != nil {
