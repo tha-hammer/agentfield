@@ -9,6 +9,11 @@ agentfield:
     batch_size: 200
     preserve_recent_duration: 1h
     stale_execution_timeout: 10m
+  event_outbox:
+    enabled: false          # Durable event outbox rotation (off by default)
+    retention_max_age: 48h   # Delete outbox rows older than this (0 = no age cap)
+    retention_max_rows: 100000 # Keep at most this many rows (0 = no count cap)
+    prune_interval: 5m       # How often the rotator runs
   execution_queue:
     agent_call_timeout: 1800s  # Timeout for agent HTTP calls (0s or -1s to disable)
     webhook_timeout: 10s          # Per-attempt timeout for webhook deliveries

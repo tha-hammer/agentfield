@@ -585,3 +585,29 @@ type ConfigStorageModel struct {
 }
 
 func (ConfigStorageModel) TableName() string { return "config_storage" }
+
+// EventOutboxModel persists one execution event durably with a dedicated
+// monotonic seq used for cursor reads (at-least-once catch-up). The live
+// in-memory bus stays best-effort; this table is the durable backstop so a
+// full subscriber buffer or a restart never loses an event.
+type EventOutboxModel struct {
+	Seq         int64     `gorm:"column:seq;primaryKey;autoIncrement"`
+	EventType   string    `gorm:"column:event_type;not null;default:''"`
+	ExecutionID string    `gorm:"column:execution_id;not null;default:'';index"`
+	WorkflowID  string    `gorm:"column:workflow_id;not null;default:''"`
+	AgentNodeID string    `gorm:"column:agent_node_id;not null;default:''"`
+	Payload     string    `gorm:"column:payload;not null;default:'{}'"`
+	CreatedAt   time.Time `gorm:"column:created_at;not null;index"`
+}
+
+func (EventOutboxModel) TableName() string { return "event_outbox" }
+
+// EventOutboxCursorModel records how far a durable consumer has read the
+// outbox. GetOutboxCursor returns 0 for an unknown consumer; AdvanceOutboxCursor
+// upserts. The minimum last_seq across rows is the rotation low-water mark.
+type EventOutboxCursorModel struct {
+	ConsumerID string `gorm:"column:consumer_id;primaryKey"`
+	LastSeq    int64  `gorm:"column:last_seq;not null;default:0"`
+}
+
+func (EventOutboxCursorModel) TableName() string { return "event_outbox_cursor" }

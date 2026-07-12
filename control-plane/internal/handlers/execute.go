@@ -822,6 +822,9 @@ func (c *executionController) publishExecutionEventWithReasonerInfo(exec *types.
 		Timestamp:   time.Now(),
 		Data:        data,
 	}
+	// Persist to the durable outbox first so a full/absent live buffer or a
+	// restart never loses the event; the live fan-out below stays best-effort.
+	persistExecutionEvent(context.Background(), c.store, event)
 	if c.eventBus != nil {
 		c.eventBus.Publish(event)
 	}
@@ -894,6 +897,20 @@ func (c *executionController) waitForExecutionCompletion(ctx context.Context, ex
 			return nil, ctx.Err()
 
 		case <-timer.C:
+			// Before giving up, consult the durable outbox: the live terminal
+			// event may have been dropped by a full buffer even though it was
+			// persisted. If a terminal event is durably recorded and the record
+			// is terminal, return the real result instead of a false timeout.
+			if checker, ok := c.store.(outboxTerminalChecker); ok {
+				if has, chkErr := checker.HasTerminalOutboxEvent(ctx, executionID); chkErr == nil && has {
+					if exec, err := c.store.GetExecutionRecord(ctx, executionID); err == nil && exec != nil && types.IsTerminalExecutionStatus(exec.Status) {
+						logger.Logger.Info().
+							Str("execution_id", executionID).
+							Msg("recovered terminal execution from durable outbox after live-event drop")
+						return exec, nil
+					}
+				}
+			}
 			logger.Logger.Warn().
 				Str("execution_id", executionID).
 				Dur("timeout", timeout).

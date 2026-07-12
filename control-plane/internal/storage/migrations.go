@@ -237,6 +237,8 @@ func (ls *LocalStorage) autoMigrateSchema(ctx context.Context) error {
 		&ConfigStorageModel{},
 		&TriggerModel{},
 		&InboundEventModel{},
+		&EventOutboxModel{},
+		&EventOutboxCursorModel{},
 	}
 
 	if err := gormDB.WithContext(ctx).AutoMigrate(models...); err != nil {

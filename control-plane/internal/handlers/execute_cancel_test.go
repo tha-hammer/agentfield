@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Agent-Field/agentfield/control-plane/internal/events"
 	"github.com/Agent-Field/agentfield/control-plane/internal/storage"
 	"github.com/Agent-Field/agentfield/control-plane/pkg/types"
 
@@ -33,6 +34,13 @@ func newCancelHandlerStorage() *cancelHandlerStorage {
 		workflowExecutions: make(map[string]*types.WorkflowExecution),
 		workflowEvents:     make([]*types.WorkflowExecutionEvent, 0),
 	}
+}
+
+// GetExecutionEventBus overrides the embedded nil StorageProvider so the cancel
+// handler's durable-publish path can call it safely. Returning nil is fine — the
+// publish helper guards against a nil bus and falls back to the global bus.
+func (s *cancelHandlerStorage) GetExecutionEventBus() *events.ExecutionEventBus {
+	return nil
 }
 
 func (s *cancelHandlerStorage) seedExecution(executionID, status string) {
