@@ -6,6 +6,112 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.90-rc.6] - 2026-07-12
+
+
+### Added
+
+- Feat(int-03): reusable ProvenanceHandoff SDK capability + conformance kit (Behaviors 1-8)
+
+Extract the Phase-2 research→reels handoff pattern into a drop-in
+AgentField ProvenanceHandoff capability with ports, adapters, and a
+conformance kit certifying R1–R4 rules.
+
+SDK capability (provenance_handoff.py):
+- CompletionEmitter / CompletionConsumer / ProvenanceStore ports
+  (@runtime_checkable Protocol encoding R1–R4)
+- CompletionEnvelope value object (CloudEvents 1.0, subject == correlation_id)
+- OutboxCompletionEmitter adapter (appends via DurableExecutionBus.Publish)
+- IdempotentConsumer adapter (dedup on correlation_id, store.has() guard)
+- build_envelope() with depth/size validation
+
+Conformance kit (testing/conformance.py):
+- run_provenance_conformance() certifies R1–R4 against a fake outbox
+- C-Outbox and C-AtLeastOnce delegated to live-Postgres @integration proofs
+- Deliberately-broken fixture assertions (R1/R2/R3/R4 each proven red)
+
+Cross-language golden fixture (testdata/completion_envelope.golden.json):
+- Go round-trip test asserts same shape as Python
+
+testing.py → testing/ package conversion:
+- Moved to testing/_testing_helpers.py with fixed imports
+- Added conformance.py to the package
+
+Behavior 6: Phase-2 refactored onto generic port:
+- ReelAfConsumer + ReelAfProvenanceStore adapters prove the existing
+  research→reels pattern is expressible via the generic ports
+- Conformance kit certifies the pair R1–R4
+- All Phase-2 suites remain green (645 carousel-impl, 22 Go research)
+
+Test coverage: 41 new Python tests (7 files), 2 new Go tests.
+All pass: SDK 1664 passed, Go events green.
+
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com> (7e942a1)
+
+- Feat(events): emit research.completed in the terminal succeeded tx (C-Outbox)
+
+INT-02 Behavior 1, control-plane Go half. The research.completed event must
+append to event_outbox in the SAME transaction as the execution's terminal
+succeeded write (C-Outbox) — otherwise a dual-write bug reintroduces itself
+(run marked done, event lost, or vice-versa).
+
+- internal/events/research_completed.go: builds the research.completed
+  CloudEvent (envelope + small owner DTO) from a terminal execution, gated on
+  the deep-research node id + succeeded status. Mirrors the shape already
+  shipped by silmari-af-deep-research/research_completed_event.py (the
+  canonical producer + golden fixture).
+- internal/storage/event_outbox.go: AppendEventOutboxTx appends on the
+  caller's *sql.Tx via raw SQL (postgres RETURNING seq / sqlite
+  LastInsertId), since the existing AppendEventOutbox appends via GORM on its
+  own connection and can't share a transaction.
+- internal/storage/execution_records.go: UpdateExecutionRecord now delegates
+  to UpdateExecutionRecordWithOutbox, which appends the outbox record on the
+  same tx before Commit().
+- internal/handlers/execute.go: completeExecution (the one confirmed
+  terminal-succeeded write path for every agent call) type-asserts its store
+  to an ExecutionOutboxUpdater capability and wires in the emit when
+  available, falling back to the plain path otherwise.
+
+Closure tests use a real on-disk SQLite store via database/sql transactions
+(matching internal/events/durable_bus_test.go's existing pattern for
+same-tx claims): prove the append lands in-tx, a rollback discards it, the
+gate skips non-research/non-succeeded executions, and the old plain path
+never appended (red-at-seam baseline).
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com> (2445e16)
+
+
+
+### Fixed
+
+- Fix(events): close patch-coverage gap on research.completed emit
+
+CI's coverage-summary gate failed at 75.00% patch coverage (min_patch=80%,
+34/139 touched lines uncovered). Closes the reachable gaps:
+
+- research_completed.go: cover the nil-execution guard directly; simplify
+  BuildResearchCompletedOutboxRecord to stop duplicating the succeeded-only
+  check that BuildResearchCompletedEvent already owns (the duplicate made
+  its own error branch dead code) — the existing SkipsNonSucceeded test now
+  exercises the real (single) validation path.
+- execute.go: add tests for the "already cancelled/waiting" guard inside
+  completionUpdater (pre-existing logic, newly extracted into a named
+  closure by the previous commit).
+- event_outbox.go: cover the empty-payload default, and drive the postgres
+  RETURNING-clause branch directly — mattn/go-sqlite3 supports RETURNING, so
+  wrapping the same real on-disk *sql.Tx with mode="postgres" exercises that
+  branch's actual SQL + Scan behavior without a live postgres connection.
+  Also cover the dead-tx error path for both branches.
+
+Remaining 8 uncovered patch lines (94% final) are defensive-only branches
+not reachable without contriving the failure (json.Marshal erroring on a
+fixed struct with no cyclic/unsupported fields, sql.Result.LastInsertId
+failing on a normal rowid-table insert, and a fake test store that
+pre-checks existence and can never invoke the updater with a nil record the
+way the real DB-backed store does on a genuinely missing row).
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com> (288e1b8)
+
 ## [0.1.90-rc.5] - 2026-07-12
 
 
