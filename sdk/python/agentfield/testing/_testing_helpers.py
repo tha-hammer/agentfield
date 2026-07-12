@@ -40,7 +40,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Dict, Optional, Union
 
-from .triggers import EventTrigger, ScheduleTrigger, TriggerContext
+from agentfield.triggers import EventTrigger, ScheduleTrigger, TriggerContext
 
 
 def simulate_trigger(
@@ -139,7 +139,7 @@ def load_fixture(source: str, name: str = "default") -> Dict[str, Any]:
     Returns a dict (the parsed JSON). Tests can mutate freely; each call
     re-reads from disk.
     """
-    base = Path(__file__).parent / "fixtures" / "triggers"
+    base = Path(__file__).parent.parent / "fixtures" / "triggers"
     candidate = base / (f"{source}_{name}.json" if name != "default" else f"{source}.json")
     if not candidate.exists():
         raise FileNotFoundError(
