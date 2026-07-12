@@ -4,7 +4,6 @@ from agentfield.provenance_handoff import (
     OutboxCompletionEmitter,
 )
 from agentfield.testing.conformance import (
-    ConformanceResult,
     _FakeBus,
     _SpyForeignStore,
     run_provenance_conformance,
@@ -55,7 +54,6 @@ def test_kit_reports_all_six_spec_contracts():
         _CorrectConsumer(),
         _MemStore(),
     )
-    all_contracts = res.passed | res.failed | res.waived | res.delegated | res.precondition
     assert "C-Outbox" in res.delegated
     assert "C-AtLeastOnce" in res.delegated
     assert "C-Correlation" in res.precondition
