@@ -6,6 +6,55 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.90-rc.7] - 2026-07-13
+
+
+### Fixed
+
+- Fix(sdk-python): remaining ruff errors from int-03 (provenance_handoff, conformance kit)
+
+Completes the lint-and-test fix started in the previous commit — these are
+the other 12 errors from 7e942a1a, all F401 (unused imports) and F841
+(unused locals), none behavior-changing:
+
+- provenance_handoff.py: drop unused `field` import (dataclasses).
+- testing/conformance.py:
+  - drop unused `Mapping` (typing) and `OutboxCompletionEmitter` imports.
+  - `emit_completed(...)`/`idempotent_counted.deliver(...)` calls matter for
+    their side effects (outbox append / provenance store), not their return
+    values — drop the unused `ce_id`/`artifact_id_1`/`artifact_id_2`
+    bindings, keep the calls.
+  - drop the dead local `CompletionEnvelope as CE` re-import (the module
+    already imports CompletionEnvelope at top level for type hints).
+  - drop `idempotent`/`call_count`/`original_on_completed`: leftover from an
+    earlier iteration — R3 actually runs through `_CountingWrapper` +
+    `idempotent_counted` a few lines down, which already existed and does
+    the real work.
+- tests/test_completion_envelope.py: drop unused MAX_SNAPSHOT_BYTES /
+  MAX_SNAPSHOT_DEPTH imports (referenced only in comments, not code).
+
+Verified: `ruff check .` clean across sdk/python; full suite
+(1664 passed, 12 skipped) unaffected.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com> (10b0fb1)
+
+- Fix(sdk-python): ruff errors in test_conformance_kit.py
+
+main's lint-and-test (3.10/3.11/3.12) has been failing since
+7e942a1a (feat(int-03): reusable ProvenanceHandoff SDK capability).
+
+- F401: ConformanceResult imported at module scope but never used there —
+  the only real usage is the local re-import inside test_kit_is_importable,
+  which intentionally checks the name is importable from an external
+  consumer's perspective.
+- F811: redefinition of ConformanceResult, a direct consequence of the
+  F401 — removing the unused module-level import resolves both.
+- F841: all_contracts assigned in test_kit_reports_all_six_spec_contracts
+  but never read; the test's actual assertions only check res.delegated
+  and res.precondition membership.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com> (6d9f0b1)
+
 ## [0.1.90-rc.6] - 2026-07-12
 
 
