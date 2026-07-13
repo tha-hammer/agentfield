@@ -3,6 +3,8 @@ from typing import Any, Dict, List, Literal, Optional
 from pydantic import BaseModel, Field, computed_field
 from enum import Enum
 
+from agentfield.openrouter_attribution import apply_litellm_attribution
+
 
 class AgentStatus(str, Enum):
     """Agent lifecycle status enum matching the Go backend"""
@@ -316,6 +318,15 @@ class HarnessConfig(BaseModel):
     opencode_bin: str = Field(
         default="opencode", description="Path to opencode binary."
     )
+    schema_mode: str = Field(
+        default="single",
+        description=(
+            'How schema output is produced: "single" (one Write of the whole '
+            'object, default), "incremental" (build it one top-level field at a '
+            "time with field-level recovery — robust for large/deep schemas), or "
+            '"auto" (incremental only when the schema is large).'
+        ),
+    )
 
 
 class AIConfig(BaseModel):
@@ -473,6 +484,14 @@ class AIConfig(BaseModel):
     organization: Optional[str] = Field(
         default=None, description="Organization ID (for OpenAI)"
     )
+    openrouter_site_url: Optional[str] = Field(
+        default=None,
+        description="OpenRouter attribution site URL. Defaults to https://agentfield.ai.",
+    )
+    openrouter_app_name: Optional[str] = Field(
+        default=None,
+        description="OpenRouter attribution app title. Defaults to AgentField AI.",
+    )
 
     # Additional LiteLLM parameters that can be overridden
     litellm_params: Dict[str, Any] = Field(
@@ -520,6 +539,9 @@ class AIConfig(BaseModel):
         "gpt-4o-mini": 128000,
         "gpt-4": 8192,
         "gpt-3.5-turbo": 16385,
+        # GLM models
+        "openrouter/z-ai/glm-5.2": 131072,
+        "z-ai/glm-5.2": 131072,
         # Claude models
         "openrouter/anthropic/claude-3.5-sonnet": 200000,
         "openrouter/anthropic/claude-3-opus": 200000,
@@ -678,6 +700,12 @@ class AIConfig(BaseModel):
         )
         if provider == "openai" and "max_tokens" in params:
             params["max_completion_tokens"] = params.pop("max_tokens")
+
+        apply_litellm_attribution(
+            params,
+            site_url=self.openrouter_site_url,
+            app_name=self.openrouter_app_name,
+        )
 
         return params
 

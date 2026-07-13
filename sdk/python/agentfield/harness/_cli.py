@@ -6,30 +6,60 @@ import asyncio
 import json
 import os
 import re
-import time
+import signal
 from typing import Any, Dict, List, Optional, Tuple
 
+from agentfield.openrouter_attribution import apply_subprocess_env
+
 _ANSI_RE = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
+
+# 600s (10min), not upstream's 120s: an OpenRouter/LLM stream can go fully
+# silent (connection ESTABLISHED, zero bytes, no socket timer) for well
+# longer than 2 minutes without being dead — see the opencode provider's
+# original idle-timeout comment for the incident this default is tuned
+# against. 120s was flagged as too aggressive for codex/gemini before this
+# default was raised; if a provider's calls need a different window, pass
+# ``idle_seconds`` explicitly or set AGENTFIELD_HARNESS_IDLE_SECONDS.
+_DEFAULT_IDLE_SECONDS = 600.0
 
 
 def strip_ansi(text: str) -> str:
     return _ANSI_RE.sub("", text)
 
 
+def _resolve_idle_seconds(idle_seconds: Optional[float]) -> Optional[float]:
+    """Resolve the no-progress watchdog window.
+
+    Precedence: explicit ``idle_seconds`` arg, then env
+    ``AGENTFIELD_HARNESS_IDLE_SECONDS``, then ``_DEFAULT_IDLE_SECONDS`` (600s).
+    A value <= 0 disables the watchdog.
+    """
+    if idle_seconds is None:
+        raw = os.environ.get("AGENTFIELD_HARNESS_IDLE_SECONDS")
+        if raw is not None:
+            try:
+                idle_seconds = float(raw)
+            except ValueError:
+                idle_seconds = _DEFAULT_IDLE_SECONDS
+        else:
+            idle_seconds = _DEFAULT_IDLE_SECONDS
+    return idle_seconds if idle_seconds and idle_seconds > 0 else None
+
+
 async def _drain(
     stream: Optional[asyncio.StreamReader],
     chunks: List[bytes],
-    activity: List[float],
+    last_activity: List[float],
 ) -> None:
-    """Read a pipe to EOF, buffering chunks and stamping last-output time."""
+    """Read a stream incrementally, recording each chunk and its arrival time."""
     if stream is None:
         return
     while True:
         chunk = await stream.read(65536)
         if not chunk:
-            return
+            break
         chunks.append(chunk)
-        activity[0] = time.monotonic()
+        last_activity[0] = asyncio.get_event_loop().time()
 
 
 async def run_cli(
@@ -38,23 +68,22 @@ async def run_cli(
     env: Optional[Dict[str, str]] = None,
     cwd: Optional[str] = None,
     timeout: Optional[float] = None,
-    idle_timeout: Optional[float] = None,
+    idle_seconds: Optional[float] = None,
 ) -> Tuple[str, str, int]:
     """Run a CLI command async. Returns (stdout, stderr, returncode).
 
-    ``timeout`` is a total wall-clock cap. ``idle_timeout``, when set,
-    additionally kills the process if it produces NO stdout/stderr output for
-    that many seconds — catching silent stalls (e.g. an upstream LLM stream
-    that hangs mid-response) far sooner than the total cap. A progressing CLI
-    streams events continuously, so idle detection won't cut a working call as
-    long as ``idle_timeout`` exceeds the longest expected gap between output
-    (e.g. a long-running tool/test invocation). Both raise ``TimeoutError``.
-    When ``idle_timeout`` is None the behavior is identical to the prior
-    total-cap-only implementation.
+    Streams stdout and stderr concurrently so a no-progress (idle) watchdog can
+    abort a stalled child early. If no output arrives for ``idle_seconds`` (env
+    ``AGENTFIELD_HARNESS_IDLE_SECONDS``, default 600s; <= 0 disables), the process
+    group is killed and ``TimeoutError`` is raised. ``timeout`` remains the outer
+    wall-clock bound.
     """
     merged_env = {**os.environ}
     if env:
         merged_env.update(env)
+    apply_subprocess_env(merged_env)
+
+    idle = _resolve_idle_seconds(idle_seconds)
 
     proc = await asyncio.create_subprocess_exec(
         *cmd,
@@ -63,66 +92,79 @@ async def run_cli(
         stderr=asyncio.subprocess.PIPE,
         env=merged_env,
         cwd=cwd,
+        start_new_session=True,
     )
 
-    if idle_timeout is None:
-        # Total-cap-only path (unchanged behavior).
-        try:
-            stdout_bytes, stderr_bytes = await asyncio.wait_for(
-                proc.communicate(), timeout=timeout
-            )
-        except asyncio.TimeoutError:
-            proc.kill()
-            await proc.wait()
-            raise TimeoutError(
-                f"CLI command timed out after {timeout}s: {' '.join(cmd)}"
-            )
-        return (
-            stdout_bytes.decode("utf-8", errors="replace"),
-            stderr_bytes.decode("utf-8", errors="replace"),
-            proc.returncode if proc.returncode is not None else -1,
-        )
-
-    # Idle-aware path: stream both pipes concurrently, tracking the last time
-    # any output arrived, and enforce both the idle cap and the total cap.
     stdout_chunks: List[bytes] = []
     stderr_chunks: List[bytes] = []
-    activity = [time.monotonic()]
-    start = time.monotonic()
-    readers = asyncio.gather(
-        _drain(proc.stdout, stdout_chunks, activity),
-        _drain(proc.stderr, stderr_chunks, activity),
+    last_activity = [asyncio.get_event_loop().time()]
+
+    # Drain both pipes concurrently to avoid a pipe-buffer deadlock.
+    drain = asyncio.gather(
+        _drain(proc.stdout, stdout_chunks, last_activity),
+        _drain(proc.stderr, stderr_chunks, last_activity),
     )
 
-    poll = min(max(idle_timeout / 4.0, 0.05), 15.0)
-    killed_reason: Optional[str] = None
+    def _kill_group() -> None:
+        # Kill the whole process group, not just the direct child — a CLI
+        # provider (codex/opencode/gemini) commonly spawns its own
+        # subprocesses, and a bare proc.kill() would leave those orphaned.
+        pid = proc.pid
+        if isinstance(pid, int) and pid > 0:
+            try:
+                os.killpg(pid, signal.SIGKILL)
+                return
+            except (ProcessLookupError, PermissionError, OSError):
+                pass
+        try:
+            proc.kill()
+        except ProcessLookupError:
+            pass
+
+    timed_out = False
+    idle_timed_out = False
+    deadline = asyncio.get_event_loop().time() + timeout if timeout else None
+
     try:
         while True:
+            now = asyncio.get_event_loop().time()
+            waits: List[float] = []
+            if idle is not None:
+                waits.append(idle - (now - last_activity[0]))
+            if deadline is not None:
+                waits.append(deadline - now)
+            wait_for = min(waits) if waits else None
+            if wait_for is not None and wait_for <= 0:
+                wait_for = 0.0
+
             try:
-                # shield so an idle/total-cap timeout cancels only the wait,
-                # not the underlying reader tasks (which keep draining).
-                await asyncio.wait_for(asyncio.shield(readers), timeout=poll)
-                break  # both pipes hit EOF -> process is exiting
+                await asyncio.wait_for(asyncio.shield(drain), timeout=wait_for)
+                break  # both pipes hit EOF: child is done
             except asyncio.TimeoutError:
-                now = time.monotonic()
-                if now - activity[0] >= idle_timeout:
-                    killed_reason = f"no output for {idle_timeout}s (idle stall)"
+                now = asyncio.get_event_loop().time()
+                if deadline is not None and now >= deadline:
+                    timed_out = True
                     break
-                if timeout is not None and now - start >= timeout:
-                    killed_reason = f"exceeded total timeout {timeout}s"
+                if idle is not None and (now - last_activity[0]) >= idle:
+                    idle_timed_out = True
                     break
+                # Spurious wakeup (progress reset the idle window): loop again.
     finally:
-        if killed_reason is not None:
-            proc.kill()
-        # Let the readers drain post-kill EOF, then reap the process.
+        if timed_out or idle_timed_out:
+            _kill_group()
+        drain.cancel()
         try:
-            await readers
-        except Exception:
+            await drain
+        except BaseException:
             pass
         await proc.wait()
 
-    if killed_reason is not None:
-        raise TimeoutError(f"CLI command killed: {killed_reason}: {' '.join(cmd)}")
+    if idle_timed_out:
+        raise TimeoutError(
+            f"CLI command made no progress for {idle}s: {' '.join(cmd)}"
+        )
+    if timed_out:
+        raise TimeoutError(f"CLI command timed out after {timeout}s: {' '.join(cmd)}")
 
     return (
         b"".join(stdout_chunks).decode("utf-8", errors="replace"),

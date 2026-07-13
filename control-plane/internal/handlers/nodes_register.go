@@ -380,9 +380,10 @@ func RegisterNodeHandler(storageProvider storage.StorageProvider, uiService *ser
 		if newNode.GroupID == "" {
 			newNode.GroupID = newNode.ID
 		}
+		types.HydrateAgentSessions(&newNode)
 
 		// Normalize proposed_tags → tags for backward compatibility.
-		// If a skill/reasoner has proposed_tags but no tags, copy proposed_tags to tags.
+		// If a skill/reasoner/session has proposed_tags but no tags, copy proposed_tags to tags.
 		for i := range newNode.Reasoners {
 			if len(newNode.Reasoners[i].ProposedTags) > 0 && len(newNode.Reasoners[i].Tags) == 0 {
 				newNode.Reasoners[i].Tags = newNode.Reasoners[i].ProposedTags
@@ -399,6 +400,15 @@ func RegisterNodeHandler(storageProvider storage.StorageProvider, uiService *ser
 				newNode.Skills[i].ProposedTags = newNode.Skills[i].Tags
 			}
 		}
+		for i := range newNode.Sessions {
+			if len(newNode.Sessions[i].ProposedTags) > 0 && len(newNode.Sessions[i].Tags) == 0 {
+				newNode.Sessions[i].Tags = newNode.Sessions[i].ProposedTags
+			}
+			if len(newNode.Sessions[i].Tags) > 0 && len(newNode.Sessions[i].ProposedTags) == 0 {
+				newNode.Sessions[i].ProposedTags = newNode.Sessions[i].Tags
+			}
+		}
+		types.SyncAgentSessionsToMetadata(&newNode)
 
 		candidateList, defaultPort := gatherCallbackCandidates(newNode.BaseURL, newNode.CallbackDiscovery, c.ClientIP())
 		resolvedBaseURL := ""
@@ -558,6 +568,20 @@ func RegisterNodeHandler(storageProvider storage.StorageProvider, uiService *ser
 						}
 						newNode.Skills[i].ApprovedTags = approved
 					}
+					for i := range newNode.Sessions {
+						var approved []string
+						proposed := newNode.Sessions[i].ProposedTags
+						if len(proposed) == 0 {
+							proposed = newNode.Sessions[i].Tags
+						}
+						for _, t := range proposed {
+							if _, ok := approvedSet[strings.ToLower(strings.TrimSpace(t))]; ok {
+								approved = append(approved, t)
+							}
+						}
+						newNode.Sessions[i].ApprovedTags = approved
+					}
+					types.SyncAgentSessionsToMetadata(&newNode)
 				}
 
 				// If lifecycle was offline or empty, reset to starting so the
@@ -858,9 +882,10 @@ func RegisterServerlessAgentHandler(storageProvider storage.StorageProvider, uiS
 
 		// Parse discovery response
 		var discoveryData struct {
-			NodeID    string `json:"node_id"`
-			Version   string `json:"version"`
-			Reasoners []struct {
+			NodeID       string `json:"node_id"`
+			Version      string `json:"version"`
+			AuthRequired bool   `json:"auth_required"`
+			Reasoners    []struct {
 				ID           string                 `json:"id"`
 				Name         string                 `json:"name"`
 				Description  string                 `json:"description"`
@@ -944,8 +969,9 @@ func RegisterServerlessAgentHandler(storageProvider storage.StorageProvider, uiS
 			LifecycleStatus: types.AgentStatusReady,    // Serverless agents are always ready
 			Metadata: types.AgentMetadata{
 				Custom: map[string]interface{}{
-					"serverless":    true,
-					"discovery_url": discoveryURL,
+					"serverless":           true,
+					"discovery_url":        discoveryURL,
+					"origin_auth_required": discoveryData.AuthRequired,
 				},
 			},
 		}

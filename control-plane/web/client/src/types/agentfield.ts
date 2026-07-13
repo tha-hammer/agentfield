@@ -9,8 +9,10 @@ export interface AgentNode {
   registered_at?: string;
   deployment_type?: string; // "long_running" or "serverless"
   invocation_url?: string; // For serverless agents
+  origin_auth_required?: boolean; // Whether the node enforces auth on inbound execute calls (serverless only)
   reasoners?: ReasonerDefinition[];
   skills?: SkillDefinition[];
+  sessions?: SessionDefinition[];
 }
 
 export interface AgentNodeSummary {
@@ -23,8 +25,10 @@ export interface AgentNodeSummary {
   last_heartbeat?: string;
   deployment_type?: string; // "long_running" or "serverless"
   invocation_url?: string; // For serverless agents
+  origin_auth_required?: boolean; // Whether the node enforces auth on inbound execute calls (serverless only)
   reasoner_count: number;
   skill_count: number;
+  session_count?: number;
   /** Optional MCP roll-up when the control plane exposes it on the summary endpoint */
   mcp_summary?: MCPSummaryForUI;
 }
@@ -144,6 +148,20 @@ export interface SkillDefinition {
   name: string;
   description?: string;
   tags?: string[];
+}
+
+export interface SessionDefinition {
+  name: string;
+  provider: string;
+  transport: string;
+  model?: string;
+  modalities?: string[];
+  voice?: string;
+  tools?: string[];
+  tags?: string[];
+  proposed_tags?: string[];
+  approved_tags?: string[];
+  metadata?: Record<string, any>;
 }
 
 export type AgentConfiguration = Record<string, any>;

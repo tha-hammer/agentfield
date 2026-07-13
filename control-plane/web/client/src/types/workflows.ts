@@ -1,6 +1,6 @@
 // Enhanced types for the new workflow-centric execution page
 
-import type { CanonicalStatus } from '../utils/status';
+import type { CanonicalStatus } from "../utils/status";
 
 export interface TriggerInfo {
   trigger_id: string;
@@ -43,6 +43,24 @@ export interface WorkflowSummary {
   active_executions: number;
   terminal: boolean;
   trigger?: TriggerInfo;
+  lineage?: RunLineageMetadata;
+  golden?: GoldenRunMetadata;
+}
+
+export interface RunLineageMetadata {
+  kind?: string;
+  source_run_id?: string;
+  source_execution_id?: string;
+  restarted_execution_id?: string;
+  reuse?: string;
+  scope?: string;
+}
+
+export interface GoldenRunMetadata {
+  name?: string;
+  tags?: string[];
+  saved_by?: string;
+  saved_at?: string;
 }
 
 export interface EnhancedExecution {
@@ -63,7 +81,7 @@ export interface EnhancedExecution {
 }
 
 export interface ViewMode {
-  id: 'executions' | 'workflows' | 'sessions' | 'agents';
+  id: "executions" | "workflows" | "sessions" | "agents";
   label: string;
   description: string;
   icon: string;
@@ -97,10 +115,10 @@ export interface EnhancedExecutionsResponse {
 }
 
 export interface ExecutionViewState {
-  viewMode: ViewMode['id'];
+  viewMode: ViewMode["id"];
   filters: ExecutionViewFilters;
   sortBy: string;
-  sortOrder: 'asc' | 'desc';
+  sortOrder: "asc" | "desc";
   page: number;
   pageSize: number;
 }
@@ -136,6 +154,20 @@ export interface WorkflowTimelineNode {
   }[];
 }
 
+export interface WorkflowDAGExternal {
+  kind: "ard" | string;
+  local_target?: string;
+  provider?: string;
+  entry_identifier?: string;
+  adapter?: string;
+  policy?: string;
+  transport?: string;
+  mode?: string;
+  remote_run_id?: string;
+  remote_execution_id?: string;
+  remote_control_plane_url?: string;
+}
+
 export interface WorkflowDAGLightweightNode {
   execution_id: string;
   parent_execution_id?: string;
@@ -143,10 +175,18 @@ export interface WorkflowDAGLightweightNode {
   reasoner_id: string;
   status: string;
   status_reason?: string;
+  reuse?: ExecutionReuseMetadata;
   started_at: string;
   completed_at?: string;
   duration_ms?: number;
   workflow_depth: number;
+  external?: WorkflowDAGExternal;
+}
+
+export interface ExecutionReuseMetadata {
+  hit: boolean;
+  source_execution_id: string;
+  source_run_id?: string;
 }
 
 /** Aggregated webhook deliveries for a run (from lightweight DAG). */
@@ -175,7 +215,7 @@ export interface WorkflowDAGLightweightResponse {
   total_nodes: number;
   max_depth: number;
   timeline: WorkflowDAGLightweightNode[];
-  mode: 'lightweight';
+  mode: "lightweight";
   unique_agent_node_ids?: string[];
   /** Issuer DID from stored execution VCs for this workflow (server-issued), when present. */
   workflow_issuer_did?: string;
@@ -183,4 +223,6 @@ export interface WorkflowDAGLightweightResponse {
   /** Executions with a failed delivery (capped); for run-level retry / focus step. */
   webhook_failures?: WebhookFailurePreview[];
   trigger?: TriggerInfo;
+  lineage?: RunLineageMetadata;
+  golden?: GoldenRunMetadata;
 }
