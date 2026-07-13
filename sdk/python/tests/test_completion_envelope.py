@@ -3,8 +3,6 @@ from agentfield.provenance_handoff import (
     CompletionEnvelope,
     EnvelopeError,
     build_envelope,
-    MAX_SNAPSHOT_BYTES,
-    MAX_SNAPSHOT_DEPTH,
 )
 
 

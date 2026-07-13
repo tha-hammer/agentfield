@@ -24,12 +24,11 @@ Governing-spec contract coverage (spec §4):
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Mapping
+from typing import Any
 
 from agentfield.provenance_handoff import (
     CompletionEnvelope,
     IdempotentConsumer,
-    OutboxCompletionEmitter,
     build_envelope,
 )
 
@@ -103,7 +102,7 @@ def run_provenance_conformance(
 
     # --- Emit via producer ---
     try:
-        ce_id = producer.emit_completed(
+        producer.emit_completed(
             domain=domain,
             correlation_id=correlation_id,
             result_ref="pkg://conformance/result",
@@ -127,7 +126,6 @@ def run_provenance_conformance(
     else:
         rec = bus_records[-1]
         try:
-            from agentfield.provenance_handoff import CompletionEnvelope as CE
             import json
 
             env_data = json.loads(rec.get("data", "{}")) if isinstance(rec.get("data"), str) else rec.get("data", {})
@@ -153,10 +151,6 @@ def run_provenance_conformance(
     )
 
     # --- R3: idempotent consumer, keyed on correlation_id ---
-    idempotent = IdempotentConsumer(consumer, store)
-    call_count = 0
-    original_on_completed = consumer.on_completed
-
     class _CountingWrapper:
         def __init__(self, inner: Any) -> None:
             self._inner = inner
@@ -174,7 +168,7 @@ def run_provenance_conformance(
     counting = _CountingWrapper(consumer)
     idempotent_counted = IdempotentConsumer(counting, store)
 
-    artifact_id_1 = idempotent_counted.deliver(first_env)
+    idempotent_counted.deliver(first_env)
 
     reemit_env = build_envelope(
         node_id="conformance-producer",
@@ -183,7 +177,7 @@ def run_provenance_conformance(
         result_ref="pkg://conformance/result",
         snapshot={"test_key": "test_value"},
     )
-    artifact_id_2 = idempotent_counted.deliver(reemit_env)
+    idempotent_counted.deliver(reemit_env)
 
     r3_ok = counting.call_count == 1
     if not r3_ok:
