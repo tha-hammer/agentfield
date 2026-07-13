@@ -55,10 +55,11 @@ func seedRunningWorkflowExecution(
 }
 
 // TestMarkAgentExecutionsOrphaned_ReapsByAgent confirms the core invariant:
-// every non-terminal execution owned by the given agent_node_id is failed,
-// and rows belonging to OTHER agents are untouched. This is the load-bearing
-// behavior — without it, a single redeploy of one agent would never clean up
-// orphaned cross-agent calls and could potentially fail unrelated work.
+// every non-terminal execution owned by the given agent_node_id is reset to the
+// recoverable `pending` status (NOT terminal `failed`), and rows belonging to
+// OTHER agents are untouched. This is the load-bearing behavior — without it, a
+// single redeploy of one agent would never clean up orphaned cross-agent calls
+// and could either permanently kill (old bug) or fail to recover healthy work.
 func TestMarkAgentExecutionsOrphaned_ReapsByAgent(t *testing.T) {
 	ls, ctx := setupTestLocalStorage(t)
 	now := time.Now().UTC()
@@ -99,8 +100,10 @@ func TestMarkAgentExecutionsOrphaned_ReapsByAgent(t *testing.T) {
 	for _, id := range []string{"exec-gh-1", "exec-gh-2"} {
 		got, err := ls.GetWorkflowExecution(ctx, id)
 		require.NoError(t, err, "execution %s should exist", id)
-		require.Equal(t, "failed", got.Status, "execution %s should be failed", id)
-		require.NotNil(t, got.CompletedAt, "execution %s should have completed_at", id)
+		require.Equal(t, "pending", got.Status,
+			"execution %s should be recoverable pending, not terminal failed", id)
+		require.Nil(t, got.CompletedAt,
+			"execution %s should have NULL completed_at (recoverable, not completed)", id)
 		require.NotNil(t, got.StatusReason, "execution %s should have status_reason set", id)
 		require.True(t,
 			strings.Contains(*got.StatusReason, "agent_restart_orphaned"),
@@ -124,8 +127,8 @@ func TestMarkAgentExecutionsOrphaned_ReapsByAgent(t *testing.T) {
 }
 
 // TestMarkAgentExecutionsOrphaned_ReapsAllNonTerminalStatuses ensures we don't
-// silently leave `pending`, `queued`, or `waiting` executions behind. They're
-// equally orphaned by a process restart.
+// silently leave `running`, `queued`, or `waiting` executions behind. They're
+// equally orphaned by a process restart and must all become recoverable pending.
 func TestMarkAgentExecutionsOrphaned_ReapsAllNonTerminalStatuses(t *testing.T) {
 	ls, ctx := setupTestLocalStorage(t)
 	now := time.Now().UTC()
@@ -155,9 +158,58 @@ func TestMarkAgentExecutionsOrphaned_ReapsAllNonTerminalStatuses(t *testing.T) {
 	for _, status := range []string{"running", "pending", "queued", "waiting"} {
 		got, err := ls.GetWorkflowExecution(ctx, "exec-"+status)
 		require.NoError(t, err)
-		require.Equal(t, "failed", got.Status,
-			"status=%s execution should be reaped to failed", status)
+		require.Equal(t, "pending", got.Status,
+			"status=%s execution should be reaped to recoverable pending", status)
 	}
+}
+
+// TestMarkAgentExecutionsOrphaned_MarksRetryablePendingNotFailed is the Behavior-1
+// pin (bsb slice 1): an orphaned in-flight row must become a *recoverable*
+// `pending` — not terminal `failed` — with completed_at left NULL and started_at
+// preserved, so a future re-dispatch can resume the original attempt and the run
+// is not permanently killed by a single restart.
+func TestMarkAgentExecutionsOrphaned_MarksRetryablePendingNotFailed(t *testing.T) {
+	ls, ctx := setupTestLocalStorage(t)
+	started := time.Now().UTC().Add(-3 * time.Minute)
+	seedRunningWorkflowExecution(t, ls, "wf-1", "github-buddy", started)
+
+	n, err := ls.MarkAgentExecutionsOrphaned(ctx, "github-buddy", "agent_restart_orphaned: test")
+	require.NoError(t, err)
+	require.Equal(t, 1, n)
+
+	got, err := ls.GetWorkflowExecution(ctx, "wf-1")
+	require.NoError(t, err)
+	require.Equal(t, "pending", got.Status, "orphaned row must be recoverable pending, not terminal failed")
+	require.Nil(t, got.CompletedAt, "recoverable rows are not completed")
+	require.NotNil(t, got.StatusReason)
+	require.Contains(t, *got.StatusReason, "agent_restart_orphaned")
+	require.Equal(t, started.Unix(), got.StartedAt.UTC().Unix(), "started_at must be preserved for re-dispatch")
+}
+
+// TestMarkAgentExecutionsOrphaned_AtomicRollbackOnMirrorFailure is the Behavior-2
+// pin: the reap writes workflow_executions (source of truth) and the legacy
+// executions mirror atomically. If the mirror UPDATE fails mid-reap, the
+// source-of-truth row must roll back — never a split state where the truth flips
+// but the mirror doesn't. We force the failure by dropping the mirror table so
+// its UPDATE errors after the first table was already written.
+func TestMarkAgentExecutionsOrphaned_AtomicRollbackOnMirrorFailure(t *testing.T) {
+	ls, ctx := setupTestLocalStorage(t)
+	now := time.Now().UTC()
+	seedRunningWorkflowExecution(t, ls, "wf-atomic", "github-buddy", now)
+
+	// Force the second (mirror `executions`) UPDATE to fail mid-reap.
+	db := ls.requireSQLDB()
+	_, err := db.ExecContext(ctx, "DROP TABLE executions")
+	require.NoError(t, err)
+
+	_, err = ls.MarkAgentExecutionsOrphaned(ctx, "github-buddy", "agent_restart_orphaned: atomic test")
+	require.Error(t, err, "a mirror-table failure must surface as an error, not be silently swallowed")
+
+	// workflow_executions must be unchanged (rolled back): still running.
+	got, err := ls.GetWorkflowExecution(ctx, "wf-atomic")
+	require.NoError(t, err)
+	require.Equal(t, "running", got.Status,
+		"source-of-truth row must roll back when the mirror update fails (no split state)")
 }
 
 // TestMarkAgentExecutionsOrphaned_DoesNotResurrectTerminalStatuses pins that
