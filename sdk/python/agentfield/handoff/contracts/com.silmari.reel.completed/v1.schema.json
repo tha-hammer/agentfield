@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "com.silmari.reel.completed.v1",
+  "title": "reel.completed v1 DTO",
+  "description": "Frozen contract for the reel.completed handoff event data. C-Notification: ids + primitives + small snapshot only, never the mutable body.",
+  "type": "object",
+  "properties": {
+    "run_id": { "type": "string" },
+    "status": { "type": "string", "enum": ["succeeded", "failed"] },
+    "reel_ref": { "type": "string" },
+    "source_execution_id": { "type": "string" },
+    "duration_s": { "type": "number" },
+    "beat_count": { "type": "integer" }
+  },
+  "required": ["run_id", "status", "reel_ref", "source_execution_id", "duration_s", "beat_count"],
+  "additionalProperties": false
+}
