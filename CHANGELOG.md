@@ -6,6 +6,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.90-rc.8] - 2026-07-13
+
+
+### Added
+
+- Feat(storage): recoverable orphaning — reap to pending, atomic mirror (bsb slice 1)
+
+When an agent re-registers with a new instance_id (crash or mid-run redeploy),
+MarkAgentExecutionsOrphaned previously bulk-wrote terminal `failed` to every
+non-terminal row owned by that node — permanently killing an otherwise-healthy
+multi-step run on a single restart. Flip the reap to the recoverable `pending`
+status (leaving completed_at NULL, started_at preserved) and write both
+workflow_executions and the legacy executions mirror inside one transaction so
+they can never diverge on restart recovery. Extract updateOrphanedRows helper +
+static per-table query consts (mirrors MarkStaleWorkflowExecutions' tx style).
+
+Adds a BLOCKING closure test (register handler -> real storage -> run-detail
+read) proving a restart leaves in-flight steps recoverable (pending), not a
+failed run; red-at-seam verified. Re-dispatch/reconcile/drain are explicit
+follow-ups.
+
+Bead: silmari-agentfield-system-bsb
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (18a7919)
+
 ## [0.1.90-rc.7] - 2026-07-13
 
 
