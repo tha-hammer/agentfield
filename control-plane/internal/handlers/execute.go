@@ -1910,7 +1910,10 @@ func (c *executionController) completeExecution(ctx context.Context, plan *prepa
 		if outboxStore, ok := c.store.(ExecutionOutboxUpdater); ok {
 			updated, err = outboxStore.UpdateExecutionRecordWithOutbox(ctx, plan.exec.ExecutionID, completionUpdater,
 				func(updatedExec *types.Execution) (*types.EventOutboxRecord, bool, error) {
-					return events.BuildResearchCompletedOutboxRecord(updatedExec)
+					// MW Phase 3 B4 (Option B): select the completion outbox builder by
+					// AgentNodeID — research.completed and reel.completed both append in this
+					// same terminal state-write tx (C-Outbox). Was a research-only call.
+					return events.BuildCompletedOutboxRecord(updatedExec)
 				})
 		} else {
 			updated, err = c.store.UpdateExecutionRecord(ctx, plan.exec.ExecutionID, completionUpdater)
