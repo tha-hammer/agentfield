@@ -18,7 +18,7 @@ async def test_opencode_provider_constructs_command_and_maps_result(
 ):
     captured: dict[str, Any] = {}
 
-    async def fake_run_cli(cmd, *, env=None, cwd=None, timeout=None, idle_timeout=None):
+    async def fake_run_cli(cmd, *, env=None, cwd=None, timeout=None, idle_seconds=None):
         _ = timeout
         captured["cmd"] = cmd
         captured["env"] = env
@@ -110,7 +110,7 @@ def test_factory_builds_opencode_provider_with_config_bin() -> None:
 async def test_opencode_passes_model_flag(monkeypatch: pytest.MonkeyPatch):
     captured: dict[str, Any] = {}
 
-    async def fake_run_cli(cmd, *, env=None, cwd=None, timeout=None, idle_timeout=None):
+    async def fake_run_cli(cmd, *, env=None, cwd=None, timeout=None, idle_seconds=None):
         _ = timeout
         captured["cmd"] = cmd
         captured["env"] = env
@@ -138,7 +138,7 @@ async def test_opencode_passes_model_flag(monkeypatch: pytest.MonkeyPatch):
 async def test_opencode_cost_flows_through_metrics(monkeypatch: pytest.MonkeyPatch):
     """When model is provided, estimated cost populates metrics.total_cost_usd."""
 
-    async def fake_run_cli(cmd, *, env=None, cwd=None, timeout=None, idle_timeout=None):
+    async def fake_run_cli(cmd, *, env=None, cwd=None, timeout=None, idle_seconds=None):
         _ = (env, cwd, timeout)
         return "result text\n", "", 0
 
@@ -169,7 +169,7 @@ async def test_opencode_cost_prefers_stream_cost_when_present(
         ]
     )
 
-    async def fake_run_cli(cmd, *, env=None, cwd=None, timeout=None, idle_timeout=None):
+    async def fake_run_cli(cmd, *, env=None, cwd=None, timeout=None, idle_seconds=None):
         _ = (cmd, env, cwd, timeout)
         return stdout, "", 0
 
@@ -191,7 +191,7 @@ async def test_opencode_cost_prefers_stream_cost_when_present(
 async def test_opencode_cost_none_without_model(monkeypatch: pytest.MonkeyPatch):
     """Without a model, cost estimation returns None (not 0)."""
 
-    async def fake_run_cli(cmd, *, env=None, cwd=None, timeout=None, idle_timeout=None):
+    async def fake_run_cli(cmd, *, env=None, cwd=None, timeout=None, idle_seconds=None):
         _ = (env, cwd, timeout)
         return "result text\n", "", 0
 
@@ -209,9 +209,11 @@ async def test_opencode_command_does_not_use_attach_pattern(
     monkeypatch: pytest.MonkeyPatch,
 ):
     """Verify the provider uses direct CLI pattern, NOT serve+attach workaround."""
-    captured_cmd = None
+    captured_cmd: list[str] | None = None
 
-    async def capture_cmd(cmd, *, env=None, cwd=None, timeout=None, idle_timeout=None):
+    async def capture_cmd(
+        cmd: list[str], *, env=None, cwd=None, timeout=None, idle_seconds=None
+    ):
         nonlocal captured_cmd
         captured_cmd = cmd
         return "result", "", 0
@@ -221,6 +223,7 @@ async def test_opencode_command_does_not_use_attach_pattern(
     provider = OpenCodeProvider(bin_path="opencode")
     await provider.execute("test prompt", {"model": "gpt-4"})
 
+    assert captured_cmd is not None
     cmd_str = " ".join(captured_cmd)
     assert "--attach" not in cmd_str
     assert "http://" not in cmd_str
@@ -234,9 +237,11 @@ async def test_opencode_uses_project_dir_when_no_cwd(
     monkeypatch: pytest.MonkeyPatch,
 ):
     """Verify project_dir is used as --dir argument when cwd is not provided."""
-    captured_cmd = None
+    captured_cmd: list[str] | None = None
 
-    async def capture_cmd(cmd, *, env=None, cwd=None, timeout=None, idle_timeout=None):
+    async def capture_cmd(
+        cmd: list[str], *, env=None, cwd=None, timeout=None, idle_seconds=None
+    ):
         nonlocal captured_cmd
         captured_cmd = cmd
         return "result", "", 0
@@ -246,8 +251,42 @@ async def test_opencode_uses_project_dir_when_no_cwd(
     provider = OpenCodeProvider()
     await provider.execute("test", {"project_dir": "/my/project"})
 
+    assert captured_cmd is not None
     assert "--dir" in captured_cmd
     assert "/my/project" in captured_cmd
+
+
+@pytest.mark.asyncio
+async def test_opencode_project_dir_takes_precedence_over_cwd(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Regression for agentfield#684: when BOTH cwd and project_dir are set,
+    --dir must be project_dir (the agent's root), not the nested cwd. Otherwise
+    reading a sibling path under the shared root looks external to opencode and
+    gets auto-rejected, so the schema output file is never written.
+    """
+    captured_cmd: list[str] | None = None
+
+    async def capture_cmd(
+        cmd: list[str], *, env=None, cwd=None, timeout=None, idle_seconds=None
+    ):
+        nonlocal captured_cmd
+        captured_cmd = cmd
+        return "result", "", 0
+
+    monkeypatch.setattr("agentfield.harness.providers.opencode.run_cli", capture_cmd)
+
+    provider = OpenCodeProvider()
+    await provider.execute(
+        "read a sibling file",
+        {"cwd": "/research-lab/tasks/a", "project_dir": "/research-lab"},
+    )
+
+    assert captured_cmd is not None
+    dir_idx = captured_cmd.index("--dir")
+    assert captured_cmd[dir_idx + 1] == "/research-lab"
+    # The nested cwd must NOT be used as the project root.
+    assert "/research-lab/tasks/a" not in captured_cmd
 
 
 @pytest.mark.asyncio
@@ -271,7 +310,7 @@ async def test_opencode_exit0_with_error_stderr_is_treated_as_failure(
         "Error: Model not found: minimax/minimax-m2.5.\n"
     )
 
-    async def fake_run_cli(cmd, *, env=None, cwd=None, timeout=None, idle_timeout=None):
+    async def fake_run_cli(cmd, *, env=None, cwd=None, timeout=None, idle_seconds=None):
         return "", stderr_with_real_error, 0
 
     monkeypatch.setattr("agentfield.harness.providers.opencode.run_cli", fake_run_cli)
@@ -293,7 +332,7 @@ async def test_opencode_exit0_with_only_migration_stderr_is_success(
 ):
     """Migration prelude on stderr without an Error: line should NOT be a failure."""
 
-    async def fake_run_cli(cmd, *, env=None, cwd=None, timeout=None, idle_timeout=None):
+    async def fake_run_cli(cmd, *, env=None, cwd=None, timeout=None, idle_seconds=None):
         return (
             "actual model output\n",
             "Performing one time database migration, may take a few minutes...\n"
@@ -322,7 +361,7 @@ async def test_opencode_exit0_with_json_error_event_is_treated_as_failure(
         ]
     )
 
-    async def fake_run_cli(cmd, *, env=None, cwd=None, timeout=None, idle_timeout=None):
+    async def fake_run_cli(cmd, *, env=None, cwd=None, timeout=None, idle_seconds=None):
         _ = (cmd, env, cwd, timeout)
         return stdout, "", 0
 
@@ -343,10 +382,10 @@ async def test_opencode_exit_nonzero_uses_extracted_error_not_truncated_prelude(
 ):
     """Non-zero exit + long migration prelude in stderr should still surface
     the real Error: line, not just the first 1000 chars of the prelude."""
-    long_prelude = ("Performing one time database migration line\n" * 30)
+    long_prelude = "Performing one time database migration line\n" * 30
     stderr = long_prelude + "Error: AuthenticationError: bad key\n"
 
-    async def fake_run_cli(cmd, *, env=None, cwd=None, timeout=None, idle_timeout=None):
+    async def fake_run_cli(cmd, *, env=None, cwd=None, timeout=None, idle_seconds=None):
         return "", stderr, 1
 
     monkeypatch.setattr("agentfield.harness.providers.opencode.run_cli", fake_run_cli)
@@ -373,9 +412,11 @@ async def test_opencode_v14_cli_shape_no_deprecated_flags(
     and exits with no output, which surfaces as 'Product manager failed to
     produce a valid PRD'.
     """
-    captured_cmd = None
+    captured_cmd: list[str] | None = None
 
-    async def capture_cmd(cmd, *, env=None, cwd=None, timeout=None, idle_timeout=None):
+    async def capture_cmd(
+        cmd: list[str], *, env=None, cwd=None, timeout=None, idle_seconds=None
+    ):
         nonlocal captured_cmd
         captured_cmd = cmd
         return "result", "", 0
@@ -385,6 +426,7 @@ async def test_opencode_v14_cli_shape_no_deprecated_flags(
     provider = OpenCodeProvider(bin_path="opencode")
     await provider.execute("build the feature", {"cwd": "/repo", "model": "gpt-4o"})
 
+    assert captured_cmd is not None
     cmd_str = " ".join(captured_cmd)
     # Must use `run` subcommand
     assert captured_cmd[1] == "run", "Must use 'opencode run' subcommand (v1.4+)"
@@ -421,7 +463,7 @@ async def test_opencode_num_turns_counts_step_start_events(
         ]
     )
 
-    async def fake_run_cli(cmd, *, env=None, cwd=None, timeout=None, idle_timeout=None):
+    async def fake_run_cli(cmd, *, env=None, cwd=None, timeout=None, idle_seconds=None):
         _ = (cmd, env, cwd, timeout)
         return stdout, "", 0
 
@@ -449,7 +491,7 @@ async def test_opencode_extracts_result_from_text_events(
         ]
     )
 
-    async def fake_run_cli(cmd, *, env=None, cwd=None, timeout=None, idle_timeout=None):
+    async def fake_run_cli(cmd, *, env=None, cwd=None, timeout=None, idle_seconds=None):
         _ = (cmd, env, cwd, timeout)
         return stdout, "", 0
 
@@ -476,7 +518,7 @@ async def test_opencode_accumulates_multiple_text_parts(
         ]
     )
 
-    async def fake_run_cli(cmd, *, env=None, cwd=None, timeout=None, idle_timeout=None):
+    async def fake_run_cli(cmd, *, env=None, cwd=None, timeout=None, idle_seconds=None):
         _ = (cmd, env, cwd, timeout)
         return stdout, "", 0
 

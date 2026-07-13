@@ -21,6 +21,23 @@ type Config struct {
 	UI         UIConfig         `yaml:"ui" mapstructure:"ui"`
 	API        APIConfig        `yaml:"api" mapstructure:"api"`
 	Telemetry  TelemetryConfig  `yaml:"telemetry" mapstructure:"telemetry"`
+	Logging    LoggingConfig    `yaml:"logging" mapstructure:"logging"`
+}
+
+// LoggingConfig controls structured logging behavior.
+type LoggingConfig struct {
+	// Level sets the minimum log level: "debug", "info", "warn", "error".
+	// Defaults to "info".
+	Level string `yaml:"level" mapstructure:"level"`
+	// RedactPayloads controls whether execution input/output payloads are
+	// omitted from structured log events and internal event bus data.
+	// Defaults to true (payloads are redacted).
+	RedactPayloads *bool `yaml:"redact_payloads" mapstructure:"redact_payloads"`
+}
+
+// ShouldRedactPayloads returns true (the safe default) unless explicitly set to false.
+func (l LoggingConfig) ShouldRedactPayloads() bool {
+	return l.RedactPayloads == nil || *l.RedactPayloads
 }
 
 // TelemetryConfig controls anonymous OSS usage telemetry. It is separate from
@@ -52,6 +69,8 @@ type UIConfig struct {
 // AgentFieldConfig holds the core AgentField server configuration.
 type AgentFieldConfig struct {
 	Port             int                    `yaml:"port"`
+	ShutdownTimeout  time.Duration          `yaml:"shutdown_timeout" mapstructure:"shutdown_timeout"`
+	ARD              ARDConfig              `yaml:"ard" mapstructure:"ard"`
 	Registration     RegistrationConfig     `yaml:"registration" mapstructure:"registration"`
 	NodeHealth       NodeHealthConfig       `yaml:"node_health" mapstructure:"node_health"`
 	LLMHealth        LLMHealthConfig        `yaml:"llm_health" mapstructure:"llm_health"`
@@ -88,6 +107,43 @@ func EffectiveEventOutbox(c EventOutboxConfig) EventOutboxConfig {
 		out.RetentionMaxRows = 0
 	}
 	return out
+}
+
+// ARDConfig controls Agentic Resource Discovery exposure. Config/env values are
+// deployment guardrails; runtime publish/import state is stored in the DB.
+type ARDConfig struct {
+	Enabled         bool              `yaml:"enabled" mapstructure:"enabled"`
+	PublicBaseURL   string            `yaml:"public_base_url" mapstructure:"public_base_url"`
+	PublisherDomain string            `yaml:"publisher_domain" mapstructure:"publisher_domain"`
+	Host            ARDHostConfig     `yaml:"host" mapstructure:"host"`
+	Publish         ARDPublishConfig  `yaml:"publish" mapstructure:"publish"`
+	Registry        ARDRegistryConfig `yaml:"registry" mapstructure:"registry"`
+	External        ARDExternalConfig `yaml:"external" mapstructure:"external"`
+}
+
+type ARDHostConfig struct {
+	DisplayName      string `yaml:"display_name" mapstructure:"display_name"`
+	Identifier       string `yaml:"identifier" mapstructure:"identifier"`
+	DocumentationURL string `yaml:"documentation_url" mapstructure:"documentation_url"`
+	LogoURL          string `yaml:"logo_url" mapstructure:"logo_url"`
+}
+
+type ARDPublishConfig struct {
+	Enabled               bool     `yaml:"enabled" mapstructure:"enabled"`
+	IncludeHealthStatuses []string `yaml:"include_health_statuses" mapstructure:"include_health_statuses"`
+	DefaultType           string   `yaml:"default_type" mapstructure:"default_type"`
+}
+
+type ARDRegistryConfig struct {
+	Enabled bool `yaml:"enabled" mapstructure:"enabled"`
+	Public  bool `yaml:"public" mapstructure:"public"`
+}
+
+type ARDExternalConfig struct {
+	SearchEnabled      bool     `yaml:"search_enabled" mapstructure:"search_enabled"`
+	InvocationEnabled  bool     `yaml:"invocation_enabled" mapstructure:"invocation_enabled"`
+	AllowedRegistries  []string `yaml:"allowed_registries" mapstructure:"allowed_registries"`
+	DefaultSearchLimit int      `yaml:"default_search_limit" mapstructure:"default_search_limit"`
 }
 
 // RegistrationConfig governs validation of agent-supplied registration endpoints.
@@ -220,6 +276,34 @@ type FeatureConfig struct {
 	DID       DIDConfig       `yaml:"did" mapstructure:"did"`
 	Connector ConnectorConfig `yaml:"connector" mapstructure:"connector"`
 	Tracing   TracingConfig   `yaml:"tracing" mapstructure:"tracing"`
+	Knowledge KnowledgeConfig `yaml:"knowledge" mapstructure:"knowledge"`
+}
+
+// KnowledgeConfig configures the native, scope-aware RAG knowledge store and its
+// embedding provider. The embedding dimension is pinned in code (see
+// internal/embedding) and is intentionally NOT configurable per-caller — the
+// shared vector index is fixed-dimension.
+type KnowledgeConfig struct {
+	// Enabled turns the /api/v1/knowledge endpoints on. Default: true.
+	Enabled *bool `yaml:"enabled" mapstructure:"enabled"`
+	// Provider selects the embedder: "openai", "fake", or "" (auto: openai when
+	// an API key is present, otherwise fake).
+	Provider string `yaml:"provider" mapstructure:"provider"`
+	// OpenAI holds OpenAI embedding-provider settings.
+	OpenAI OpenAIEmbeddingConfig `yaml:"openai" mapstructure:"openai"`
+}
+
+// IsEnabled reports whether the knowledge store is enabled (default true).
+func (c KnowledgeConfig) IsEnabled() bool {
+	return c.Enabled == nil || *c.Enabled
+}
+
+// OpenAIEmbeddingConfig holds OpenAI embedding-provider settings. When APIKey is
+// empty the knowledge store falls back to the deterministic FakeEmbedder so it
+// works locally with zero external dependencies.
+type OpenAIEmbeddingConfig struct {
+	APIKey string `yaml:"api_key" mapstructure:"api_key"`
+	Model  string `yaml:"model" mapstructure:"model"`
 }
 
 // TracingConfig holds configuration for OpenTelemetry distributed tracing.
@@ -412,6 +496,15 @@ func LoadConfig(configPath string) (*Config, error) {
 
 // ApplyDefaults fills values that should be stable across config loaders.
 func ApplyDefaults(cfg *Config) {
+	if cfg.AgentField.ARD.Publish.DefaultType == "" {
+		cfg.AgentField.ARD.Publish.DefaultType = "application/openapi+json"
+	}
+	if len(cfg.AgentField.ARD.Publish.IncludeHealthStatuses) == 0 {
+		cfg.AgentField.ARD.Publish.IncludeHealthStatuses = []string{"active", "unknown"}
+	}
+	if cfg.AgentField.ARD.External.DefaultSearchLimit <= 0 {
+		cfg.AgentField.ARD.External.DefaultSearchLimit = 10
+	}
 	if cfg.Telemetry.Mode == "" {
 		cfg.Telemetry.Mode = "anonymous"
 	}
@@ -421,6 +514,12 @@ func ApplyDefaults(cfg *Config) {
 	if cfg.Telemetry.Timeout <= 0 {
 		cfg.Telemetry.Timeout = 800 * time.Millisecond
 	}
+	if cfg.AgentField.ShutdownTimeout <= 0 {
+		cfg.AgentField.ShutdownTimeout = 30 * time.Second
+	}
+	if cfg.Logging.Level == "" {
+		cfg.Logging.Level = "info"
+	}
 }
 
 // ApplyEnvOverrides applies environment variable overrides to the config.
@@ -428,6 +527,53 @@ func ApplyDefaults(cfg *Config) {
 // Exported so the main server startup (which uses Viper for file loading)
 // can call it after Viper unmarshal to apply the shorter env var names.
 func ApplyEnvOverrides(cfg *Config) {
+	// Knowledge / embedding overrides. OPENAI_API_KEY is the standard OpenAI env
+	// var; AGENTFIELD_KNOWLEDGE_* allow explicit control.
+	if val := os.Getenv("OPENAI_API_KEY"); val != "" && cfg.Features.Knowledge.OpenAI.APIKey == "" {
+		cfg.Features.Knowledge.OpenAI.APIKey = strings.TrimSpace(val)
+	}
+	if val := os.Getenv("AGENTFIELD_KNOWLEDGE_OPENAI_API_KEY"); val != "" {
+		cfg.Features.Knowledge.OpenAI.APIKey = strings.TrimSpace(val)
+	}
+	if val := os.Getenv("AGENTFIELD_KNOWLEDGE_PROVIDER"); val != "" {
+		cfg.Features.Knowledge.Provider = strings.TrimSpace(val)
+	}
+	if val := os.Getenv("AGENTFIELD_KNOWLEDGE_OPENAI_MODEL"); val != "" {
+		cfg.Features.Knowledge.OpenAI.Model = strings.TrimSpace(val)
+	}
+	if val := os.Getenv("AGENTFIELD_KNOWLEDGE_ENABLED"); val != "" {
+		enabled := parseEnvBool(val)
+		cfg.Features.Knowledge.Enabled = &enabled
+	}
+
+	if val := os.Getenv("AGENTFIELD_ARD_ENABLED"); val != "" {
+		cfg.AgentField.ARD.Enabled = parseEnvBool(val)
+	}
+	if val := os.Getenv("AGENTFIELD_ARD_PUBLIC_BASE_URL"); val != "" {
+		cfg.AgentField.ARD.PublicBaseURL = strings.TrimRight(strings.TrimSpace(val), "/")
+	}
+	if val := os.Getenv("AGENTFIELD_ARD_PUBLISHER_DOMAIN"); val != "" {
+		cfg.AgentField.ARD.PublisherDomain = strings.TrimSpace(val)
+	}
+	if val := os.Getenv("AGENTFIELD_ARD_PUBLISH_ENABLED"); val != "" {
+		cfg.AgentField.ARD.Publish.Enabled = parseEnvBool(val)
+	}
+	if val := os.Getenv("AGENTFIELD_ARD_REGISTRY_ENABLED"); val != "" {
+		cfg.AgentField.ARD.Registry.Enabled = parseEnvBool(val)
+	}
+	if val := os.Getenv("AGENTFIELD_ARD_REGISTRY_PUBLIC"); val != "" {
+		cfg.AgentField.ARD.Registry.Public = parseEnvBool(val)
+	}
+	if val := os.Getenv("AGENTFIELD_ARD_EXTERNAL_SEARCH_ENABLED"); val != "" {
+		cfg.AgentField.ARD.External.SearchEnabled = parseEnvBool(val)
+	}
+	if val := os.Getenv("AGENTFIELD_ARD_EXTERNAL_INVOCATION_ENABLED"); val != "" {
+		cfg.AgentField.ARD.External.InvocationEnabled = parseEnvBool(val)
+	}
+	if val := os.Getenv("AGENTFIELD_ARD_EXTERNAL_ALLOWED_REGISTRIES"); val != "" {
+		cfg.AgentField.ARD.External.AllowedRegistries = splitEnvCSV(val)
+	}
+
 	// API Authentication
 	if apiKey := os.Getenv("AGENTFIELD_API_KEY"); apiKey != "" {
 		cfg.API.Auth.APIKey = apiKey
@@ -456,6 +602,13 @@ func ApplyEnvOverrides(cfg *Config) {
 			if trimmed != "" {
 				cfg.AgentField.Registration.WebhookAllowedHosts = append(cfg.AgentField.Registration.WebhookAllowedHosts, trimmed)
 			}
+		}
+	}
+
+	// Shutdown timeout override
+	if val := os.Getenv("AGENTFIELD_SHUTDOWN_TIMEOUT"); val != "" {
+		if d, err := time.ParseDuration(val); err == nil {
+			cfg.AgentField.ShutdownTimeout = d
 		}
 	}
 
@@ -707,4 +860,34 @@ func ApplyEnvOverrides(cfg *Config) {
 			}
 		}
 	}
+
+	// Logging overrides
+	if val := os.Getenv("AGENTFIELD_LOG_LEVEL"); val != "" {
+		cfg.Logging.Level = strings.ToLower(strings.TrimSpace(val))
+	}
+	if val := os.Getenv("AGENTFIELD_LOG_REDACT_PAYLOADS"); val != "" {
+		b := parseEnvBool(val)
+		cfg.Logging.RedactPayloads = &b
+	}
+}
+
+func parseEnvBool(value string) bool {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "1", "true", "yes", "y", "on", "enabled":
+		return true
+	default:
+		return false
+	}
+}
+
+func splitEnvCSV(value string) []string {
+	parts := strings.Split(value, ",")
+	out := make([]string, 0, len(parts))
+	for _, part := range parts {
+		trimmed := strings.TrimSpace(part)
+		if trimmed != "" {
+			out = append(out, trimmed)
+		}
+	}
+	return out
 }

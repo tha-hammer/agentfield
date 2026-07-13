@@ -81,6 +81,9 @@ main's lint-and-test (3.10/3.11/3.12) has been failing since
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com> (6d9f0b1)
 
 ## [0.1.90-rc.6] - 2026-07-12
+## [0.1.107] - 2026-07-09
+
+## [0.1.107-rc.3] - 2026-07-09
 
 
 ### Added
@@ -187,6 +190,21 @@ way the real DB-backed store does on a genuinely missing row).
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com> (288e1b8)
 
 ## [0.1.90-rc.5] - 2026-07-12
+- Feat(control-plane): af install support for Go agent nodes (#745)
+
+PackageMetadata gains an explicit language field with go.mod detection
+fallback (additive to config v1; Python manifests unchanged).
+entrypoint.build compiles the node at install time via a resolved Go
+toolchain (pyinterp-style discovery with actionable missing/too-old
+errors); af run launches the built binary with identical port,
+healthcheck, secret, and env semantics. Out-of-tree replace directives
+are refused with vendoring guidance, with an AGENTFIELD_GO_REPLACE
+override for dev installs. Service-layer install/start paths route
+through the shared dispatcher so both code paths stay in lockstep.
+
+Co-authored-by: Claude Fable 5 <noreply@anthropic.com> (10cfe8a)
+
+## [0.1.107-rc.2] - 2026-07-09
 
 
 ### Added
@@ -250,6 +268,39 @@ Specs & thoughts:
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (379d3b1)
 
+- Feat(sdk/go): Agent.Pause webhook approvals, harness cost reporting, incremental schema mode (#744)
+
+* feat(sdk/go): Agent.Pause with webhook-resumed approvals
+
+Parity with the Python SDK's Agent.pause(): PauseManager registers a
+pending approval before client.RequestApproval transitions the
+execution to waiting, then blocks until the control plane's
+/webhooks/approval callback resolves it (or expiry/cancellation).
+Route matches the Python agent_server path and the CP's
+notifyApprovalCallback payload; exempted from origin/DID middleware
+like other CP-to-worker notifications. PauseClock intentionally not
+ported: the Go SDK has no execution watchdog to discount.
+
+Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+
+* feat(sdk/go): harness cost reporting and incremental schema mode
+
+Metrics/Result gain CostUSD (*float64, nil = unknown) extracted from
+Claude's JSON output with Python's cost_usd-or-total_cost_usd
+semantics and accumulated across retries including failed attempts.
+Options gains SchemaMode (single/incremental/auto): auto engages on
+the compact-encoded schema crossing the large-schema token threshold,
+with the incremental prompt suffix, per-field failure diagnosis, and
+followup prompts ported byte-verbatim from the Python SDK. Non-Claude
+providers report nil cost (Python parity when litellm is unavailable).
+
+Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+
+---------
+
+Co-authored-by: Claude Fable 5 <noreply@anthropic.com> (cbe40d4)
+
+## [0.1.107-rc.1] - 2026-07-09
 
 
 ### Chores
@@ -276,6 +327,317 @@ Only takes effect once the repo is added to the GITHUB_BUDDY_CLA_REPOS
 roster on the github-buddy deployment.
 
 Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (49f9a21)
+- Chore(deps): bump golang.org/x/crypto (#728)
+
+Bumps the go_modules group with 1 update in the /control-plane directory: [golang.org/x/crypto](https://github.com/golang/crypto).
+
+
+Updates `golang.org/x/crypto` from 0.51.0 to 0.52.0
+- [Commits](https://github.com/golang/crypto/compare/v0.51.0...v0.52.0)
+
+---
+updated-dependencies:
+- dependency-name: golang.org/x/crypto
+  dependency-version: 0.52.0
+  dependency-type: direct:production
+  dependency-group: go_modules
+...
+
+Signed-off-by: dependabot[bot] <support@github.com>
+Co-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
+Co-authored-by: Abir Abbas <abirabbas1998@gmail.com> (d179bb6)
+
+
+
+### Fixed
+
+- Fix(control-plane): add timestamp freshness checks to prevent webhook replay attacks (#717)
+
+* fix(control-plane): add timestamp freshness checks to prevent webhook replay attacks (#65)
+
+The generic_hmac source and the approval webhook handler accepted any
+timestamp without checking freshness, allowing captured signatures to
+be replayed indefinitely.
+
+Changes:
+- generic_hmac: add optional timestamp_header + tolerance_seconds config
+  (default 300s); reject requests with stale or future timestamps
+- webhook_approval: enforce 5-minute skew window on hax-sdk 't=...'
+  timestamps; reject non-numeric timestamps
+- Add 7 new tests for timestamp freshness (stale, future, missing,
+  invalid format, custom tolerance, zero-disables)
+- Add 2 new tests for approval webhook replay rejection
+
+Note: the original issue also mentioned plaintext secret storage, but
+the codebase has since been refactored to use SecretEnvVar (env var
+names stored, secrets read from environment at request time), so that
+part is already resolved.
+
+Closes #65
+
+* fix: address Copilot review feedback
+
+- Trim whitespace on timestamp header value before parsing
+- Add tolerance_seconds >= 0 validation in Validate() to prevent
+  negative values silently disabling replay protection
+- Clarify hard-coded 5-minute skew in approval webhook as intentional
+  (configurable tolerance is a future enhancement)
+- Add test for negative tolerance_seconds rejection
+
+* fix: bind timestamp into HMAC signature to prevent replay attacks
+
+Address maintainer review feedback: the timestamp was verified for
+freshness but not included in the signed payload, so an attacker could
+rewrite the timestamp header to 'now' and replay the original
+body+signature pair unchanged.
+
+Now when timestamp_header is configured, the HMAC is computed over
+'<timestamp>.<body>' (Stripe-style) instead of bare body. A forged
+fresh timestamp invalidates the signature, making replay impossible.
+
+Also adds:
+- Validate() rejects negative tolerance_seconds
+- Whitespace trimming on timestamp header
+- Test: replay with fresh timestamp is rejected (signature mismatch)
+- Test: backward-compatible body-only signing without timestamp_header
+- Test: whitespace in timestamp header handled correctly
+
+---------
+
+Co-authored-by: Abir Abbas <abirabbas1998@gmail.com> (a507eed)
+
+## [0.1.106] - 2026-07-09
+
+## [0.1.106-rc.2] - 2026-07-08
+
+
+### Added
+
+- Feat(af-tray): live status dashboard — fleet, metrics, traffic-light thresholds, API-key flow (#739)
+
+* feat(af-tray): live fleet status menu with API-key handling
+
+Enhance the macOS menu-bar tray beyond a bare running/stopped indicator:
+
+- Fleet summary line under the status header: "N of M agents online · X
+  skills" (skills counted over online agents only, since offline agents'
+  capabilities aren't callable).
+- A bounded, live list of agents (online-first, then alphabetical), each
+  row a filled/hollow dot + node id + capability count. Overflow beyond
+  the slot pool collapses into "…and N more". Rows open the dashboard.
+- API-key aware: /health stays public so status never breaks, but
+  /api/v1/nodes returns 401 when the control plane has a key configured.
+  The tray detects that, shows "🔒 API key required" + an "Enter API
+  key…" item, prompts with a native hidden-answer dialog, validates the
+  key against the API before persisting it 0600 to ~/.agentfield/
+  tray-apikey, and re-prompts whenever the stored key is missing, wrong,
+  or expired. AGENTFIELD_API_KEY (env) still wins, mirroring the af CLI.
+
+All parsing/summary/formatting/key-storage logic lives in the
+build-tag-free shared.go so it unit-tests on Linux CI; the systray event
+loop and osascript dialogs stay in the _darwin file. fleet_test.go covers
+node parsing, online/skill counting, the 200/401/403/500/unreachable
+status mapping, header/proxy X-API-Key behavior, env-vs-file key
+precedence (0600), and the row/headline/sort formatting.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+
+* feat(af-tray): polished, colored status menu with live metrics
+
+Redesign the tray menu around the feedback that it was crowded, colorless,
+and hard to tell online from offline:
+
+- Color via emoji (NSMenu renders item text in the system color, but emoji
+  keep their color): 🟢 online / ⚪ offline agents, and icon-led metric
+  rows. Replaces the near-identical ●/○ dots that read as "all the same".
+- Declutter: the per-agent list moves into an "Agents" submenu whose title
+  carries the "N of M agents online" headline, so the top level stays short.
+- Live metrics rows:
+    ✅ success rate · run count · ✗ failures (· ▶ running)
+    ⏱ average latency · 🧠 server memory
+  Success/latency come from /api/ui/v1/executions/stats; memory is the
+  control-plane process RSS read via `ps` (the Prometheus /metrics endpoint
+  only exports Go heap, which understates the real footprint). Each row
+  hides itself when it has nothing to show.
+- The stats endpoint sits behind the API key like /nodes, so the existing
+  auth flow covers it; the key prompt now doubles as the "auth required"
+  message ("🔒 API key required — enter…" / "… expired — re-enter…").
+
+New pure helpers (agentsHeadline, agentLine, successLine, perfLine,
+enterKeyTitle, parse/fetchExecStats) live in the tag-free shared.go and are
+unit-tested on Linux CI; serverMemoryMB (ps-based RSS) is darwin-only.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+
+* fix(af-tray): reload launchd agents via bootout+bootstrap on install
+
+The install converge step used `kickstart -k`, which cannot re-exec a
+launchd agent across a binary whose code signature changed. Every
+rebuild/upgrade produces a new ad-hoc cdhash, so on a real upgrade launchd
+rejects the relaunch with EX_CONFIG (78) — "spawn failed" — and the tray
+(and potentially the server) dies until the next login.
+
+Replace the bootstrap-then-kickstart-k dance with reloadAgent: bootout
+(ignored if not loaded), bootstrap with a short retry loop to ride out
+bootout's async teardown, then a plain kickstart to ensure it's running
+now. This lands cleanly on the new bytes every time, and also fixes the
+long-standing caveat that plist-content changes weren't hot-reloaded.
+
+Verified across an A→B upgrade with distinct cdhashes plus repeated
+installs: tray and server both stay running, server healthy, no EX_CONFIG.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+
+* refine(af-tray): calmer, one-fact-per-row dashboard layout
+
+Address the feedback that rows were still cramming multiple facts:
+
+- Two-line header: "AgentField" over a colored status line
+  ("🟢 Running · localhost:8080" / "🔴 Stopped").
+- One fact per row, each led by a single category glyph and reading
+  "Label — value":
+      🤖 Agents — 4 of 7 online   (submenu holds the roster)
+      ✅ Success — 83% (20 of 24) (fraction carries volume + failures)
+      ⚡ Response — 42 ms avg
+      🧠 Memory — 34 MB
+  Replaces the two crammed "… · … · …" lines. Rows with no data hide
+  themselves via a small setRow helper.
+- Server controls (Start/Stop/Restart/Start at login) move into a
+  "Control plane" submenu, so the top level reads as a quiet dashboard
+  rather than a wall of actions.
+
+Helpers renamed/split accordingly (statusLine, metricSuccess,
+metricResponse, metricMemory) and remain pure + unit-tested on Linux CI.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+
+* refine(af-tray): replace emoji with Lucide icon set
+
+Swap the emoji prefixes for real monochrome menu icons, so the tray looks
+native rather than "vibecoded":
+
+- Pull only the nine icons we use from Lucide (ISC): bot, circle-check,
+  gauge, cpu, layout-dashboard, server, scroll-text, key, power. Each is
+  rendered to a 32×32 (16pt @2x) black-on-transparent PNG and applied with
+  SetTemplateIcon, so macOS recolors it to match the menu in light/dark.
+- Status is shown with small colored dot icons (green/red header state,
+  green/gray per-agent) applied as regular images so their color survives.
+- Menu text drops all emoji; the pure helpers now emit text only and the
+  icons are attached in the darwin tray code.
+
+Assets live in assets/icons/ with a LICENSE.md crediting Lucide. Total
+footprint is ~6 KB for all twelve PNGs. Embeds are darwin-only
+(menu_icons_darwin.go); Linux CI cross-build and all unit tests still pass.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+
+* refine(af-tray): make metric rows readable, clickable dashboard links
+
+The stats were disabled menu items, which macOS renders in a hard-to-read
+dim gray; enabling them plainly would make them look like clickable actions
+with no action. Resolve the tension by making them genuine links: each stat
+row is now enabled (full-contrast, legible) and opens the dashboard view it
+summarizes —
+
+  Success / Response  -> /ui/executions
+  Memory              -> /ui/dashboard
+  Agents "Open …"     -> /ui/agents
+
+So the full-contrast text is honest rather than misleading. Adds uiPageURL
+(pure, tested) and an openURL helper.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+
+* feat(af-tray): traffic-light thresholds on the metric icons
+
+Color each stat's icon green / yellow / red by a benchmark, so health reads
+at a glance (NSMenu won't let us color the row text, so the icon carries it):
+
+  Success   green ≥60%   · yellow 30–59%  · red <30%
+  Response  green ≤100ms · yellow ≤500ms  · red >500ms
+  Memory    green <1GB   · yellow <2GB    · red ≥2GB
+
+No data → the neutral monochrome (template) icon. Green/yellow/red variants
+of circle-check, gauge and cpu are rendered from the same Lucide sources
+(ISC) and applied as regular colored images; the thresholds and
+level-mapping (successLevel/responseLevel/memoryLevel) are pure and
+unit-tested at every boundary.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+
+---------
+
+Co-authored-by: Claude Opus 4.8 <noreply@anthropic.com> (95d54ac)
+
+## [0.1.106-rc.1] - 2026-07-08
+
+
+### Added
+
+- Feat: macOS menu-bar tray (af-tray) with launchd auto-start (#725)
+
+* feat(control-plane): add macOS menu-bar tray (af-tray)
+
+Adds `af-tray`, a small separate binary that puts an AgentField icon in
+the macOS menu bar. It polls the control plane's public /health endpoint
+to show running/stopped status, opens the dashboard, and drives the
+control-plane lifecycle (start/stop/restart/start-at-login) via launchd —
+the tray is a controller of an OS service, not a supervisor.
+
+Design/isolation:
+- Separate binary so the systray/CGO dependency never enters the server
+  binary (verified: ./cmd/af has no systray/dbus deps). Containers/headless
+  hosts (Railway/ECS/EC2) never build, install, or run it.
+- Platform-neutral logic (health, launchd plist generation, launchctl arg
+  construction, atomic writes) lives in shared.go with contract tests that
+  run on the Linux CI; the systray loop and launchctl exec calls are
+  darwin-tagged. Non-darwin builds compile a graceful no-op stub.
+- launchd semantics encode the intended behaviour: server uses
+  KeepAlive={SuccessfulExit:false} so a graceful Stop sticks but a crash
+  restarts; tray uses KeepAlive={Crashed:true} so Quit / no-GUI exit never
+  crash-loops; server runs with --open=false under launchd.
+- install is idempotent/convergent (bootstrap + kickstart -k) so a
+  `curl | bash` update force-restarts a stale tray/server onto the new
+  binary with nothing manual.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+* feat(install): install macOS tray + auto-start via install.sh
+
+On macOS (production channel) the installer now fetches the separate
+`agentfield-tray-<arch>` binary and delegates .app-bundle + launchd setup
+to `af-tray install` (mirroring how the skill install is delegated to the
+binary). Best-effort throughout: a missing/failed tray never fails the
+overall install, and it is never fetched on Linux/headless/container hosts.
+Opt out with --no-tray or TRAY_MODE=none.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+* build(release): build and ship af-tray for darwin
+
+Adds goreleaser build targets for agentfield-tray-darwin-{amd64,arm64}
+(CGO on, macOS only) and includes them in the release matrix on the
+macos-14 runner so the Cocoa/CGO link happens on a real macOS host. The
+binaries are named to match the existing agentfield-* asset convention,
+so the flatten/checksum/upload steps pick them up automatically.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+* test(control-plane): make af-tray dispatch testable and cover shared helpers
+
+Splits the CLI dispatch out of main() into a testable run([]string) int and
+adds unit tests for it plus the non-darwin stubs and the shared helpers
+(serverBinaryPath fallbacks, writeFileAtomic error paths). This lifts the
+control-plane patch coverage on the af-tray files from 66% to ~85%, above the
+80% patch-coverage gate. The darwin-only files are not measured on the Linux
+coverage run; the systray loop / launchctl calls remain covered only by the
+on-device build.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+---------
+
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (e2bf705)
 
 
 
@@ -324,6 +686,618 @@ toolchain gate:
   go 1.24.0 directive (firm B-D1 green gate).
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (673e9d3)
+- Docs: document installing agent nodes via `af install <repo-url>` (#738)
+
+Add an install snippet to the 'Built With AgentField' section: with a control
+plane running, any first-party node (swe-planner, sec-af, cloudsecurity, pr-af)
+installs with one `af install <github-url>` command, prompts once for shared
+secrets, and its reasoners become callable. Links to docs/installing-agent-nodes.md.
+
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (d9569d1)
+
+## [0.1.105] - 2026-07-08
+
+## [0.1.105-rc.1] - 2026-07-08
+
+
+### Fixed
+
+- Fix(af run): eliminate port race that killed healthy nodes on startup (#737)
+
+`af run <node>` intermittently failed with 'agent node did not become ready
+within 10s' — worst for import-heavy nodes like pr-af. Root cause is a
+check-then-exec race between the runner and the SDK:
+
+1. The runner probes a free port, releases the probe, exports PORT=N, then
+   polls ONLY port N for readiness.
+2. If N is momentarily unavailable when the child binds, the SDK SILENTLY
+   moves to the next free port (N+1) — a port the runner never learns about.
+   The runner then polls the dead port N until timeout and kills a node that
+   actually came up fine on N+1.
+3. The 10s readiness window is also too short for nodes with large import
+   graphs, independent of the race.
+
+Fix (regression-safe, gated):
+- Runner exports AGENTFIELD_STRICT_PORT=1 alongside PORT.
+- SDK, only when that signal is set, binds the injected PORT authoritatively:
+  if it is unavailable it exits with a clear error instead of silently
+  bumping, so the runner and node can never disagree about the port. Absent
+  the signal (standalone `python -m <node>.app`, manual PORT=...), the old
+  lenient auto-bump behavior is unchanged — no regression.
+- Readiness timeout is now 30s and configurable via
+  AGENTFIELD_NODE_READY_TIMEOUT (whole seconds).
+- Guard PortManager's reserved-ports map with a mutex (it was read/written
+  without synchronization).
+
+Verified: with the patched control plane + SDK, all four reference nodes
+(swe-planner, cloudsecurity-af, sec-af, pr-af) start on their assigned ports
+and pass health; pr-af — previously failing almost every run — now binds its
+assigned port every time.
+
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (23d9086)
+
+## [0.1.104] - 2026-07-08
+
+## [0.1.104-rc.2] - 2026-07-07
+
+
+### Fixed
+
+- Fix(cli): don't dump usage/help block on runtime errors (#736)
+
+When a command failed at runtime — e.g. `af run <node>` hitting a
+readiness timeout — cobra printed the full usage/help block (flags,
+global flags, etc.) after the error. Usage text is meant for
+mis-invocation, not runtime failures, so it was pure noise on top of the
+actual error the user cares about.
+
+Set SilenceUsage on the root command (cobra suppresses the usage block
+for any subcommand when the root has this set). The error itself still
+propagates — main.go surfaces it — so nothing is hidden; only the
+irrelevant usage wall is gone. Genuine bad-invocation errors (wrong arg
+count, unknown flag) still print their concise error message.
+
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (fac34e1)
+
+## [0.1.104-rc.1] - 2026-07-07
+
+
+### Fixed
+
+- Fix(control-plane): correct observability-webhook paths in KB + API catalog (#735)
+
+The embedded Knowledge Base article ("observability/webhooks") and the
+machine-readable API catalog both advertised
+`GET/POST/DELETE /api/v1/settings/webhooks`, which is not a registered
+route and 404s on the server (the Smart404 handler confirms
+"/api/v1/settings/webhooks does not exist"). The real endpoint is the
+singleton `GET/POST/DELETE /api/v1/settings/observability-webhook`
+(plus `/status`, `/redrive`, `/dlq`), registered in
+registerObservabilityRoutes.
+
+Both surfaces are served to users/agents (public KB article endpoint and
+the /discover + .well-known/ai-catalog.json catalog), so the wrong paths
+were externally visible.
+
+Changes:
+- KB article: repoint to the real observability-webhook endpoints, note
+  the config is a singleton (POST upserts, no :id), document the
+  `X-AgentField-Signature: sha256=<hex>` HMAC signing (when a secret is
+  set) and the lifecycle events it fires on, and clarify that this
+  outbound observability webhook is distinct from the inbound,
+  HMAC-signed approval webhook (POST /api/v1/webhooks/approval-response).
+- API catalog: replace the three dead `/settings/webhooks` entries with
+  the seven real `/settings/observability-webhook*` endpoints.
+
+Verified live: all documented paths now resolve (200), the dead path is
+gone from the served KB, and the corrected KB/catalog match the router.
+
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (06f9110)
+
+## [0.1.103] - 2026-07-07
+
+## [0.1.103-rc.1] - 2026-07-07
+
+
+### Added
+
+- Feat(cli): numbered menu for require_one_of provider selection (#734)
+
+When an interactive `af run`/`af install` hits an unsatisfied
+require_one_of group, the old flow prompted for each option in sequence
+and told the user to "fill in one, leave the rest blank" — so to use
+OpenRouter you had to know to press Enter past the Anthropic prompt.
+Nobody could tell how to select. It also listed options as
+`ANTHROPIC_API_KEY  |  OPENROUTER_API_KEY`, which reads poorly.
+
+Now a group with two or more options renders a numbered menu (each
+option on its own line with its description), reads a single selection,
+and prompts only for the chosen provider. A single-option group still
+prompts directly. All user-facing option enumerations join with "or"
+instead of "|" (menu prompt "Enter 1 or 2 …", and the missing-env
+error).
+
+Adds a PromptLine method to the Prompter interface (echoed line read for
+the selection) with a stdin-swap test, and menu contract tests covering
+select/retry/skip/exhaust/blank/single-option paths.
+
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (c07b197)
+
+## [0.1.102] - 2026-07-07
+
+## [0.1.102-rc.3] - 2026-07-07
+
+
+### Added
+
+- Feat(install): version the agentfield-package.yaml manifest schema (config_version) (#733)
+
+* feat(install): version the agentfield-package.yaml manifest schema
+
+Add a config_version field to the agent-node manifest so the control plane
+can read it as the format evolves without locking authors into whatever
+shape shipped the day they wrote it. It is distinct from the node's own
+version: (release semver); config_version is the schema version.
+
+ParsePackageMetadata now does a version-dependent read: an absent value is
+v0 (the legacy, pre-versioning format, read leniently), the current version
+is v1, and a manifest declaring a version newer than CurrentConfigVersion is
+refused with an "upgrade AgentField" error rather than silently mis-parsed.
+The "v" prefix is optional/case-insensitive; malformed values fail loudly.
+
+Bump policy: config_version bumps only for BREAKING format changes (a field
+renamed/removed or its shape changed). Additive optional fields (e.g. the
+existing require_one_of) do not bump it.
+
+Tests:
+- config_version_test.go: parse/normalize + future-version and malformed
+  rejection + additive-field tolerance.
+- config_version_fixtures_test.go: one canonical golden manifest + structure
+  assertion per schema version, with a coverage guard that fails if a version
+  has no fixture (or the highest fixture and CurrentConfigVersion drift) —
+  the executable spec that forces "net-new version -> net-new fixture, never
+  rewrite old fixtures" for future maintainers.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+* docs(install): document the config_version manifest schema version
+
+Explain config_version in the agent-node install guide and the coding-agent
+CLI reference: what it is (schema version, distinct from the node's release
+version:), that absent means v0, that v1 is current, and the bump policy
+(breaking changes only — additive fields don't bump). Add a version table and
+link Agent-Field/SWE-AF's manifest as a real example to copy from. Mirror the
+CLI-reference change into the embedded skill_data copy.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+* docs(agents): note the manifest config_version contract for coding agents
+
+Tell agents authoring/reading agentfield-package.yaml about config_version:
+the single reader (packages.ParsePackageMetadata), the bump policy, and that
+the golden-fixture suite is the spec they must maintain (grow the current
+fixture for additive fields; add a net-new fixture for a net-new version).
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+---------
+
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (315f732)
+
+## [0.1.102-rc.2] - 2026-07-07
+
+
+### Added
+
+- Feat(cli): clean, styled af install output (follow-up to #730) (#732)
+
+* refactor(cli): move ui package to internal/ui
+
+Relocate the shared ui package out of internal/cli so non-cli packages (e.g.
+internal/packages, which prints install progress) can render with the same
+styled primitives without a cli->packages layering inversion. No behaviour
+change; only the import path moves.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+* feat(cli): clean, styled af install output
+
+The git install path routed user-facing text through the JSON logger, so the
+terminal showed raw {"level":"info",...\u001b[..m} lines mixed with the
+spinners. Print those directly instead, and render the completion as a bordered
+success panel (name/version + source/location). Two more fixes to the flow:
+
+- Spinner is now TTY-aware: when stdout is piped/captured it no longer emits
+  thousands of animation frames — just the final ✓/✗ line per step.
+- The uv/pyenv 'Provisioned Python' notice clears the active spinner line
+  (terminal only) so it lands on its own line instead of being appended to
+  'Installing dependencies'.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+* test(cli): cover install summary rendering and TTY-aware spinner
+
+Extract the post-install source label and success panel into pure
+installSourceLabel / installSummaryPanel helpers so the styled completion is
+unit-tested (the surrounding InstallFromGit needs a real clone). Add spinner
+lifecycle tests for the non-TTY path and a clearLine test.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+---------
+
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (2c4d446)
+
+## [0.1.102-rc.1] - 2026-07-07
+
+
+### Added
+
+- Feat(sdk-ts): pause/WAITING + async-execution dispatch (parity with Python) — closes #726 (#731)
+
+* feat(sdk-ts): add pause/WAITING + async-execution dispatch (parity with Python)
+
+Ports the control-plane pause/resume mechanism to the TypeScript SDK
+(closes the gap tracked in #726, where it existed only in the Python SDK).
+
+Three layers:
+
+1. Async-execution dispatch (on by default, `asyncExecution` config to opt out):
+   a reasoner dispatched by the control plane (carrying `X-Execution-ID`) is
+   acknowledged immediately with `202 Accepted` and run detached; its terminal
+   status is delivered out-of-band via `POST /executions/{id}/status`. This
+   frees the dispatch connection so a reasoner can wait far longer than the
+   control plane's synchronous dispatch ceiling. A watchdog (pause-aware
+   active-time budget) guarantees a terminal status even if a reasoner hangs.
+
+2. Pause primitive: `ctx.pause()` / `Agent.pause()` transition the execution to
+   WAITING via request-approval and block on a promise resolved by the always-on
+   `POST /webhooks/approval` route when the control plane delivers the decision.
+   Returns an `ApprovalResult`; times out to `{ decision: 'expired' }` rather
+   than throwing. Backed by a PauseManager + PauseClock (new src/agent/pause.ts).
+
+3. Multi-hop propagation: the remote `call()` path now submits async and polls
+   for the result, and when an awaited child enters WAITING it pushes the
+   caller's own execution to WAITING via `notifyAwaiterStatus` — so ancestors
+   don't time out while a descendant legitimately waits.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+* test(sdk-ts): cover pause/WAITING, async dispatch, and multi-hop cascade
+
+- pause.test.ts: PauseClock accounting, PauseManager resolve/fallback/cancelAll,
+  ApprovalResult getters, and the /webhooks/approval route.
+- agent_async_execution.test.ts: 202 fast-ack + out-of-band succeeded/failed
+  reporting, non-object result wrapping, sync fallback (no header /
+  asyncExecution:false), and the reasoner_timeout watchdog.
+- agent_pause.test.ts: end-to-end ctx.pause() resume via webhook, expired
+  timeout, request-approval failure, and the awaiter-status multi-hop cascade,
+  all driven through a mock control plane.
+- agentfield_client_async.test.ts: executeAsync / getExecutionStatus /
+  waitForExecutionResult (incl. WAITING-window clock pause) / notifyAwaiterStatus
+  / reportExecutionResult.
+- agent_runtime_paths.test.ts: pin the existing remote-delegation test to the
+  synchronous path (asyncExecution:false); the async default is covered above.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+* docs(examples): add ctx.pause() reasoner to the TS waiting-state example
+
+Adds `planWithPause`, which uses the high-level `ctx.pause()` primitive
+alongside the existing low-level ApprovalClient demo, so the example shows both
+the parity API and the manual polling approach.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+* fix(sdk-ts): only run async dispatch on async-aware paths (require X-Run-ID)
+
+The functional test `test_ts_agent` invokes the reasoner via the legacy
+synchronous endpoint `POST /api/v1/reasoners/{node}.{reasoner}`, which forwards
+the agent's HTTP response verbatim and cannot handle a 202. With async dispatch
+gated only on `X-Execution-ID`, the agent 202-acked there and the caller got the
+`{status:"processing"}` marker instead of the result.
+
+Gate async dispatch on BOTH `X-Execution-ID` and `X-Run-ID`. `X-Run-ID` is set
+only by the control plane's async-aware `callAgent` path (workflow execute,
+execute/async, agent-to-agent calls, triggers) — all of which wait for the
+out-of-band `/status` result. The legacy sync invoke endpoint omits `X-Run-ID`
+for long-running agents, so the agent now runs synchronously and returns the
+result inline there, while pause/async continues to work on the execute paths.
+
+Verified live: the legacy endpoint returns the inline echo result again, and a
+pause submitted via execute/async still reaches WAITING and resumes to
+succeeded. Adds a regression test for the X-Execution-ID-without-X-Run-ID case.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+---------
+
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (1e11e82)
+
+## [0.1.101] - 2026-07-07
+
+## [0.1.101-rc.1] - 2026-07-07
+
+
+### Added
+
+- Feat(cli): styled terminal UI — shared ui package + af list/secrets tables (#730)
+
+* feat(cli): add shared ui package for styled terminal output
+
+Introduce internal/cli/ui: a small lipgloss-based toolkit (bordered panels,
+column tables, status badges, key/value blocks) so CLI commands share one
+consistent, styled look. Palette matches the existing af init flow. lipgloss and
+bubbletea are already dependencies, so this adds no new modules.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+* feat(cli): render af list and af secrets ls as styled tables
+
+Replace the ad-hoc printf output of `af list` and `af secrets ls` with bordered
+ui tables: status badges (● running / ○ stopped), aligned columns, sorted rows,
+and framed empty states. Update the two list assertions to the new header text.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+---------
+
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (726e211)
+
+## [0.1.100] - 2026-07-07
+
+## [0.1.100-rc.1] - 2026-07-07
+
+
+### Added
+
+- Feat(cli): require_one_of env-var groups for agent nodes (#729)
+
+* feat(cli): require_one_of env-var groups for agent nodes
+
+Agent-node manifests could only mark each variable independently required or
+optional. Nodes that accept alternatives — e.g. SWE-AF works with either an
+Anthropic key OR an OpenRouter key — had no way to say "at least one of these";
+you had to over-require one provider or make both optional and fail at runtime.
+
+Add a `require_one_of` section: a list of groups, each satisfied when at least
+one of its options resolves (env / secret store / default). On `af run`, an
+unsatisfied group prompts the user to fill in one option (leaving the rest
+blank), validating and persisting it encrypted like any required secret; a
+non-interactive session errors naming the alternatives instead of failing inside
+the node. `af install` surfaces unsatisfied groups the same way it does required
+vars. Required / require_one_of / optional compose in one manifest.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+* docs: document require_one_of env-var groups
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+* test(cli): cover require_one_of install warnings and group error paths
+
+Add unit coverage for the require_one_of paths flagged by the patch-coverage
+gate: the install-time group warnings in both checkEnvironmentVariables copies,
+envGroupSatisfied, and the group store-read / persist / combined-missing error
+branches. Also propagate store-read errors from resolveGroupFromSources so a
+group option's store failure aborts the resolve, consistent with required and
+optional variables.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+---------
+
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (468caf0)
+
+## [0.1.99] - 2026-07-07
+
+## [0.1.99-rc.1] - 2026-07-07
+
+
+### Added
+
+- Feat(cli): provision a requires-python-compatible interpreter for af install (#727)
+
+* feat(cli): resolve a requires-python-compatible interpreter for node installs
+
+`af install` built each node's venv with whatever `python3` was on PATH and
+let pip enforce the package's requires-python. A node pinning
+`requires-python = ">=3.12"` on a host whose python3 is 3.10 failed with a raw
+`pip ... requires a different Python` trace and no path forward.
+
+Add resolveVenvInterpreter: read requires-python from pyproject.toml and, when
+the ambient interpreter doesn't satisfy it, provision a compatible one via uv
+(auto-downloads a standalone build) or discover a matching pyenv-installed
+version — otherwise fail with an actionable error naming the required and found
+versions. No declared constraint keeps the legacy python3->python fallback, so
+existing behavior is unchanged.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+* feat(cli): build node venvs with the requires-python-resolved interpreter
+
+Wire resolveVenvInterpreter into InstallPythonDependencies so a node's venv is
+created with an interpreter that satisfies its requires-python, provisioning one
+when the ambient python is too old instead of failing later in pip.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+---------
+
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (086b0e0)
+
+## [0.1.98] - 2026-07-07
+
+## [0.1.98-rc.4] - 2026-07-06
+
+
+### Added
+
+- Feat(sdk-go): production-harden serverless agent nodes (Lambda-ready, auth-visible, restart-safe) (#719)
+
+A deployment_type:"serverless" node is a pull-registered, stateless HTTP
+handler - the same request/response contract AWS Lambda (via a Function
+URL), Cloud Run, Cloud Functions 2nd gen, and Fly.io all speak. That means
+the same Go reasoner should drop into any of them with zero SDK changes,
+but four real gaps broke that promise for a first-time adopter:
+
+- The Go SDK had no /status endpoint, so the control plane's health
+  monitor 404s polling it; serverless nodes (no heartbeat by design) have
+  nothing to mask this and flip to Inactive on the first check.
+- HealthMonitor.RecoverFromDatabase re-subjects every node, serverless
+  included, to that polling after a control-plane restart - the one time
+  live registration never does.
+- Origin auth defaults off with no visibility into which registered nodes
+  have it on - a Lambda Function URL is public by default.
+- The bundled serverless example's relay reasoner forwarded its payload
+  under the wrong key, silently dropping the message on every parent-to-
+  child hop.
+
+Closes Agent-Field/agentfield#718. (e16987a)
+
+## [0.1.98-rc.3] - 2026-07-06
+
+
+### Fixed
+
+- Fix(sdk): GLM-5.2 context limits + reasoning-model empty-output retry (#722)
+
+- _MODEL_CONTEXT_LIMITS: add openrouter/z-ai/glm-5.2 and z-ai/glm-5.2 at
+  131072. Absent entries fell back to 10,192 tokens and the trimmer cut
+  68% of large prompts (verified live: whole context blocks dropped).
+- AgentAI.ai: when parsed structured output is empty/default-only AND the
+  response carries reasoning_content (reasoning model spent the whole
+  completion budget on hidden reasoning), retry once with max_tokens
+  doubled instead of silently returning the empty instance.
+
+Co-authored-by: Abir Abbas <abirabbas1998@gmail.com> (0f9cc60)
+
+- Fix(sdk-go): make agent outbound call timeout configurable (#721)
+
+agent.New() hardcoded a 15s timeout on the http.Client used for every
+outbound call the agent makes as a client (cross-agent Call(), the
+control-plane memory backend). Any reasoner chained behind Call() that
+legitimately takes longer - most visibly a reasoning-model-backed
+reasoner doing search + a large max_tokens "thinking" response -
+fails the caller with a client-side context-deadline-exceeded error
+while the callee keeps running and completes successfully on its own,
+with no way to fix it from the caller's config.
+
+Adds Config.CallTimeout, defaulting to the existing 15s when unset so
+this is not a behavior change for anyone not hitting the issue.
+
+Fixes Agent-Field/agentfield#720.
+
+Co-authored-by: Abir Abbas <abirabbas1998@gmail.com> (5fa2057)
+
+## [0.1.98-rc.2] - 2026-07-06
+
+
+### Fixed
+
+- Fix(control-plane): flush SSE headers immediately in memory events handler (#358) (#716)
+
+The SSEHandler deferred header flush until the first event, causing
+clients to hang on connection when no events matched immediately.
+
+Changes:
+- Subscribe before flushing headers so HTTP 500 is still possible on error
+- Flush response headers + WriteHeader(200) after successful subscription
+- Send ': connected' comment frame as keepalive marker
+- Replace deprecated c.Writer.CloseNotify() with c.Request.Context().Done()
+- Handle channel close (ok=false) to exit cleanly
+- Update test comments to reflect new behavior
+
+Closes #358 (e0e8337)
+
+## [0.1.98-rc.1] - 2026-07-04
+
+
+### Fixed
+
+- Fix(control-plane): implement graceful shutdown on SIGTERM/SIGINT (#715)
+
+* fix(control-plane): implement graceful shutdown (#427)
+
+Replace the select{} no-op with real signal handling and HTTP server
+drain so SIGTERM during rolling deploys no longer kills in-flight
+requests.
+
+Changes:
+- Install signal.NotifyContext for SIGINT/SIGTERM in runServer
+- Replace gin Router.Run() with net/http.Server for Shutdown() support
+- Call server.Stop() on signal: drains HTTP connections, stops background
+  goroutines (presence manager, health monitor, cleanup, OTel, etc.)
+- Add configurable shutdown_timeout (default 30s) via YAML and
+  AGENTFIELD_SHUTDOWN_TIMEOUT env var
+- Remove literal '// TODO: Implement graceful shutdown' comments
+- Add nil guard for healthMonitor.Stop() to prevent panic on empty server
+
+Closes #427
+
+* test: add coverage for graceful shutdown paths
+
+- Test AGENTFIELD_SHUTDOWN_TIMEOUT env override and defaults
+- Test Stop() on empty server (nil safety)
+- Test HTTP server graceful shutdown with active listener
+- Test HTTP server shutdown timeout + force close
+- Test defaultWaitForShutdown unblocks on SIGINT (Linux/macOS only)
+
+* fix(control-plane): tighten graceful shutdown lifecycle
+
+---------
+
+Co-authored-by: santoshkumarradha <instrument.santosh@gmail.com> (6c6c195)
+
+## [0.1.97] - 2026-07-04
+
+## [0.1.97-rc.8] - 2026-07-03
+
+
+### Added
+
+- Feat(share): af share — export & publish run artifacts (offline HTML + hosted permalinks) (#706)
+
+* feat(cli): af share exports self-contained run artifact (DAG, timeline, bundle v1)
+
+* fix(share): hide cost UI entirely when cost data is unavailable
+
+* feat(share): workflow share export endpoint + UI share button
+
+Add GET /api/ui/v1/workflows/{workflow_id}/share returning the same
+self-contained offline HTML artifact as `af share`, as an attachment
+(run-<id>.html, text/html). Supports ?redact=1.
+
+The share bundle/template package moves from internal/cli/share to
+internal/share so both the CLI and the new handler import it. The
+handler builds the bundle directly from the storage layer (the same
+execution records the DAG and execution-details UI handlers read),
+resolving payloads from the payload store when stored by URI — no
+internal HTTP round-trip and no per-execution fan-out.
+
+UI: a native Share button in the run detail action row (matching the
+Export provenance button style, Share2 icon from lucide-react) and a
+Share item in the runs-list lifecycle kebab menu. Both download via an
+authenticated fetch + anchor, honouring Content-Disposition.
+
+* feat(share): default --public to agentfield.ai
+
+`af share <id> --public` now publishes to agentfield.ai and prints the
+returned permalink (https://agentfield.ai/share/<token>) instead of erroring
+when AGENTFIELD_SHARE_URL is unset. Point that variable at a self-hosted
+share server to publish there instead.
+
+* test(web): cover run share menu action
+
+* fix(share): avoid script escape preallocation overflow
+
+* test(share): cover artifact export paths (6f17fac)
+
+
+
+### Chores
+
+- Chore(sdk-go): bump testify to v1.11.1 (#681) (0e48916)
 
 
 
@@ -357,6 +1331,1731 @@ Found while running the SWE-AF Go node live.
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (a80afeb)
 
 - Fix(harness): preserve original goal on non-crash schema retries
+- Fix(harness): stream output with idle watchdog and explicit stdin null (#695) (#696)
+
+* fix(harness): stream output with idle watchdog and explicit stdin null (#695)
+
+The CLI harness runner in all three SDKs blocked until the child exited and
+read output only at the end, so it could not apply a no-progress watchdog.
+A stalled opencode/OpenRouter streaming call froze the run up to the
+wall-clock cap (default 1800s) while holding a concurrency-semaphore slot.
+
+Python (sdk/python/agentfield/harness/_cli.py):
+- Stream stdout and stderr concurrently; track last-output time; kill the
+  process group and raise TimeoutError if no output arrives for idle_seconds
+  (env AGENTFIELD_HARNESS_IDLE_SECONDS, default 120; <= 0 disables).
+- Set stdin=DEVNULL and start_new_session=True. Wall-clock timeout kept.
+
+Go (sdk/go/harness/cli.go, cli_unix.go, cli_windows.go):
+- Switch from c.Run() buffers to StdoutPipe/StderrPipe drained in goroutines;
+  poll last-activity; kill the process group on idle. Set c.Stdin to an empty
+  reader and run the child in its own process group.
+
+TypeScript (sdk/typescript/src/harness/cli.ts):
+- Add an idle-watchdog interval over the existing data listeners; SIGKILL on
+  idle. Spawn with stdio ['ignore','pipe','pipe'] so the child's stdin gets EOF.
+
+All return shapes are unchanged, so JSONL parsing downstream is unaffected.
+Adds idle-watchdog and fast-command tests in each SDK.
+
+* fix(ai): retry .ai() LLM calls on wall-clock timeout (#695)
+
+The .ai() path raised TimeoutError on the asyncio safety-net timeout with no
+retry (rate-limit retry only covers 429/503). A stalled OpenRouter connection
+therefore failed the reasoner outright. Add a timeout-retry layer that reissues
+the call on a fresh client pool (the pool is already reset on timeout), bounded
+by AGENTFIELD_AI_TIMEOUT_RETRIES (default 2, 0 disables). Applies to both the
+plain and tool-loop .ai paths. Existing deadlock-recovery tests run with retries
+disabled; added tests cover the retry-recovers and retry-exhausts cases.
+
+* fix(ai): retry transient provider errors (malformed response, 5xx) on .ai() (#695)
+
+The .ai() timeout-retry now also covers transient provider glitches: a
+malformed 'Unable to get json response', a 5xx, or a dropped connection are
+retried on a fresh client pool, while permanent client errors (bad request,
+auth, model-not-found, unsupported-schema) propagate immediately. Observed live
+with glm-5.2 returning a garbage whitespace body that failed a reasoner outright. (05ae9eb)
+
+
+
+### Other
+
+- [codex] fix Python SDK decorator metadata duplication (#693)
+
+* fix python sdk decorator metadata duplication
+
+* preserve stacked reasoner metadata
+
+* unwrap reasoners for code origin
+
+* honor outer reasoner trigger opt in
+
+* honor staged trigger opt in
+
+* keep agent reasoner metadata local
+
+* fix(sdk-python): apply EventTrigger transform on canonical reasoner form (#693)
+
+The decorator-dedup refactor moved trigger merging into
+resolve_reasoner_metadata but stopped stamping _reasoner_triggers on the
+stored handler. As a result the runtime path (_execute_reasoner_endpoint)
+read no bindings for the canonical `@app.reasoner(triggers=[EventTrigger(
+..., transform=fn)])` form on a plain handler, so the declared transform
+was silently skipped and the handler received the raw event payload.
+
+Rather than re-stamping the function (which the PR deliberately dropped:
+bound methods reject setattr, and a shared function object registered on
+two agents would leak triggers between them), thread the merged bindings
+through _execute_reasoner_endpoint via the registration closure. This
+keeps the PR's agent-local metadata intent while restoring transform
+application at dispatch time.
+
+Adds a regression test that drives the real route -> envelope unwrap ->
+_execute_reasoner_endpoint path and asserts the handler receives the
+transformed object.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+---------
+
+Co-authored-by: Santosh <santosh@agentfield.ai>
+Co-authored-by: Abir Abbas <abirabbas1998@gmail.com>
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (91d8f67)
+
+
+
+### Testing
+
+- Test(functional): fix docker-backed SDK test infra (#709) (b6f0292)
+
+## [0.1.97-rc.7] - 2026-07-03
+
+
+### Fixed
+
+- Fix(agentfield): add test for issue #589 (#703)
+
+* fix(agentfield): add test for issue #589
+
+Ref: #589
+Signed-off-by: Jay <sallomondiei@gmail.com>
+
+* fix: replace stub with real regression test for OpenRouter video download auth
+
+* test(#589): relocate regression test into sdk/python/tests so CI collects it
+
+The regression test for #589 was committed at repo-root tests/test_issue_589.py.
+The sdk-python CI workflow only triggers on sdk/python/**, so the test never ran,
+and 'import agentfield' does not resolve from repo root. Move it under
+sdk/python/tests/ where CI collects it and the package import resolves. Also drop
+an unused 'import os' flagged by ruff.
+
+Refs #703, #589
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+---------
+
+Signed-off-by: Jay <sallomondiei@gmail.com>
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (7b6f4b8)
+
+## [0.1.97-rc.6] - 2026-07-03
+
+
+### Added
+
+- Feat(cli): af install/run for agent nodes — encrypted secrets, env prompting, node-to-node deps (#692)
+
+* feat(cli): encrypted secret store + manifest entrypoint/env resolution for agent nodes
+
+Adds the foundation for making 'af install'/'af run' usable for real agent
+nodes (which start via 'python -m pkg.app' and have no top-level main.py):
+
+- internal/packages/secrets.go: encrypted at-rest secret store. KeyfileProvider
+  keeps a random 32-byte key at ~/.agentfield/keyring/master.key (0600);
+  SecretStore encrypts global.enc + <node>.enc via AES-256-GCM, with node scope
+  overriding global so shared keys (API tokens) are entered once.
+- internal/packages/env_resolver.go: resolves declared env vars in order
+  process-env -> node store -> global store -> manifest default -> prompt
+  (hidden for type:secret), persisting prompted secrets encrypted. Injected only
+  into the child process; never written to disk in plaintext.
+- installer.go: manifest gains entrypoint{start,healthcheck}, dependencies.nodes,
+  and per-var scope. Validation accepts entrypoint.start instead of requiring
+  main.py; package copy excludes .git/venv/.env/__pycache__.
+- runner.go: launches via manifest entrypoint, exports AGENTFIELD_SERVER (the
+  var the SDK actually reads) alongside legacy AGENTFIELD_SERVER_URL, honors the
+  manifest healthcheck path, and resolves env via the secret store.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+* feat(cli): af secrets command + node-to-node dependency install/start
+
+- af secrets set/ls/rm manages the encrypted store (hidden input for set,
+  masked listing, global + --node scopes).
+- install resolves dependencies.nodes recursively (af://registry/<name>
+  -> github.com/Agent-Field/<name>, or git URLs), skipping already-installed
+  nodes to break cycles.
+- af run brings up a node's installed node-dependencies first, in dependency
+  order, with cycle protection.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+* docs: agent-node install/run/secrets guide
+
+- docs/installing-agent-nodes.md: full guide to af install/run, the
+  agentfield-package.yaml manifest (entrypoint, node deps, user_environment),
+  the encrypted runtime-only secrets model, and af secrets.
+- cli-toolkit.md reference: document af install, af run, af secrets (+ embedded
+  skill_data copy synced).
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+* fix(cli): apply install/run fixes to the active service layer
+
+Local end-to-end verification revealed the CLI's install/run path goes through
+internal/core/services (DefaultPackageService/DefaultAgentService), which
+duplicated — and so bypassed — the fixes previously made in internal/packages.
+'af install' on an entrypoint-only node still failed with 'main.py not found',
+and 'af run' still exported only AGENTFIELD_SERVER_URL and loaded plaintext .env.
+
+- package_service: validate/parse/copy now delegate to the shared
+  packages.ValidatePackage / ParsePackageMetadata / ShouldSkipCopy (entrypoint
+  accepted, junk excluded). Install guidance points at 'af secrets set'.
+- agent_service: buildProcessConfig launches via the manifest entrypoint,
+  exports AGENTFIELD_SERVER, resolves env via the encrypted secret store
+  (prompting for missing required), honors the manifest healthcheck path, and
+  drops the plaintext .env loader. RunAgent starts node deps first with a
+  threaded cycle guard.
+- packages: export ValidatePackage + ShouldSkipCopy as the single source of truth.
+- tests updated to the new contract (entrypoint validation, store-based env
+  injection instead of .env).
+
+Verified end-to-end: install entrypoint-only node -> missing-secret errors
+cleanly -> af secrets set -> af run injects AGENTFIELD_SERVER + the stored
+secret + manifest default into the process (confirmed via the node's env dump).
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+* fix(cli): start node dependencies before allocating the parent's port
+
+Local multi-agent verification showed a port collision: dependencies were
+started after the parent allocated its port, so the parent's port (not yet
+bound) was handed out again to a dependency, which then failed to bind. Move
+dependency startup ahead of port allocation so each dependency fully binds its
+own port first.
+
+Verified end-to-end against a live local control plane: 'af run greeter-node'
+auto-starts its dependency echo-node (distinct ports 8002/8003), both register,
+both reasoners execute through the control plane, and an already-running
+dependency is left untouched (same PID).
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+* test(cli): cover node-dependency resolution and ordered-start helpers
+
+Unit tests for resolveNodeRef, installedNames, installNodeDependencies
+(skip-already-installed), and startNodeDependencies (not-installed warning +
+already-running skip) in both the service and packages layers — covering the
+new patch lines and pinning the behaviors verified end-to-end.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+* fix(cli): git/github install validation + pyproject dependency install
+
+End-to-end install testing against the published node repos surfaced two gaps:
+
+1. The git and GitHub install paths (git.go/github.go findPackageRoot) were a
+   third and fourth copy of the 'main.py required' check, so 'af install
+   <github-url>' failed for entrypoint-only nodes (no top-level main.py) such as
+   SWE-AF and cloudsecurity-af. Both now delegate to the shared ValidatePackage
+   (accepts a manifest entrypoint.start).
+2. Dependency install only ran for requirements.txt projects, so pyproject-only
+   nodes (pr-af, sec-af, cloudsecurity-af) installed with no venv and no deps.
+   Dependency install is now a single shared InstallPythonDependencies that also
+   runs 'pip install .' for pyproject.toml/setup.py projects.
+
+Verified: all five published node repos now install from their GitHub URLs; a
+pyproject node (sec-af) builds its venv and 'pip install .' succeeds, with
+sec_af + agentfield importable from the node's venv. (Nodes that declare
+requires-python >=3.11 need a matching interpreter on PATH — pip reports this
+clearly.) Tests updated for the new validation contract; new unit tests cover
+the pyproject branch and entrypoint-accepting findPackageRoot.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+* test(#692): add patch-coverage tests for node install secrets/env/runner
+
+The coverage-summary check was failing the patch-coverage gate: touched
+lines in the af-node-install feature sat at 59% vs the 80% floor in
+.coverage-gate.toml. This adds behavior-focused Go tests for the
+previously untested error and lifecycle paths:
+
+- internal/cli/secrets.go: full `af secrets set/ls/rm` command tree
+  (global + node scope, stdin value, empty-value rejection, idempotent
+  remove) — previously had no test file.
+- internal/packages/secrets.go: KeyfileProvider generation/empty/
+  unreadable/unwritable key paths, provider-error propagation, empty
+  scope = global, load/save error propagation across Set/Delete/List/Get,
+  and ListAll (empty, non-.enc skip, corrupt-scope, read-dir errors).
+- internal/packages/env_resolver.go: store-read failures, optional
+  omission, prompter errors, skipped prompts, invalid/too-many validation
+  attempts, persist failure, and TTYPrompter plain-line reads.
+- internal/packages/runner.go: resolveEnvironment (declared/undeclared),
+  startAgentNodeProcess env assembly + manifest fallback, node-dependency
+  bring-up (not-installed / cycle-guard / already-running / recursive
+  start), and waitForAgentNode default health path.
+
+Patch coverage on touched lines: 59% -> 81% (gate passes at the 80%
+floor). No production code changed; tests only.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+---------
+
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (753cba7)
+
+## [0.1.97-rc.5] - 2026-07-03
+
+
+### Fixed
+
+- Fix(control-plane): prevent structured logs from leaking execution payloads (#701)
+
+* fix(control-plane): prevent structured logs from leaking execution payloads (#560)
+
+Add logging configuration (level + redact_payloads) to control what
+execution data appears in structured log events and the internal event bus.
+
+Changes:
+- Add LoggingConfig with 'level' and 'redact_payloads' options
+- Support AGENTFIELD_LOG_LEVEL and AGENTFIELD_LOG_REDACT_PAYLOADS env vars
+- Guard execution input/output/context in event publishing behind redaction flag
+- Default to redact_payloads=true (safe) — opt-in via config to see full payloads
+- Replace 32 log.Printf calls in storage layer with leveled logger.Logger calls
+- Add InitLoggerWithLevel() for string-based log level configuration
+- Re-initialize logger from config at server startup
+
+Closes #560
+
+* fix: address Copilot review comments
+
+- Guard req.Result behind redactPayloads in handleStatusUpdate event data
+- Remove raw data preview from corrupted JSON warning log (log only metadata: context + length)
+
+* test(control-plane): cover payload redaction branches for patch-coverage gate (#701)
+
+The structured-log payload redaction added in #701 gated execution
+input/result/context data behind `redactPayloads`. Those branches were only
+exercised on their redact-enabled default, leaving the opt-out paths uncovered
+and dropping control-plane patch coverage below the 80% floor.
+
+Adds behavior tests that subscribe to the execution event bus and assert the
+observable contract: input/result/context payloads are omitted from published
+events when redaction is enabled (the safe default) and present only when an
+operator explicitly disables it. Covers completeExecution, failExecution,
+completeReplayHit, handleStatusUpdate, and the event-context path.
+
+Patch coverage on touched lines: 68% -> 93%. Additive only; does not weaken the
+redaction logic.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+---------
+
+Co-authored-by: Abir Abbas <abirabbas1998@gmail.com>
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (841459b)
+
+## [0.1.97-rc.4] - 2026-07-03
+
+
+### Chores
+
+- Chore: remove dead identity UI surface and unreferenced docker-perf config (#618)
+
+Salvage of the safe, zero-regression subset of #618. Removes genuinely dead
+code only:
+
+- control-plane/internal/handlers/ui/identity.go (+2 tests): the DID Explorer /
+  Credentials UI backend. Its sole frontend consumer (identityApi.ts) has no
+  callers, and the DID Explorer pages were already removed — App.tsx redirects
+  /identity/dids and /identity/credentials to /settings. No live consumer.
+- web/client/src/services/identityApi.ts (+ test): orphaned frontend service.
+- control-plane/config/docker-perf.yaml: unreferenced by any Makefile/CI/compose.
+
+Deliberately EXCLUDES the regression-inducing parts of the original PR:
+the /admin/public-key alias removal (breaks all-SDK offline VC verification),
+node lifecycle + /actions/claim endpoints, legacy reasoner execute endpoints,
+the broken root compose.yaml, and storage-mode/telemetry config flips.
+
+Validation: go build/vet clean; go test ./... green (control-plane); web-ui
+npm build clean; web-ui coverage 84.78% (baseline 84.79%, floor 84.0).
+
+Co-authored-by pocesar via original PR #618.
+
+Co-authored-by: Abir Abbas <abirabbas1998@gmail.com>
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (615baa6)
+
+## [0.1.97-rc.3] - 2026-07-03
+
+
+### Fixed
+
+- Fix(sdk-python): use AsyncConfig.from_environment() for client default async config (#714)
+
+AgentFieldClient constructed its default async_config with AsyncConfig(),
+ignoring AGENTFIELD_ASYNC_* environment overrides that Agent already honors.
+Initialize the default from AsyncConfig.from_environment() so client-level
+async behavior can be tuned via env vars, while preserving any explicitly
+passed async_config unchanged. Adds regression coverage for both paths.
+
+Fixes #621. Supersedes #632 (original change by liuzemei / neooosky);
+re-authored here so it can land without the outstanding CLA signature.
+
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (04756b8)
+
+## [0.1.97-rc.2] - 2026-07-03
+
+
+### Chores
+
+- Chore(deps): bump golang.org/x/net (#710)
+
+Bumps the go_modules group with 1 update in the /control-plane directory: [golang.org/x/net](https://github.com/golang/net).
+
+
+Updates `golang.org/x/net` from 0.52.0 to 0.55.0
+- [Commits](https://github.com/golang/net/compare/v0.52.0...v0.55.0)
+
+---
+updated-dependencies:
+- dependency-name: golang.org/x/net
+  dependency-version: 0.55.0
+  dependency-type: indirect
+  dependency-group: go_modules
+...
+
+Signed-off-by: dependabot[bot] <support@github.com>
+Co-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com> (bd5f8cc)
+
+## [0.1.97-rc.1] - 2026-07-02
+
+
+### Added
+
+- Feat(skill): generative orchestration theory for the agentfield skill (#708)
+
+* feat(skill): add mental-models layer to agentfield skill
+
+* feat(skill): rework thinking layer into generative orchestration theory
+
+The skill taught rules and a pattern vocabulary; an agent reading it could
+imitate reference builds but not derive an orchestration for a problem that
+looks like neither security auditing nor contract review. Patterns are
+outputs of thinking, not inputs.
+
+- mental-models.md: rewritten as the full generative theory — cognitive-job
+  decomposition, autonomy spectrum, seven-rung verification ladder,
+  six-rung dynamism ladder, quality escalation ladder, code-for-certainty +
+  archei data-flow rule; one invoice-intake example threads through it
+- SKILL.md: 'How to think' is now the five-step derivation procedure; the
+  five principles are reframed as consequences and a review checklist;
+  pattern-first design added to hard rejections (+18 lines vs main)
+- patterns-emerge.md: reframed as post-hoc naming; every named pattern
+  carries a derivation line from the ladders (HUNT->PROVE = rung 6 on a
+  parallel discovery layer, etc.)
+- anti-patterns.md: rejections that follow from the theory (rung below/above
+  the stakes, unjustified dynamism, pattern-first design, model-size-first)
+- verification.md and templates: 'verification ladder' now names the output
+  ladder; build proof renamed to build checks; stale 'five principles'
+  pointers updated
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+
+* chore(skill): bump agentfield skill to v0.5.0 and sync embedded copy
+
+The thinking-layer rework edited skills/agentfield/ (source of truth)
+but the binary embeds skill_data/agentfield/. Sync the mirror (adds
+mental-models.md, updates SKILL.md and references) and bump the catalog
+version 0.4.0 -> 0.5.0 so existing installs pick up the change on
+af skill install/update instead of being skipped as already-current.
+
+---------
+
+Co-authored-by: Claude Opus 4.8 <noreply@anthropic.com> (76fdf5e)
+
+
+
+### Documentation
+
+- Docs: credit integrations packs in comparison table (linked partial mark) (a709524)
+
+- Docs: sharpen vs-frameworks pitch (concede row, plain-words rows, second-caller rule) (2ea7c67)
+
+- Docs: scale-first README rewrite (fan-out hero sample, how-it-scales section, tutorial blog cards) (859174f)
+
+## [0.1.96] - 2026-06-29
+
+## [0.1.96-rc.1] - 2026-06-29
+
+
+### Added
+
+- Feat(sdk): ReasonerFailed exception so a reasoner can report failure with result (#697)
+
+The async execution handler records an execution as `succeeded` whenever the
+reasoner returns a value — it never inspects the result. A reasoner whose own
+payload says `success: False` (e.g. a build that completed zero issues and
+merged nothing) therefore surfaces as green, which is easy to act on
+incorrectly.
+
+Add `ReasonerFailed`, raised inside a reasoner to report that the work ran but
+failed. The handler maps it to `status="failed"` while still posting the
+structured `result`, so the control plane (which stores the result payload
+regardless of terminal status) keeps the rich outcome — debt, DAG state, any
+PR opened — instead of just a bare error string. error_details is carried
+through the existing generic path.
+
+Refs Agent-Field/SWE-AF#82 (Gap 2, SDK half).
+
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (491460d)
+
+## [0.1.95] - 2026-06-27
+
+## [0.1.95-rc.3] - 2026-06-27
+
+
+### Other
+
+- Revert fail-closed auth: #682 (API key) + #691 (admin token) (#694)
+
+* Revert "fix(security): Enforce fail-closed for empty admin token (#425) (#691)"
+
+This reverts commit bc0f7c78171353ed82b3b1da7fed2677d538aa2d.
+
+* Revert "fix(#424): fail closed on empty API key unless insecure mode is explicitly enabled (#682)"
+
+This reverts commit 8ff2bc7ada89168ba6206a83a9dd573387d340c4. (bee7eb5)
+
+## [0.1.95-rc.2] - 2026-06-27
+
+
+### Fixed
+
+- Fix(security): Enforce fail-closed for empty admin token (#425) (#691) (bc0f7c7)
+
+## [0.1.95-rc.1] - 2026-06-25
+
+
+### Fixed
+
+- Fix(go-sdk): surface json.Marshal errors in memory backend requests (#679)
+
+* fix(go-sdk): surface json.Marshal errors in memory backend requests
+
+mustJSONReader discarded the json.Marshal error and returned a reader
+over a nil byte slice. When a value could not be serialized (unsupported
+type, cyclic struct, channel, func), the control-plane POST was sent with
+an empty body — silently storing nothing or overwriting with an empty
+value — and the real error never reached the caller.
+
+Replace it with jsonReader(v any) (io.Reader, error) and propagate the
+error at each call site (Set, Get, Delete, SetVector, SearchVector), all
+of which already return an error.
+
+Adds a test asserting an unserializable value yields an error instead of
+an empty reader. Fixes #434.
+
+* test(go-sdk): avoid dead marshal path in get/delete
+
+---------
+
+Co-authored-by: santoshkumarradha <santosh@agentfield.ai> (f9666c9)
+
+## [0.1.94] - 2026-06-25
+
+## [0.1.94-rc.3] - 2026-06-25
+
+
+### Added
+
+- Feat(sdk/python): add Ed25519 JWS sign/verify for payload authenticity (#690)
+
+Adds crypto.sign/verify and generate_ed25519_keypair — compact JWS over an
+Ed25519 key, wire-compatible with the TS SDK's jose CompactSign. Encryption
+(JWE) proves confidentiality only; signing lets a recipient verify a payload's
+ORIGIN. Used by the discuss/aggregator split so the aggregator accepts only
+hax-sdk-signed scopes (sign-then-encrypt), closing a cross-tenant forgery gap.
+
+Implemented directly over `cryptography` Ed25519 rather than joserfc (which
+rejects alg=EdDSA per RFC 9864); alg is pinned to EdDSA so a forged header
+cannot downgrade to none. Interop verified both directions (jose <-> this) plus
+negatives (wrong key, tampered, alg=none/HS256, malformed). 21 crypto tests, ruff clean.
+
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (2243032)
+
+## [0.1.94-rc.2] - 2026-06-24
+
+
+### Added
+
+- Feat(harness): canonical dir model, unified permissions, incremental schema (Python) (#689)
+
+Reworks the Python harness directory, permission, and schema-output contracts
+so they are consistent across all four providers and match the Go SDK.
+
+Directory model (#684, #686):
+- project_dir is the canonical agent root; cwd is the process dir. The schema
+  output file always lands inside the agent root — when project_dir is set the
+  runner places it in an isolated temp dir under project_dir (mirrors Go), so
+  providers like OpenCode no longer reject it as an external-directory write.
+- opencode: --dir prefers project_dir over cwd (was inverted, the #684 bug).
+- codex: -C uses project_dir or cwd; added --skip-git-repo-check for non-repo
+  working dirs.
+- gemini: removed the -C flag, which gemini rejects outright ("Unknown
+  argument: C") and crashed every call; the root is now the process cwd.
+- claude-code: SDK cwd uses project_dir or cwd.
+- Terminal schema errors now include effective provider/project_dir/cwd/output.
+
+Permissions (#687):
+- codex: "auto" -> --sandbox workspace-write (was the deprecated --full-auto);
+  "plan" -> --sandbox read-only.
+- gemini: "auto" -> --yolo (was --sandbox, which RESTRICTS execution and was
+  backwards); "plan" -> --approval-mode plan.
+
+Incremental schema (#688):
+- New schema_mode: "single" (default) | "incremental" | "auto".
+- incremental builds the JSON object one top-level field at a time and recovers
+  by patching only the missing/invalid fields instead of a full re-run.
+- auto switches to incremental above the large-schema threshold.
+
+Adds project_dir and schema_mode to app.harness() and HarnessConfig.
+Full harness test coverage for every provider's flag mapping and the
+incremental field-recovery path.
+
+Closes #684
+Closes #686
+Closes #687
+Closes #688 (ff6f043)
+
+## [0.1.94-rc.1] - 2026-06-24
+
+
+### Fixed
+
+- Fix(#424): fail closed on empty API key unless insecure mode is explicitly enabled (#682) (8ff2bc7)
+
+## [0.1.93] - 2026-06-22
+
+## [0.1.93-rc.1] - 2026-06-22
+
+
+### Fixed
+
+- Fix(sdk): satisfy OpenAI strict response_format schema rules (#680)
+
+`app.ai(schema=...)` sent `strict: True` alongside Pydantic's raw
+`model_json_schema()`, which omits `additionalProperties: false` and a
+complete `required` list. OpenAI rejects such schemas with
+`BadRequestError: Invalid schema ... 'additionalProperties' is required
+to be supplied and to be false`, so every structured-output call against
+OpenAI failed and callers silently degraded to unstructured text.
+
+Add `_strictify_openai_schema`: recursively set `additionalProperties:
+false` and require all properties (including nested `$defs`) before
+sending. Surfaced while deploying the discuss agent, whose `app.ai`
+phrasing fell back to raw retrieved context on every call.
+
+Co-authored-by: Claude Opus 4.8 <noreply@anthropic.com> (79ae8b9)
+
+## [0.1.92] - 2026-06-22
+
+## [0.1.92-rc.20] - 2026-06-22
+
+
+### Other
+
+- Add workflow restart and replay reuse (#639)
+
+* feat: restart workflow runs with replay reuse
+
+* Polish restart recovery UI states
+
+* Fix run detail test mocks for restart hooks
+
+* Cover Python restart replay SDK paths
+
+* Show reused nodes in restart views
+
+* Cover restart provenance UX paths
+
+* Stabilize restart replay functional test
+
+* Stabilize restart replay coverage
+
+* refactor(restart): apply pr-af code review recommendations
+
+pr-af (https://github.com/Agent-Field/pr-af) reviewed the workflow
+restart/replay change and recommended these follow-ups, applied here:
+
+- Back-fill ExecutionReuseInfo.source_run_id from the run lineage so the
+  reused-node sidebar and graph provenance show the source run, not just the
+  source execution. Every reused node in a restarted run shares the run's
+  single replay source, so it is taken from lineage rather than re-queried
+  per node.
+- Document that the restart workflow_runs row is a metadata-only sidecar:
+  its status/total_steps are seeded at enqueue and are not kept current, and
+  all read paths derive live status from execution aggregation.
+- Document the replay-match contract in findReplayHit (keyed on
+  node/reasoner/canonical input+context; earliest succeeded source wins;
+  position/multiplicity agnostic).
+
+Adds TestFillReuseSourceRun covering the back-fill behavior.
+
+* Polish restart UI typography
+
+---------
+
+Co-authored-by: Claude <noreply@anthropic.com>
+Co-authored-by: Abir Abbas <abirabbas1998@gmail.com> (e4d8596)
+
+## [0.1.92-rc.19] - 2026-06-22
+
+
+### Chores
+
+- Chore(deps): bump the uv group across 1 directory with 2 updates (#678)
+
+Bumps the uv group with 2 updates in the /sdk/python directory: [msgpack](https://github.com/msgpack/msgpack-python) and [pydantic-settings](https://github.com/pydantic/pydantic-settings).
+
+
+Updates `msgpack` from 1.1.2 to 1.2.1
+- [Release notes](https://github.com/msgpack/msgpack-python/releases)
+- [Changelog](https://github.com/msgpack/msgpack-python/blob/main/CHANGELOG.md)
+- [Commits](https://github.com/msgpack/msgpack-python/compare/v1.1.2...v1.2.1)
+
+Updates `pydantic-settings` from 2.13.1 to 2.14.2
+- [Release notes](https://github.com/pydantic/pydantic-settings/releases)
+- [Commits](https://github.com/pydantic/pydantic-settings/compare/v2.13.1...v2.14.2)
+
+---
+updated-dependencies:
+- dependency-name: msgpack
+  dependency-version: 1.2.1
+  dependency-type: indirect
+  dependency-group: uv
+- dependency-name: pydantic-settings
+  dependency-version: 2.14.2
+  dependency-type: indirect
+  dependency-group: uv
+...
+
+Signed-off-by: dependabot[bot] <support@github.com>
+Co-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com> (fbc2fc2)
+
+## [0.1.92-rc.18] - 2026-06-21
+
+
+### Added
+
+- Feat(did+cp): DID-encrypted payloads + control-plane knowledge store (discuss/aggregator foundation) (#677)
+
+* feat(did): derive X25519 keyAgreement key for agent DIDs
+
+Each agent DID now gets an X25519 encryption key derived from the master
+seed (distinct HKDF salt from the Ed25519 signing key, so signing and
+encryption keys are independent). The public key is exposed in DID
+resolution — as a flat `key_agreement` JWK on the did:key resolve response
+and as a W3C `keyAgreement` (X25519KeyAgreementKey2020) entry in the DID
+document — and the private key is returned to the agent at registration.
+
+This enables encrypting a payload *to* an agent's DID (JWE ECDH-ES+A256GCM)
+that only that agent can decrypt, underpinning the discuss/aggregator split.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+
+* feat(py-sdk): DID-based payload encryption (JWE over X25519)
+
+Add agentfield.crypto: encrypt_for_did/decrypt/encrypt_to_jwk,
+generate_x25519_keypair and load_private_key. Encrypts a payload to an
+agent's published X25519 keyAgreement key using standard JWE compact
+(ECDH-ES + A256GCM) via joserfc, decryptable only by the holder of the
+matching private key. Interoperable with the TypeScript SDK.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+
+* feat(ts-sdk): DID-based payload encryption (JWE over X25519)
+
+Add crypto/didEncryption: encryptForDid/decrypt/encryptToJwk,
+generateX25519KeyPair. Mirrors the Python SDK using jose; a ciphertext
+produced here decrypts in Python and vice-versa. Used by hax-sdk to
+encrypt a scoped payload to the aggregator's DID.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+
+* test(sdk): cross-language JWE interop harness
+
+run_interop.sh exercises the real TypeScript and Python SDK crypto in both
+directions (TS<->Python) to guard the wire-format contract.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+
+* feat(cp): add pinned-dimension embedding provider package
+
+Introduce internal/embedding with an Embedder interface (Embed/Dimensions),
+an OpenAIEmbedder (text-embedding-3-small, 1536 dims) and a deterministic,
+network-free FakeEmbedder at the same pinned dimension. The dimension is
+pinned centrally because the shared vector index is fixed-dimension; callers
+must not embed with mismatched models. NewFromConfig falls back to the
+FakeEmbedder when no OpenAI key is set so the store works locally with zero
+external deps.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+
+* feat(cp): scope-aware RAG knowledge service + HTTP handlers
+
+Add internal/knowledge: a Service that embeds caller-supplied TEXT and stores
+it in the existing scoped vector store, reusing the SetVector/SimilaritySearch/
+DeleteVectorsByPrefix surface. Chunks are namespaced ws:<workspaceID> or
+proj:<projectID>; a workspace search matches only its namespace, a project
+search matches its own namespace AND the parent workspace's (inheritance).
+
+Defense in depth: the scope is applied in the vector query (namespace scopeID +
+workspace_id metadata filter) AND every returned chunk is re-verified in Go
+before returning; mismatches are dropped and logged. Empty workspace_id is
+rejected so an unscoped query is structurally impossible.
+
+Handlers wire POST /knowledge/upsert, POST /knowledge/search, and
+DELETE /knowledge/source/:id, mapping scope/argument errors to 400 and
+embed/store failures to 500.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+
+* feat(cp): wire knowledge store config, provider, and routes
+
+Add a features.knowledge config section (enabled, provider, openai key/model)
+with OPENAI_API_KEY (and AGENTFIELD_KNOWLEDGE_*) env overrides. Build the
+embedder from config at server startup (FakeEmbedder fallback when no key),
+construct the knowledge Service over the storage provider, and register the
+/api/v1/knowledge routes (skipped when the feature is disabled).
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+
+* feat(did): X25519 keyAgreement key rotation via per-agent epoch
+
+Fold a per-agent rotation epoch into the X25519 HKDF derivation
+(info = <path>/enc/<epoch>) so each epoch yields an independent
+keyAgreement keypair. Adds deriveX25519PrivateKeyAtEpoch and
+regenerateX25519KeyPairJWKAtEpoch; the existing epoch-less helpers
+delegate to epoch 0.
+
+Store X25519Epoch on AgentDIDInfo (and surface it on DIDIdentity).
+RegisterAgent starts new agents at epoch 0; ResolveDID, the
+re-registration path, and PartialRegisterAgent all derive at the
+agent's CURRENT stored epoch and preserve it across re-registration.
+
+RotateAgentX25519Key(did) increments the agent-node's epoch,
+re-derives + persists the new public key, and returns (newPub, epoch).
+Reasoner/skill/root DIDs error clearly. Exposed over
+POST /api/v1/did/key-agreement/rotate, returning the new
+x25519_public_key_jwk object + epoch.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+
+* test(did): cover X25519 key rotation + epoch-aware interop fixture
+
+Service tests: RotateAgentX25519Key changes the stored pub + increments
+epoch; ResolveDID after rotation returns the new pub with a matching
+priv; same (seed,path,epoch) derives identically while distinct epochs
+diverge. HTTP test: POST /api/v1/did/key-agreement/rotate returns a new
+X25519 public JWK (no private d) and a subsequent resolve returns the
+same rotated key. Update the DIDService interface stubs for the new
+RotateAgentX25519Key method.
+
+Extend cmd/x25519gen to emit epoch0/epoch1 keypairs so the SDK crypto
+cross-check can confirm an epoch1 private key cannot decrypt a payload
+encrypted to the epoch0 public key.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+
+* knowledge: add sender scope tier to control-plane knowledge store
+
+Extend the scope-aware knowledge store with a third tier, "sender", in
+addition to workspace/project.
+
+- Scope gains an optional sender_id; tier "sender" requires it.
+- Upsert stores a source under the most specific namespace by tier:
+  sender:<id> > proj:<id> > ws:<id>. workspace_id/project_id/sender_id
+  are all kept in chunk payload metadata when present.
+- Search reads the additive set of namespaces driven by the ids present
+  in the query scope: always ws, plus proj when project_id is set, plus
+  sender when sender_id is set (a query in a project owned by a sender
+  sees ws + proj + sender chunks).
+- Defense in depth unchanged: namespace filter in-query plus in-Go
+  re-verification of namespace membership and workspace_id match; empty
+  workspace_id rejected. Behavior with no sender_id is unchanged.
+- Handler scope body carries sender_id and surfaces the sender_id
+  validation error as a 400.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+
+* knowledge: test sender-scope upsert/search/delete and isolation
+
+Service-level tests: sender-scoped upsert+search, additive ws+proj+sender
+visibility, cross-sender isolation (sender A never sees sender B, and a
+workspace-only query never sees sender chunks), sender source delete, and
+rejection of sender tier without sender_id.
+
+Handler-level tests (new knowledge_test.go in handlers): drive the gin
+upsert/search/delete handlers over an in-memory vector store to assert
+the additive set, cross-sender isolation, empty workspace_id -> 400, and
+sender tier without sender_id -> 400.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+
+* refactor(did): drop unused epoch-less deriveX25519PrivateKey wrapper
+
+The rotation work made deriveX25519PrivateKeyAtEpoch the sole derivation
+path; the epoch-less wrapper had no remaining callers. Removing it clears
+the golangci-lint `unused` finding introduced by this branch.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+
+* test(embedding): cover OpenAI embedder HTTP client
+
+Adds httptest-server tests for OpenAIEmbedder.Embed: happy path (request
+shape, model/input, bearer auth, index-ordered parsing), plus the
+empty-input short-circuit, missing-API-key, non-200 (with and without an
+error body), malformed body, vector-count mismatch, dimension mismatch and
+transport-failure paths. Also covers the WithModel/WithEndpoint/WithHTTPClient
+option setters and their empty-value no-ops.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+
+* test(config): cover knowledge/embedding env overrides
+
+Covers ApplyEnvOverrides for the knowledge block: OPENAI_API_KEY adopted
+only when the knowledge key is empty (and not overriding an existing key),
+the explicit AGENTFIELD_KNOWLEDGE_OPENAI_API_KEY winning, and the
+provider/model/enabled overrides (with trimming). Also covers
+KnowledgeConfig.IsEnabled defaulting (nil => true) and explicit true/false.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+
+* test(x25519gen): cover X25519 interop fixture derivation
+
+Tests the standalone x25519gen interop command: deterministic HKDF
+derivation for a fixed (seed, path, epoch), epoch divergence (rotation
+retires the prior key), JWK shape (public has no private d, private carries
+a non-empty d, x components agree and round-trip a 32-byte X25519 key), and
+an end-to-end main() invocation.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+
+* test(knowledge): cover service + handler error paths
+
+Service: validation errors (empty source_id/chunks/chunk-text, empty query),
+embedder failure and vector-count mismatch on upsert/search, store failures
+(SetVector/SimilaritySearch/DeleteVectorsByPrefix), and the topK<=0 default.
+
+Handlers: malformed-JSON 400s for upsert/search/delete, missing path id,
+the internal-error (500) mapping via a failing store, the validation->400
+mapping, and isKnowledgeValidationError classification across its fragments
+including the internal-error fall-through.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+
+* test(did): cover X25519 rotation error paths + DID-document keyAgreement
+
+Service RotateAgentX25519Key: rejects empty DID, unknown DID, the root DID,
+and reasoner/skill component DIDs with precise errors; plus the rotation
+invariant that the epoch-N+1 private key differs from the retired epoch-N key.
+
+Handlers: RotateX25519Key invalid-body/missing-did/service-error/malformed-key
+fallback, ResolveDID's warn-and-omit branch for a malformed X25519 JWK, and a
+new GetDIDDocument test asserting the W3C keyAgreement verification method,
+x25519-2020 @context, and that the private d is never leaked.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+
+* ci: force fresh coverage run (prior run used a stale pull-request merge ref)
+
+No code change. The previous coverage workflow checked out a merge ref that
+predated the added Go coverage tests (ran the embedding package in 0.004s,
+i.e. without openai_test.go), reporting a stale 64% patch coverage. The tests
+are present on the branch and bring control-plane patch coverage to ~85%
+locally; this empty commit forces GitHub to recompute the merge ref.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+
+---------
+
+Co-authored-by: Claude Opus 4.8 <noreply@anthropic.com> (9e613cd)
+
+## [0.1.92-rc.17] - 2026-06-19
+
+
+### Other
+
+- Show external ARD boundaries in workflow traces (eacae13)
+
+## [0.1.92-rc.16] - 2026-06-18
+
+
+### Other
+
+- Add ARD discovery workspace (#675)
+
+* Add ARD discovery workspace
+
+* Complete ARD discovery UX and callable imports
+
+* Fix ARD review blockers
+
+* Add ARD PR screenshots (7336b9b)
+
+## [0.1.92-rc.15] - 2026-06-18
+
+
+### Fixed
+
+- Fix(security): restrict query API key auth to streaming routes (#423) (#674) (e6e5931)
+
+## [0.1.92-rc.14] - 2026-06-17
+
+
+### Chores
+
+- Chore(deps): patch js-yaml lockfiles (#672) (bfe4015)
+
+## [0.1.92-rc.13] - 2026-06-16
+
+
+### Fixed
+
+- Fix: Fixed the stale `_current_status` issue where status stuck on `STARTING` mode. (#673) (6a7ce08)
+
+## [0.1.92-rc.12] - 2026-06-15
+
+
+### Chores
+
+- Chore(deps): bump the uv group across 1 directory with 4 updates (#671)
+
+---
+updated-dependencies:
+- dependency-name: aiohttp
+  dependency-version: 3.14.1
+  dependency-type: direct:production
+  dependency-group: uv
+- dependency-name: cryptography
+  dependency-version: 48.0.1
+  dependency-type: direct:production
+  dependency-group: uv
+- dependency-name: python-multipart
+  dependency-version: 0.0.31
+  dependency-type: indirect
+  dependency-group: uv
+- dependency-name: starlette
+  dependency-version: 1.3.1
+  dependency-type: indirect
+  dependency-group: uv
+...
+
+Signed-off-by: dependabot[bot] <support@github.com>
+Co-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com> (af60fca)
+
+## [0.1.92-rc.11] - 2026-06-15
+
+
+### Chores
+
+- Chore(deps): bump the npm_and_yarn group across 2 directories with 4 updates (#670)
+
+Bumps the npm_and_yarn group with 3 updates in the /control-plane/web/client directory: [vite](https://github.com/vitejs/vite/tree/HEAD/packages/vite), [js-yaml](https://github.com/nodeca/js-yaml) and [ws](https://github.com/websockets/ws).
+Bumps the npm_and_yarn group with 3 updates in the /sdk/typescript directory: [vite](https://github.com/vitejs/vite/tree/HEAD/packages/vite), [ws](https://github.com/websockets/ws) and [form-data](https://github.com/form-data/form-data).
+
+
+Updates `vite` from 8.0.5 to 8.0.16
+- [Release notes](https://github.com/vitejs/vite/releases)
+- [Changelog](https://github.com/vitejs/vite/blob/main/packages/vite/CHANGELOG.md)
+- [Commits](https://github.com/vitejs/vite/commits/v8.0.16/packages/vite)
+
+Updates `js-yaml` from 4.1.1 to 4.2.0
+- [Changelog](https://github.com/nodeca/js-yaml/blob/master/CHANGELOG.md)
+- [Commits](https://github.com/nodeca/js-yaml/commits)
+
+Updates `ws` from 8.19.0 to 8.20.0
+- [Release notes](https://github.com/websockets/ws/releases)
+- [Commits](https://github.com/websockets/ws/compare/8.19.0...8.20.0)
+
+Updates `vite` from 6.4.2 to 8.0.16
+- [Release notes](https://github.com/vitejs/vite/releases)
+- [Changelog](https://github.com/vitejs/vite/blob/main/packages/vite/CHANGELOG.md)
+- [Commits](https://github.com/vitejs/vite/commits/v8.0.16/packages/vite)
+
+Updates `ws` from 8.20.1 to 8.21.0
+- [Release notes](https://github.com/websockets/ws/releases)
+- [Commits](https://github.com/websockets/ws/compare/8.19.0...8.20.0)
+
+Updates `form-data` from 4.0.5 to 4.0.6
+- [Release notes](https://github.com/form-data/form-data/releases)
+- [Changelog](https://github.com/form-data/form-data/blob/master/CHANGELOG.md)
+- [Commits](https://github.com/form-data/form-data/compare/v4.0.5...v4.0.6)
+
+---
+updated-dependencies:
+- dependency-name: vite
+  dependency-version: 8.0.16
+  dependency-type: direct:development
+  dependency-group: npm_and_yarn
+- dependency-name: js-yaml
+  dependency-version: 4.2.0
+  dependency-type: indirect
+  dependency-group: npm_and_yarn
+- dependency-name: ws
+  dependency-version: 8.20.0
+  dependency-type: indirect
+  dependency-group: npm_and_yarn
+- dependency-name: vite
+  dependency-version: 8.0.16
+  dependency-type: direct:development
+  dependency-group: npm_and_yarn
+- dependency-name: ws
+  dependency-version: 8.21.0
+  dependency-type: direct:production
+  dependency-group: npm_and_yarn
+- dependency-name: form-data
+  dependency-version: 4.0.6
+  dependency-type: indirect
+  dependency-group: npm_and_yarn
+...
+
+Signed-off-by: dependabot[bot] <support@github.com>
+Co-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com> (ffd0717)
+
+- Chore(deps): bump pyjwt (#669)
+
+Bumps the uv group with 1 update in the /sdk/python directory: [pyjwt](https://github.com/jpadilla/pyjwt).
+
+
+Updates `pyjwt` from 2.12.1 to 2.13.0
+- [Release notes](https://github.com/jpadilla/pyjwt/releases)
+- [Changelog](https://github.com/jpadilla/pyjwt/blob/master/CHANGELOG.rst)
+- [Commits](https://github.com/jpadilla/pyjwt/compare/2.12.1...2.13.0)
+
+---
+updated-dependencies:
+- dependency-name: pyjwt
+  dependency-version: 2.13.0
+  dependency-type: indirect
+  dependency-group: uv
+...
+
+Signed-off-by: dependabot[bot] <support@github.com>
+Co-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com> (2cb06f0)
+
+## [0.1.92-rc.10] - 2026-06-15
+
+
+### Other
+
+- Add Linear and Sentry integrations (#661)
+
+* feat: add linear and sentry integrations
+
+* docs: clarify integration event filters
+
+* test: cover linear and sentry capability runtimes
+
+* fix(linear): bearer prefix for OAuth tokens; hash idempotency fallback
+
+- GraphQL client detects `lin_oauth_` prefix and sends `Authorization:
+  Bearer <token>` for OAuth access tokens. Personal API keys (`lin_api_`
+  and other prefixes) continue sending the token raw per Linear's docs.
+- Webhook idempotency: when `Linear-Delivery` header is absent, fall
+  back to sha256(webhookId || timestamp || type || action) instead of
+  the body's `webhookId` alone — webhookId identifies the subscription,
+  not the delivery, so the old fallback would collapse distinct events.
+
+* fix(sentry): org-scoped issue paths; per_page pagination
+
+- Migrate GetIssue, UpdateIssue, ResolveIssue, AssignIssue from legacy
+  /api/0/issues/{id}/ to documented /api/0/organizations/{org}/issues/{id}/.
+  All four now require Config.Organization, matching the existing pattern
+  in ListIssueEvents and GetEvent.
+- ListIssues: rename undocumented `limit` param to `per_page` so
+  pagination shape matches ListIssueEvents and Sentry's de-facto API.
+  Keep the deprecated project-scoped issues endpoint with a TODO to
+  migrate once we can resolve project slug → id.
+- TODO comments added pointing to Link-header cursor pagination as a
+  follow-up.
+
+* fix(sentry): validate Sentry-Hook-Timestamp against tolerance window
+
+Mirrors the Linear source's replay-protection pattern. Default tolerance
+is 300s (Sentry doesn't document a recommended window, so this matches
+Stripe's). Set `tolerance_seconds: 0` in the trigger config to disable.
+
+Parses Sentry-Hook-Timestamp as RFC3339, unix seconds, or unix
+milliseconds — Sentry's docs only show 'a timestamp', so accept the
+common formats. Missing or unparseable headers fail closed when
+tolerance > 0.
+
+* docs(sentry): document EU/US region base URL requirement
+
+EU-region Sentry orgs MUST use https://de.sentry.io. US-region orgs
+should use https://us.sentry.io. The default https://sentry.io only
+works for legacy US-only orgs and returns 401/403 for everyone else
+with no clear hint about region. Surface this in:
+
+- docs/integrations/sentry.md: new 'Region / Base URL' section with
+  the full table
+- integrations/sentry/README.md: same table for the package readme
+- integrations/sentry/agentfield-package.yaml: SENTRY_BASE_URL
+  description spells out the three valid values
+
+Ref https://docs.sentry.io/organization/data-storage-location/.
+
+* refactor(sdk): extract shared input helpers to sdk/go/inputs
+
+The Linear and Sentry capability runtimes shipped byte-identical
+requiredString/stringInput/intInput/objectInput helpers plus a duplicated
+firstNonBlank in each node's config. Hoist them to a new sdk/go/inputs
+package with capitalized public names and migrate both nodes.
+
+Databricks and Snowflake nodes still have their own copies — they carry
+extra helpers (boolInput, compactJSON) that aren't shared yet. A
+follow-up can pull those in once the helper surface stabilizes.
+
+* test(ui): databricks icon test asserts svg presence, not path count
+
+PR #661 swapped the inline DatabricksGlyph for SiDatabricks from
+react-icons (consistent with how Stripe/GitHub/etc. now render).
+The Databricks UI test hard-coded an expectation of 3 `<path>`
+elements from the old hand-drawn glyph. Relax the assertion to 'at
+least one path' so the test pins icon presence without coupling to
+the exact SVG markup of whichever icon library renders it. (edee822)
+
+## [0.1.92-rc.9] - 2026-06-15
+
+
+### Other
+
+- Add Databricks integration pack (#667)
+
+* Add Databricks integration pack
+
+* Remove Databricks docs page from integration PR
+
+* Cover Databricks trigger UI defaults
+
+* fix(trigger-dispatcher): clean up orphan Execution + document 202 path
+
+If StoreWorkflowExecution fails after CreateExecutionRecord succeeds,
+the Execution row was previously stranded in Running. Now fail it so
+the partial state is observable.
+
+Also document why we deliberately skip completeDispatchExecution on a
+202 Accepted response: the node owns async completion via the
+reasoner-result callback path. (81e464d)
+
+## [0.1.92-rc.8] - 2026-06-15
+
+
+### Other
+
+- Add AgentField realtime sessions for WebRTC voice ingress (#654)
+
+* Add explicit realtime session DX
+
+* fix: align session route wildcards
+
+* test: cover session control-plane paths
+
+* docs(examples): add voice dictation example for realtime sessions
+
+Runnable demo of the @app.session WebRTC voice flow: browser mic ->
+control-plane SDP proxy -> OpenAI Realtime, with live transcription and
+the tools=[...] allowlist routing through execute/async. Includes WSL
+setup notes and the GA session.update shape (session.type + audio.input
+nesting) required for input transcription + server VAD.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+* Add session access tags and UI surfaces (#655)
+
+* Add session access tags and UI surfaces
+
+* test: update session access UI expectations
+
+* test: align session access CLI coverage
+
+* test: cover session playground tools
+
+* test: cover session access UI paths
+
+* fix(examples): make voice dictation example resilient to the session route rename
+
+#655 renamed the realtime-offer route (/sessions -> /session-instances). The
+page now tries the /session-instances route first and falls back to /sessions,
+so it works against #654 alone and against #654+#655.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+---------
+
+Co-authored-by: Abir Abbas <abirabbas1998@gmail.com>
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (e776f3f)
+
+## [0.1.92-rc.7] - 2026-06-15
+
+
+### Chores
+
+- Chore: annotate snowflake SQL API request validation (338a9ae)
+
+
+
+### Fixed
+
+- Fix: harden snowflake trigger polling (2e1be49)
+
+- Fix: avoid tainted snowflake request URLs (35e1e32)
+
+- Fix: constrain snowflake sql api URLs (66069b1)
+
+- Fix: validate snowflake account URLs (d14ebe9)
+
+
+
+### Other
+
+- Add Snowflake integration pack (bbd9968)
+
+
+
+### Testing
+
+- Test: cover snowflake error branches (7214d0c)
+
+- Test: exercise snowflake validation branches (5eec124)
+
+- Test: cover snowflake URL validation (d9ceba8)
+
+- Test: raise snowflake integration coverage (56aa6c0)
+
+## [0.1.92-rc.6] - 2026-06-13
+
+
+### Fixed
+
+- Fix esbuild dependabot alerts (#660) (ebd7ecb)
+
+## [0.1.92-rc.5] - 2026-06-13
+
+
+### Chores
+
+- Chore(deps): patch remaining esbuild alerts (4647c47)
+
+- Chore(deps-dev): bump esbuild (#657)
+
+Bumps the npm_and_yarn group with 1 update in the /examples/benchmarks/100k-scale/mastra-bench directory: [esbuild](https://github.com/evanw/esbuild).
+
+
+Updates `esbuild` from 0.28.0 to 0.28.1
+- [Release notes](https://github.com/evanw/esbuild/releases)
+- [Changelog](https://github.com/evanw/esbuild/blob/main/CHANGELOG.md)
+- [Commits](https://github.com/evanw/esbuild/compare/v0.28.0...v0.28.1)
+
+---
+updated-dependencies:
+- dependency-name: esbuild
+  dependency-version: 0.28.1
+  dependency-type: indirect
+  dependency-group: npm_and_yarn
+...
+
+Signed-off-by: dependabot[bot] <support@github.com>
+Co-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com> (46a9b70)
+
+## [0.1.92-rc.4] - 2026-06-11
+
+
+### Fixed
+
+- Fix: Updated the startup and shutdown events, now they are using life… (#631)
+
+* fix: Updated the startup and shutdown events, now they are using lifespan.
+
+* fix: solved the lifespan override issue.
+
+* fix: `yield` was outside of the context block of `AsyncExitStack()`, pull it back to inside.
+
+* test(sdk-python): cover merged agent lifespan
+
+---------
+
+Co-authored-by: Santosh <santosh@agentfield.ai> (bdd016d)
+
+## [0.1.92-rc.3] - 2026-06-11
+
+
+### Fixed
+
+- Fix: ignore caller identity headers for tag policy(#422) (#653) (7ac732f)
+
+
+
+### Other
+
+- Fix: Remove /api/ui/v1 URL substitution from Python & Go SDK note endpoints (#650)
+
+* issue/go-sdk-note-url-fix: Remove /api/ui/v1 URL substitution from sendNote(), update test expectedPath
+
+* issue/python-sdk-note-url-fix: remove /api/ui/v1 URL substitution from note() and update test assertion
+
+* chore: remove tracked build artifacts and fortify .gitignore
+
+- Remove compiled binary examples/go_agent_nodes/multi_version (~10MB)
+- Remove coverage artifacts: coverage_handlers.out, coverage-func.txt,
+  ts_cov.txt, py_cov.txt
+- Remove .DS_Store files (4) from control-plane tree
+- Remove tooling leftover sdk/go/harness/.codex
+- Remove local debris dirs: .artifacts/, .worktrees/
+- Fortify .gitignore with patterns for coverage files, .codex markers,
+  and the multi_version binary
+
+---------
+
+Co-authored-by: SWE-AF <eng@agentfield.ai> (9038969)
+
+## [0.1.92-rc.2] - 2026-06-10
+
+
+### Fixed
+
+- Fix(release): skip prerelease counters already taken on origin (#649)
+
+The Release workflow auto-bumps a staging rc on every push to main by
+calling `scripts/bump_version.py --channel prerelease ...`. The bump
+logic computed the next counter purely from VERSION, with no awareness
+of which tags already existed on the remote. When VERSION lagged behind
+the latest prerelease tag (e.g. VERSION=0.1.91 while v0.1.92-rc.1 was
+already pushed by an earlier run), the script kept emitting the same
+0.1.92-rc.1 and `git tag -a` failed with "tag already exists", killing
+every subsequent run.
+
+This change:
+
+- Queries origin via `git ls-remote --tags` and skips counters that
+  already exist there, so the script returns the first free counter
+  (0.1.92-rc.2 in the failure case above).
+- Falls back to the legacy behaviour on any git failure (no network,
+  missing binary, timeout) with a warning to stderr, so the script
+  remains usable offline / in tests.
+- Adds a `--skip-tag-check` opt-out for tests and offline use.
+- Adds unit tests covering both the regression and the existing paths
+  (stable bumps, same-label increments, label filtering, lookup base
+  selection).
+
+No release workflow changes are required; the existing call site
+already passes the same flags. (88cb1af)
+
+- Fix(tests): default serverless test bind host to 127.0.0.1 (#647)
+
+Aligns test_serverless_agents.py with the rest of the functional suite, which
+already defaults TEST_AGENT_BIND_HOST to 127.0.0.1 (see tests/functional/
+conftest.py and test_quick_start.py). Docker Compose overrides set the env
+variable explicitly when 0.0.0.0 is required. Closes CodeQL alert #35
+(py/bind-socket-all-network-interfaces). (c93b884)
+
+- Fix(deps): force @ai-sdk/provider-utils >3.0.97 in mastra-bench (#646)
+
+Adds npm "overrides" entries to upgrade the top-level @ai-sdk/provider-utils
+and the @ai-sdk/provider-utils-v5 alias used by @mastra/core to 4.0.27,
+removing the vulnerable 2.2.8 and 3.0.20 copies from the lockfile.
+Closes Dependabot alert #191 (CVE-2026-8769, GHSA-866g-f22w-33x8). (f5a341b)
+
+- Fix(deps): force postcss >=8.5.10 to resolve XSS advisory (#645)
+
+Adds npm "overrides" entry pinning all transitive copies of postcss to the
+direct dependency version (8.5.15), removing the nested 8.4.31 bundled inside
+Next.js. Closes Dependabot alert #136 (GHSA for PostCSS \</style\> XSS). (69f086e)
+
+
+
+### Other
+
+- Generic strong-type the consumer-facing API in Python SDK (#640)
+
+* issue/03-router-typing: define RouteRegistrar interface and use gin.IRouter for RegisterRoutes
+
+Introduce a RouteRegistrar interface in the handlers package that all
+handler types implement, and change their RegisterRoutes parameter from
+the concrete *gin.RouterGroup to the gin.IRouter interface. This enables
+polymorphic route composition and allows testing with lightweight router
+mocks.
+
+Affected handler types:
+- ConfigStorageHandlers
+- DIDHandlers
+- IdentityHandlers (ui)
+- TagApprovalHandlers (admin)
+- AccessPolicyHandlers (admin)
+- ConnectorHandlers
+
+* issue/agent-methods-typing: unwrap tracked wrapper in app.call() to preserve original function signature
+
+* issue/core-decorators-typing: add overloads, ParamSpec, and TypeVar annotations to core decorators
+
+* issue/537b5155-04-testing-typing: add mypy configuration and fix type annotations in test files
+
+* issue/537b5155-04-testing-typing: add generic TypeVar R to simulate_trigger and simulate_schedule
+
+* issue/agent-methods-typing: preserve type signatures on Agent.reasoner(), skill(), on_change() and module-level decorators
+
+* fixup: correct indentation of nested decorator functions inside reasoner, on_event, on_schedule
+
+* issue/537b5155-05-typing-verification: fix mypy errors in decorators and router
+
+- Add missing TypeVar T to decorators.py (was undefined but used in overloads)
+- Add type: ignore[attr-defined] for dynamically-set attributes on _Wrapped wrappers
+- Fix on_change inner decorator type signature (Callable[P, T] -> Callable[P, Awaitable[T]])
+- Fix legacy_reasoner return type compatibility
+- Add type: ignore[attr-defined] for router.py wrapper attributes
+- Verify mypy reveals correct types: simulate_schedule(str), simulate_trigger(str)
+
+* chore: finalize repo for handoff
+
+- Remove artifact directories (.artifacts/, .worktrees/)
+- Remove cache directories (.pytest_cache/, .mypy_cache/)
+- Deduplicate .env entry in .gitignore
+
+* fix(sdk-python): resolve ruff failures in new typing tests
+
+Remove unused imports (inspect, cast), drop the shadowed local re-import
+of _execute_with_tracking, and apply ruff format to the touched test
+files so 'ruff check .' passes again.
+
+Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+
+* fix(sdk-python): infer awaited type for async reasoners in simulate_trigger
+
+simulate_trigger/simulate_schedule await coroutines transparently, so a
+single Callable[..., R] -> R signature bound R to the coroutine for
+async handlers while the function actually returns the awaited value.
+Add an Awaitable[R] overload ahead of the plain R one so both sync and
+async reasoners reveal the awaited type.
+
+Also move the TypeVar below the imports (E402) and make the mypy reveal
+fixtures runtime-importable via typing_extensions.reveal_type (F821),
+extending them to cover the async case.
+
+Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+
+* fix(sdk-python): suppress mypy errors from ParamSpec on _execute_with_tracking
+
+The body intentionally rewrites args (Pydantic conversion) and injects
+kwargs (execution_context, trigger) beyond what the caller passed, which
+mypy rejects against P.args/P.kwargs. Keep the ParamSpec signature for
+caller-side inference and ignore the three body mutation sites; also
+apply ruff format to the new long annotations.
+
+Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+
+* Fix Python SDK lint failures in strong typing PR
+
+---------
+
+Co-authored-by: SWE-AF <eng@agentfield.ai>
+Co-authored-by: Claude Fable 5 <noreply@anthropic.com>
+Co-authored-by: Santosh <santosh@agentfield.ai> (9108f75)
+
+- Add OpenRouter attribution defaults
+
+Add OpenRouter attribution request metadata defaults across the SDKs and harness paths without changing provider credentials or AgentField control-plane auth. (9b59ecd)
+
+- Revert PR #641 over-merge
+
+Reverts the accidental over-merge from PR #641, including the generated release bump that followed it. (546aacf)
+
+
+
+### Testing
+
+- Test(web-ui): wait for empty events state in triggers test (#648)
+
+Fixes #644
+
+The "No events received yet..." copy in TriggerSheet only renders after
+the async refreshEvents() fetch resolves and loadingEvents flips back
+to false. The test used a synchronous getByText, which raced the fetch
+under CI load and intermittently failed with TestingLibraryElementError.
+
+Switch to findByText so the assertion waits for the loading state to
+clear, matching the pattern already used elsewhere in the file for
+async-mounted UI. (074c65e)
+
+## [0.1.91] - 2026-06-09
+
+## [0.1.91-rc.3] - 2026-06-09
+
+
+### Other
+
+- Fix get_logger returning agentfield.result_cache for all loggers (#635)
+
+* issue/fix-get-logger-name-bug: fix get_logger to respect name parameter using dictionary cache
+
+* chore: finalize repo for handoff
+
+* fix(logger): guard logger cache with a lock for thread-safe access
+
+The per-name logger cache introduced in this PR is shared mutable module
+state. `get_logger()` could insert into `_logger_cache` while
+`set_log_level()`/`set_cp_client()` iterate `.values()`, raising
+`RuntimeError: dictionary changed size during iteration`.
+
+Add a reentrant lock around all cache access. set_log_level/set_cp_client
+snapshot the values under the lock and apply outside it, so we never hold
+the lock during the loggers' own work. Addresses the thread-safety findings
+from the PR review.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+* test(logger): fix lint, isolate global logging state, cover concurrency
+
+Three issues in the new logger test:
+
+- Removed unused imports (`AgentFieldLogger`, `_global_log_level`) that
+  failed `ruff check` (F401) and broke CI lint on 3.10/3.11/3.12.
+- The fixture's `global _global_log_level = None` only rebound this
+  module's copy, never the real `agentfield.logger` global, so the level
+  reset silently did nothing. Reference the module so the reset bites.
+- `AgentFieldLogger` mutates the stdlib logging registry (adds a handler,
+  sets `propagate=False`). Those mutations outlived each test and leaked
+  across the session. The fixture now snapshots and restores the registry
+  so this file is order-independent and can't mute unrelated loggers.
+
+Also add a concurrency test exercising get_logger()/set_log_level() from
+several threads, locking in the thread-safety fix.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+* test(cancel): capture cancel log directly, not via caplog/root
+
+Fixing get_logger() to honour the requested name means get_logger()
+now creates the real "agentfield" logger, on which the SDK sets
+propagate=False. That stops every "agentfield.*" child (including the
+plain "agentfield.cancel" logger) from reaching the root logger — where
+pytest's `caplog` handler lives. The assertion only ever passed because
+the old singleton bug meant the real "agentfield" logger was usually
+never created, so this was silently order-dependent and failed once
+test_logger ran first.
+
+Attach a handler directly to the "agentfield.cancel" logger instead.
+It asserts the identical contract (an INFO "cancel-callback fired"
+record is emitted) but is independent of namespace propagation and
+suite ordering. Use getMessage() since no formatter runs to set
+record.message on a bare handler.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+* docs(logger): note set_log_level no longer implicitly creates a logger
+
+Document the behavior change flagged in review: set_log_level() now only
+records the level and updates cached loggers; it no longer creates the
+default logger as a side effect. New loggers pick up the stored level
+when created via get_logger().
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+* test(conftest): isolate execution-context state and drain leaked tasks
+
+A pre-existing flake surfaced on Python 3.12 CI: tests that rely on the
+agent / execution-context ContextVars (e.g.
+test_execute_with_tracking_registers_child_context) intermittently saw
+get_current_agent_instance() return None mid-test, skipping workflow
+registration (assert 0 == 1). The suite also leaked many fire-and-forget
+asyncio tasks across tests ("Task was destroyed but it is pending!").
+
+Add an autouse fixture that resets the agent/execution-context ContextVars
+around every test and best-effort drains tasks the test left pending, so
+ordering and stray tasks can't pollute later tests. All teardown work is
+guarded to never raise. Verified locally on 3.10 and 3.12: full suite
+green and the leaked-task warnings drop from dozens to zero.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+* fix(logger): forward structured logs to loggers created after set_cp_client
+
+set_cp_client() only mutated loggers already in the cache, so any logger
+created afterward kept the class default _cp_client=None and silently
+dropped all structured telemetry in _dispatch_to_cp(). The concrete victim
+is the agentfield.verification logger: it is created at module import time
+inside Agent.__init__ (lazy `from agentfield.verification import LocalVerifier`)
+which runs *after* set_cp_client(self.client), so under local_verification=True
+none of its execution logs ever reached the control plane.
+
+Mirror the existing _global_log_level pattern: record the client in a
+module-level _global_cp_client under the cache lock, and apply it to new
+loggers in get_logger(). Forwarding now works regardless of import/creation
+order. set_cp_client(None) detaches globally as well.
+
+Add regression tests covering loggers created after set_cp_client, the
+existing already-cached path, and the None reset; extend reset_logger_state
+to isolate the new global.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+
+---------
+
+Co-authored-by: SWE-AF <eng@agentfield.ai>
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (ccfde97)
+
+## [0.1.91-rc.2] - 2026-06-09
+
+
+### Fixed
+
+- Fix(sdk): attribute app.call parent from task-local context, not shared agent state (#638)
+
+`Agent.call()` resolved the parent execution via
+`_get_current_execution_context()`, which falls back to the process-global
+`self._current_execution_context` when no task-local context is set. That
+attribute is a single slot overwritten at the top of every reasoner
+invocation, so in a server running overlapping executions it holds whichever
+reasoner was most recently dispatched.
+
+When a call originates OUTSIDE any execution — e.g. a webhook handler's
+fire-and-forget asyncio task — it has no task-local context, so the fallback
+attributed it to an unrelated, possibly still-in-flight execution (one paused
+on a human-in-the-loop approval for hours). The control plane then recorded
+that bystander as the new run's parent, chaining independent webhook-triggered
+runs into one bogus workflow DAG and cross-wiring the pause-clock / budget
+cascades that key off parent_execution_id.
+
+Resolve the parent in `call()` from the task-local contextvar only
+(`get_current_context()`). asyncio.create_task copies the contextvar, so
+genuine sub-calls made from within a reasoner still nest correctly; when the
+contextvar is absent we mint a fresh root so the call starts its own workflow
+(matching cold-process behavior). `_get_current_execution_context()` is left
+unchanged for its other consumers (pause/note/vc), which run within an
+execution where the contextvar is set.
+
+Tests: a call with a stale bystander on the shared attr but no task-local
+context must start a fresh root (not inherit it); a call from within an
+execution still nests under that execution.
+
+Co-authored-by: Claude Opus 4.8 <noreply@anthropic.com> (db4d2b1)
+
+## [0.1.91-rc.1] - 2026-06-09
+
+
+### Fixed
+
+- Fix(harness): preserve original goal on non-crash schema retries (#637)
 
 _handle_schema_with_retry rebuilt the retry prompt from
 build_followup_prompt() alone on the non-crash branch, dropping the
@@ -391,6 +3090,24 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (e5947cb)
 - Record Silmari rebrand verification evidence (22eb2a3)
 
 - Finalize Silmari rebrand verification (21a6ce1)
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (a7a68da)
+
+## [0.1.90] - 2026-06-09
+
+
+### Chores
+
+- Chore: add .github/github-buddy.yml with CLA sweep config (#633)
+
+Pins the CLA status context to "license/cla" so github-buddy's
+cla_reminder_sweep reads this repo's hosted cla-assistant.io commit
+status correctly. This differs from github-buddy's own repo, which uses
+the self-hosted contributor-assistant action (a check-run named "cla").
+
+Only takes effect once the repo is added to the GITHUB_BUDDY_CLA_REPOS
+roster on the github-buddy deployment.
+
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (49f9a21)
 
 ## [0.1.90-rc.3] - 2026-06-08
 

@@ -7,22 +7,28 @@
 .worktrees/
 test-reports/
 .env
+.worktrees/
+.artifacts/
 
 # Go
 bin/
 dist/
 **/dist/
 coverage.out
+coverage*.out
+*_cov.txt
+coverage*.txt
 *.test
 tmp/
 examples/go_agent_nodes/permission_agent_*
 examples/go_agent_nodes/go_agent_nodes
+examples/go_agent_nodes/multi_version
 
 # Compiled binaries
 control-plane/agentfield-server
 control-plane/af
-examples/**/go_agent_node*
-!examples/**/*.go
+control-plane/af-tray
+scripts/lambda-rie-fake/lambda-rie-fake
 
 # Python
 __pycache__/
@@ -51,6 +57,7 @@ node_modules/
 .opencode/
 .agit/
 .claude/
+.codex
 
 # Generated assets
 coverage/
@@ -62,5 +69,4 @@ reports/
 .docker/
 
 # Typescript
-.env
 .plandb.db

@@ -18,10 +18,16 @@ class GeminiProvider:
     async def execute(self, prompt: str, options: dict[str, object]) -> RawResult:
         cmd = [self._bin]
 
-        if options.get("cwd"):
-            cmd.extend(["-C", str(options["cwd"])])
-        if options.get("permission_mode") == "auto":
-            cmd.extend(["--sandbox"])
+        # permission_mode → approval mode (agentfield#687). NOTE: gemini's
+        # --sandbox RESTRICTS execution (runs tools in a container); it does NOT
+        # grant access. The old code used --sandbox for "auto", which was
+        # backwards. --yolo auto-approves all actions.
+        permission_mode = options.get("permission_mode")
+        if permission_mode == "auto":
+            cmd.append("--yolo")
+        elif permission_mode == "plan":
+            cmd.extend(["--approval-mode", "plan"])
+
         if options.get("model"):
             cmd.extend(["-m", str(options["model"])])
         cmd.extend(["-p", prompt])
@@ -35,14 +41,25 @@ class GeminiProvider:
                 if isinstance(key, str) and isinstance(value, str)
             }
 
+        # Gemini has NO -C/--cd flag — it rejects unknown args outright
+        # ("Unknown argument: C"), so the previous `-C <cwd>` crashed every call.
+        # The agent root is the process working directory; project_dir is the
+        # canonical field, cwd is the fallback (agentfield#686).
         cwd: Optional[str] = None
-        cwd_value = options.get("cwd")
-        if isinstance(cwd_value, str):
-            cwd = cwd_value
+        root = options.get("project_dir") or options.get("cwd")
+        if isinstance(root, str):
+            cwd = root
 
         start_api = time.monotonic()
 
         try:
+            # No idle_seconds passed here: this call inherits run_cli's global
+            # no-progress watchdog (_DEFAULT_IDLE_SECONDS / env
+            # AGENTFIELD_HARNESS_IDLE_SECONDS, 600s by default). If a Gemini
+            # call ever gets killed with "made no progress for Ns" and that
+            # looks wrong for this provider specifically, that's the watchdog
+            # to check first — not a Gemini-specific timeout, since none is
+            # set here.
             stdout, stderr, returncode = await run_cli(cmd, env=env, cwd=cwd)
         except FileNotFoundError:
             return RawResult(

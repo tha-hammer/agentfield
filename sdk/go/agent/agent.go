@@ -12,9 +12,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strconv"
-	"strings"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -154,10 +153,10 @@ type Reasoner struct {
 // Use it as a typed argument to WithTriggers — the control plane registers
 // the binding and minting of the public ingest URL happens server-side.
 type EventTrigger struct {
-	Source       string
-	Types        []string
-	SecretEnv    string
-	Config       map[string]any
+	Source    string
+	Types     []string
+	SecretEnv string
+	Config    map[string]any
 }
 
 // ScheduleTrigger describes a cron-style schedule binding for a reasoner.
@@ -366,6 +365,15 @@ type Config struct {
 	// plane does not expect heartbeats.
 	LeaseRefreshInterval time.Duration
 
+	// CallTimeout bounds every outbound HTTP call this agent makes as a
+	// client - cross-agent Call()s, memory backend requests, etc.
+	// Optional. Default: 10m. Cross-node calls to a reasoning-model-backed
+	// reasoner can legitimately run for minutes; a short default aborts
+	// them mid-flight (this broke the SWE-AF Go node with the old 15s
+	// default). Settable per-agent here, or centrally via the control
+	// plane's agent_call_timeout config (ExecutionQueueConfig).
+	CallTimeout time.Duration
+
 	// DisableLeaseLoop disables automatic periodic lease refreshes.
 	// Optional. Default: false. When true, node registration reports
 	// HeartbeatInterval as "0s" to signal that the agent does not heartbeat.
@@ -469,6 +477,8 @@ type Agent struct {
 	client     *client.Client
 	httpClient *http.Client
 	reasoners  map[string]*Reasoner
+	skills     map[string]*Reasoner
+	sessions   map[string]SessionDefinition
 	aiClient   *ai.Client // AI/LLM client
 	memory     *Memory    // Memory system for state management
 
@@ -508,6 +518,13 @@ type Agent struct {
 	// Go code does this through net/http, database/sql, etc.
 	cancelMu    sync.Mutex
 	cancelFuncs map[string]context.CancelFunc
+
+	// pauseManager tracks pending Agent.Pause() calls, keyed by
+	// approval_request_id, and resolves them when the control plane POSTs an
+	// approval resolution to /webhooks/approval.
+	pauseManager *PauseManager
+
+	startTime time.Time
 }
 
 // New constructs an Agent.
@@ -537,20 +554,16 @@ func New(cfg Config) (*Agent, error) {
 		cfg.Logger = log.New(os.Stdout, "[agent] ", log.LstdFlags)
 	}
 
-	// Cross-node calls include LLM reasoners that can run for minutes; a short client
-	// timeout aborts them mid-flight (the 15s default broke the SWE-AF Go node). Default
-	// to 10m, overridable via AGENTFIELD_CALL_TIMEOUT (a Go duration like "600s"/"10m",
-	// or a bare integer interpreted as seconds).
-	callTimeout := 10 * time.Minute
-	if v := os.Getenv("AGENTFIELD_CALL_TIMEOUT"); v != "" {
-		if d, err := time.ParseDuration(v); err == nil {
-			callTimeout = d
-		} else if secs, err := strconv.Atoi(v); err == nil && secs > 0 {
-			callTimeout = time.Duration(secs) * time.Second
-		}
+	// Cross-node calls include LLM reasoners that can run for minutes; the
+	// upstream default of 15s aborts them mid-flight (this is what broke the
+	// SWE-AF Go node before). 10m is the value already proven safe there.
+	// Settable per-agent via cfg.CallTimeout, or centrally via the
+	// control plane's agent_call_timeout config (ExecutionQueueConfig).
+	if cfg.CallTimeout <= 0 {
+		cfg.CallTimeout = 10 * time.Minute
 	}
 	httpClient := &http.Client{
-		Timeout: callTimeout,
+		Timeout: cfg.CallTimeout,
 	}
 
 	// Initialize AI client if config provided
@@ -567,12 +580,16 @@ func New(cfg Config) (*Agent, error) {
 		cfg:                         cfg,
 		httpClient:                  httpClient,
 		reasoners:                   make(map[string]*Reasoner),
+		skills:                      make(map[string]*Reasoner),
+		sessions:                    make(map[string]SessionDefinition),
 		aiClient:                    aiClient,
 		memory:                      NewMemory(cfg.MemoryBackend),
 		stopLease:                   make(chan struct{}),
 		logger:                      cfg.Logger,
 		realtimeValidationFunctions: make(map[string]struct{}),
 		cancelFuncs:                 make(map[string]context.CancelFunc),
+		pauseManager:                NewPauseManager(),
+		startTime:                   time.Now(),
 	}
 
 	// Initialize local verifier if enabled
@@ -707,7 +724,10 @@ func (a *Agent) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (a *Agent) Execute(ctx context.Context, reasonerName string, input map[string]any) (any, error) {
 	reasoner, ok := a.reasoners[reasonerName]
 	if !ok {
-		return nil, fmt.Errorf("unknown reasoner %q", reasonerName)
+		reasoner, ok = a.skills[reasonerName]
+	}
+	if !ok {
+		return nil, fmt.Errorf("unknown reasoner or skill %q", reasonerName)
 	}
 	if input == nil {
 		input = make(map[string]any)
@@ -766,6 +786,9 @@ func (a *Agent) HandleServerlessEvent(ctx context.Context, event map[string]any,
 
 	handler, ok := a.reasoners[reasoner]
 	if !ok {
+		handler, ok = a.skills[reasoner]
+	}
+	if !ok {
 		return map[string]any{"error": "reasoner not found"}, http.StatusNotFound, nil
 	}
 
@@ -803,12 +826,15 @@ func (a *Agent) handler() http.Handler {
 	a.handlerOnce.Do(func() {
 		mux := http.NewServeMux()
 		mux.HandleFunc("/health", a.healthHandler)
+		mux.HandleFunc("/status", a.statusHandler)
 		mux.HandleFunc("/discover", a.handleDiscover)
 		mux.HandleFunc("/agentfield/v1/logs", a.handleAgentfieldLogs)
 		mux.HandleFunc("/execute", a.handleExecute)
 		mux.HandleFunc("/execute/", a.handleExecute)
 		mux.HandleFunc("/reasoners/", a.handleReasoner)
+		mux.HandleFunc("/skills/", a.handleSkill)
 		mux.HandleFunc("/_internal/executions/", a.handleInternalCancel)
+		mux.HandleFunc("/webhooks/approval", a.handleApprovalWebhook)
 
 		var handler http.Handler = mux
 
@@ -836,7 +862,16 @@ func (a *Agent) handler() http.Handler {
 func (a *Agent) originAuthMiddleware(next http.Handler, token string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
-		if path == "/health" || path == "/discover" || path == "/agentfield/v1/logs" {
+		if path == "/health" || path == "/status" || path == "/discover" || path == "/agentfield/v1/logs" {
+			next.ServeHTTP(w, r)
+			return
+		}
+		// /webhooks/approval is a control-plane→worker approval-resolution
+		// callback delivered unauthenticated (see notifyApprovalCallback in the
+		// control plane), analogous to the cancel notification. It only
+		// resolves a pause the agent itself initiated, so treat it as an open
+		// infrastructure route rather than a caller-initiated invocation.
+		if path == "/webhooks/approval" {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -860,7 +895,7 @@ func (a *Agent) localVerificationMiddleware(next http.Handler) http.Handler {
 		path := r.URL.Path
 
 		// Only verify execution endpoints
-		if path == "/health" || path == "/discover" || path == "/agentfield/v1/logs" {
+		if path == "/health" || path == "/status" || path == "/discover" || path == "/agentfield/v1/logs" {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -871,6 +906,14 @@ func (a *Agent) localVerificationMiddleware(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
+		// /webhooks/approval is a control-plane→worker approval-resolution
+		// callback, delivered unauthenticated by the control plane. It carries
+		// no DID signature; skip local verification (same rationale as the
+		// cancel notification above).
+		if path == "/webhooks/approval" {
+			next.ServeHTTP(w, r)
+			return
+		}
 
 		// Extract function name to check realtime validation requirement
 		funcName := ""
@@ -878,6 +921,8 @@ func (a *Agent) localVerificationMiddleware(next http.Handler) http.Handler {
 			funcName = strings.TrimPrefix(path, "/execute/")
 		} else if strings.HasPrefix(path, "/reasoners/") {
 			funcName = strings.TrimPrefix(path, "/reasoners/")
+		} else if strings.HasPrefix(path, "/skills/") {
+			funcName = strings.TrimPrefix(path, "/skills/")
 		}
 		funcName = strings.TrimSuffix(funcName, "/")
 
@@ -996,6 +1041,17 @@ func (a *Agent) healthHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"status": "ok"})
 }
 
+// statusHandler answers the control plane's HTTP health-monitor poll
+// (GET {base_url}/status), which requires a JSON body with status:"running".
+func (a *Agent) statusHandler(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]any{
+		"status":         "running",
+		"node_id":        a.cfg.NodeID,
+		"version":        a.cfg.Version,
+		"uptime_seconds": int(time.Since(a.startTime).Seconds()),
+	})
+}
+
 func (a *Agent) handleDiscover(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -1014,6 +1070,14 @@ func (a *Agent) discoveryPayload() map[string]any {
 			"tags":          []string{},
 		})
 	}
+	skills := make([]map[string]any, 0, len(a.skills))
+	for _, skill := range a.skills {
+		skills = append(skills, map[string]any{
+			"id":           skill.Name,
+			"input_schema": rawToMap(skill.InputSchema),
+			"tags":         skill.Tags,
+		})
+	}
 
 	deployment := strings.TrimSpace(a.cfg.DeploymentType)
 	if deployment == "" {
@@ -1024,8 +1088,10 @@ func (a *Agent) discoveryPayload() map[string]any {
 		"node_id":         a.cfg.NodeID,
 		"version":         a.cfg.Version,
 		"deployment_type": deployment,
+		"auth_required":   a.cfg.RequireOriginAuth || a.cfg.LocalVerification,
 		"reasoners":       reasoners,
-		"skills":          []map[string]any{},
+		"skills":          skills,
+		"sessions":        a.SessionDefinitions(),
 	}
 }
 
@@ -1061,6 +1127,9 @@ func (a *Agent) handleExecute(w http.ResponseWriter, r *http.Request) {
 	}
 
 	reasoner, ok := a.reasoners[reasonerName]
+	if !ok {
+		reasoner, ok = a.skills[reasonerName]
+	}
 	if !ok {
 		http.NotFound(w, r)
 		return
@@ -1323,6 +1392,46 @@ func (a *Agent) handleReasoner(w http.ResponseWriter, r *http.Request) {
 		"mode":        "http",
 		"duration_ms": durationMS,
 	})
+	writeJSON(w, http.StatusOK, result)
+}
+
+func (a *Agent) handleSkill(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	name := strings.TrimPrefix(r.URL.Path, "/skills/")
+	if name == "" {
+		http.NotFound(w, r)
+		return
+	}
+
+	skill, ok := a.skills[name]
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+
+	defer r.Body.Close()
+	var input map[string]any
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, fmt.Sprintf("invalid JSON: %v", err), http.StatusBadRequest)
+		return
+	}
+	if input == nil {
+		input = map[string]any{}
+	}
+
+	execCtx := a.buildExecutionContextFromServerless(r, map[string]any{"input": input}, name)
+	a.fillDIDContext(&execCtx)
+	ctx := contextWithExecution(r.Context(), execCtx)
+	result, err := skill.Handler(ctx, input)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	writeJSON(w, http.StatusOK, result)
 }
 
@@ -1717,7 +1826,10 @@ func (a *Agent) sendWorkflowEvent(event types.WorkflowExecutionEvent) error {
 func (a *Agent) CallLocal(ctx context.Context, reasonerName string, input map[string]any) (any, error) {
 	reasoner, ok := a.reasoners[reasonerName]
 	if !ok {
-		return nil, fmt.Errorf("unknown reasoner %q", reasonerName)
+		reasoner, ok = a.skills[reasonerName]
+	}
+	if !ok {
+		return nil, fmt.Errorf("unknown reasoner or skill %q", reasonerName)
 	}
 
 	parentCtx := executionContextFrom(ctx)

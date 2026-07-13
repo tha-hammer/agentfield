@@ -5,9 +5,12 @@ import {
   Play,
   XCircle,
   Activity,
+  GitBranch,
+  Share2,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { statusTone } from "@/lib/theme";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -28,6 +31,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { isTerminalStatus } from "@/utils/status";
+import { downloadWorkflowShareFile } from "@/services/vcApi";
 import type { WorkflowSummary } from "@/types/workflows";
 
 /**
@@ -59,6 +63,7 @@ interface RunLifecycleMenuProps {
   onPause: (run: WorkflowSummary) => void;
   onResume: (run: WorkflowSummary) => void;
   onCancel: (run: WorkflowSummary) => void;
+  onRestart?: (run: WorkflowSummary) => void;
 }
 
 /**
@@ -74,6 +79,7 @@ export function RunLifecycleMenu({
   onPause,
   onResume,
   onCancel,
+  onRestart,
 }: RunLifecycleMenuProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -91,7 +97,14 @@ export function RunLifecycleMenu({
   const canPause = isRunning && Boolean(run.root_execution_id);
   const canResume = isPaused && Boolean(run.root_execution_id);
   const canCancel = !isTerminalStatus(run.status);
-  const hasAnyAction = canPause || canResume || canCancel;
+  const canRestart = Boolean(
+    onRestart && run.root_execution_id && isTerminalStatus(run.status),
+  );
+  // Share is always available: any run can be exported to a self-contained
+  // offline HTML artifact, so the kebab is never fully empty.
+  const canShare = Boolean(run.run_id);
+  const hasAnyAction =
+    canPause || canResume || canCancel || canRestart || canShare;
 
   // Render an inert placeholder with the same footprint so the column
   // stays aligned across rows even when no action is available.
@@ -160,17 +173,60 @@ export function RunLifecycleMenu({
               Resume run
             </DropdownMenuItem>
           ) : null}
-          {canCancel ? (
+          {canRestart ? (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                Recovery
+              </DropdownMenuLabel>
+            </>
+          ) : null}
+          {canRestart ? (
             <DropdownMenuItem
-              className="gap-2 text-xs text-destructive focus:text-destructive"
+              className="gap-2 text-xs"
               onClick={() => {
                 setMenuOpen(false);
-                setConfirmOpen(true);
+                onRestart?.(run);
               }}
             >
-              <XCircle className="size-3.5" aria-hidden />
-              Cancel run
+              <GitBranch
+                className={cn("size-3.5", statusTone.info.accent)}
+                aria-hidden
+              />
+              Restart run
             </DropdownMenuItem>
+          ) : null}
+          {canShare ? (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="gap-2 text-xs"
+                onClick={() => {
+                  setMenuOpen(false);
+                  void downloadWorkflowShareFile(run.run_id).catch((e) =>
+                    console.error(e),
+                  );
+                }}
+              >
+                <Share2 className="size-3.5 text-muted-foreground" aria-hidden />
+                Share run
+              </DropdownMenuItem>
+            </>
+          ) : null}
+          {canCancel ? (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="gap-2 text-xs text-destructive focus:text-destructive"
+                onClick={() => {
+                  setMenuOpen(false);
+                  setConfirmOpen(true);
+                }}
+              >
+                <XCircle className="size-3.5" aria-hidden />
+                Cancel run
+              </DropdownMenuItem>
+            </>
           ) : null}
         </DropdownMenuContent>
       </DropdownMenu>

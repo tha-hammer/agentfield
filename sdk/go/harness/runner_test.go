@@ -101,7 +101,7 @@ func TestRunner_HandleSchemaWithRetry_FirstAttemptSuccess(t *testing.T) {
 	raw := &RawResult{Result: "done", Metrics: Metrics{NumTurns: 1}}
 	result := runner.handleSchemaWithRetry(
 		context.Background(), raw, schema, &dest, dir,
-		time.Now(), mock, Options{Provider: "opencode"}, "test prompt",
+		time.Now(), mock, Options{Provider: "opencode"}, "test prompt", false,
 	)
 
 	assert.False(t, result.IsError)
@@ -136,7 +136,7 @@ func TestRunner_HandleSchemaWithRetry_StdoutFallback(t *testing.T) {
 
 	result := runner.handleSchemaWithRetry(
 		context.Background(), raw, schema, &dest, dir,
-		time.Now(), mock, Options{Provider: "opencode"}, "test prompt",
+		time.Now(), mock, Options{Provider: "opencode"}, "test prompt", false,
 	)
 
 	assert.False(t, result.IsError)
@@ -196,7 +196,7 @@ func TestRunner_HandleSchemaWithRetry_RetrySuccess(t *testing.T) {
 
 	result := runner.handleSchemaWithRetry(
 		context.Background(), initialRaw, schema, &dest, dir,
-		time.Now(), mock2, Options{Provider: "opencode", SchemaMaxRetries: 2}, "test prompt",
+		time.Now(), mock2, Options{Provider: "opencode", SchemaMaxRetries: 2}, "test prompt", false,
 	)
 
 	assert.False(t, result.IsError)
@@ -250,7 +250,7 @@ func TestRunner_HandleSchemaWithRetry_AllRetriesFail(t *testing.T) {
 
 	result := runner.handleSchemaWithRetry(
 		context.Background(), initialRaw, schema, &dest, dir,
-		time.Now(), mock, Options{Provider: "opencode", SchemaMaxRetries: 2}, "test prompt",
+		time.Now(), mock, Options{Provider: "opencode", SchemaMaxRetries: 2}, "test prompt", false,
 	)
 
 	assert.True(t, result.IsError)
@@ -390,6 +390,32 @@ func TestOpenCodeProvider_WithOptions(t *testing.T) {
 	assert.False(t, raw.IsError)
 	// The script should have received --model and --dir flags
 	assert.Contains(t, raw.Result, "args:")
+}
+
+func TestOpenCodeProvider_OpenRouterConfigOverlay(t *testing.T) {
+	p := NewOpenCodeProvider("opencode", "")
+	var capturedEnv map[string]string
+	p.runCLI = func(ctx context.Context, cmd []string, env map[string]string, cwd string, timeout int) (*CLIResult, error) {
+		capturedEnv = env
+		return &CLIResult{Stdout: "ok\n", ReturnCode: 0}, nil
+	}
+
+	raw, err := p.Execute(context.Background(), "test prompt", Options{
+		Model: "openrouter/openai/gpt-4o",
+	})
+	require.NoError(t, err)
+	require.False(t, raw.IsError)
+
+	var overlay map[string]any
+	require.NoError(t, json.Unmarshal([]byte(capturedEnv["OPENCODE_CONFIG_CONTENT"]), &overlay))
+	provider := overlay["provider"].(map[string]any)
+	openrouter := provider["openrouter"].(map[string]any)
+	models := openrouter["models"].(map[string]any)
+	model := models["openai/gpt-4o"].(map[string]any)
+	headers := model["headers"].(map[string]any)
+	assert.Equal(t, "https://agentfield.ai", headers["HTTP-Referer"])
+	assert.Equal(t, "AgentField AI", headers["X-OpenRouter-Title"])
+	assert.Equal(t, "AgentField AI", headers["X-Title"])
 }
 
 // --- Codex provider tests ---

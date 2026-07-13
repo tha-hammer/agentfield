@@ -23,6 +23,9 @@ from typing import (
     Type,
     Dict,
     Literal,
+    ParamSpec,
+    TypeVar,
+    overload,
 )
 from agentfield.agent_ai import AgentAI
 from agentfield.agent_cli import AgentCLI
@@ -46,6 +49,10 @@ from agentfield.logger import log_debug, log_error, log_info, log_warn, set_cp_c
 from agentfield.router import AgentRouter
 from agentfield.connection_manager import ConnectionManager
 from agentfield.cost_tracker import CostTracker
+from agentfield.decorator_metadata import (
+    resolve_reasoner_metadata,
+    split_direct_registration_arg,
+)
 from agentfield.types import (
     AgentStatus,
     AIConfig,
@@ -57,6 +64,10 @@ from agentfield.multimodal_response import MultimodalResponse
 from agentfield.async_config import AsyncConfig
 from agentfield.async_execution_manager import AsyncExecutionManager
 from agentfield.pydantic_utils import convert_function_args, should_convert_args
+from agentfield.sessions import (
+    RealtimeSession,
+    build_session_definition,
+)
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
@@ -67,6 +78,9 @@ import weakref
 if TYPE_CHECKING:
     from agentfield.harness._result import HarnessResult
     from agentfield.harness._runner import HarnessRunner
+
+P = ParamSpec("P")
+T = TypeVar("T")
 
 # Use slots=True for memory efficiency on Python 3.10+, fallback for older versions
 _dataclass_kwargs = {"slots": True} if sys.version_info >= (3, 10) else {}
@@ -651,6 +665,7 @@ class Agent(FastAPI):
         # Using Dict[str, Entry] with __slots__ dataclasses for minimal footprint
         self._reasoner_registry: Dict[str, ReasonerEntry] = {}
         self._skill_registry: Dict[str, SkillEntry] = {}
+        self._session_registry: Dict[str, Dict[str, Any]] = {}
 
         # VC override tracking (still needed for _effective_component_vc_setting)
         self._reasoner_vc_overrides: Dict[str, bool] = {}
@@ -1534,7 +1549,60 @@ class Agent(FastAPI):
             metadata["tags"] = self.agent_tags
         if self.author:
             metadata["author"] = self.author
+        if self._session_registry:
+            metadata["sessions"] = [
+                entry["definition"].to_dict()
+                for entry in self._session_registry.values()
+            ]
         return metadata if metadata else None
+
+    @property
+    def sessions(self) -> List[Dict[str, Any]]:
+        return [
+            entry["definition"].to_dict()
+            for entry in self._session_registry.values()
+        ]
+
+    def session(
+        self,
+        name: str,
+        *,
+        provider: str,
+        transport: str,
+        model: Optional[str] = None,
+        modalities: Optional[List[str]] = None,
+        voice: Optional[str] = None,
+        tools: Optional[List[str]] = None,
+        tags: Optional[List[str]] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> Callable[[Callable[[RealtimeSession], Awaitable[Any]]], Callable[[RealtimeSession], Awaitable[Any]]]:
+        """Register a realtime/voice session endpoint.
+
+        Provider and transport are both explicit; AgentField does not infer or
+        switch them. Unsupported combinations fail at declaration time and again
+        at control-plane session start.
+        """
+
+        definition = build_session_definition(
+            name,
+            provider=provider,
+            transport=transport,
+            model=model,
+            modalities=modalities,
+            voice=voice,
+            tools=tools,
+            tags=tags,
+            metadata=metadata,
+        )
+
+        def decorator(
+            func: Callable[[RealtimeSession], Awaitable[Any]]
+        ) -> Callable[[RealtimeSession], Awaitable[Any]]:
+            self._session_registry[name] = {"definition": definition, "handler": func}
+            setattr(func, "_agentfield_session", definition)
+            return func
+
+        return decorator
 
     def _build_vc_metadata(self) -> Dict[str, Any]:
         """Produce a serializable VC policy snapshot for control-plane visibility."""
@@ -1741,9 +1809,35 @@ class Agent(FastAPI):
         """Delegate to server handler for route setup"""
         return self.server_handler.setup_agentfield_routes()
 
+    @overload
+    def reasoner(
+        self,
+        path: Callable[P, Awaitable[T]],
+        name: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        *,
+        vc_enabled: Optional[bool] = None,
+        require_realtime_validation: bool = False,
+        triggers: Optional[List[Any]] = None,
+        accepts_webhook: Optional[Any] = None,
+    ) -> Callable[P, Awaitable[T]]: ...
+
+    @overload
     def reasoner(
         self,
         path: Optional[str] = None,
+        name: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        *,
+        vc_enabled: Optional[bool] = None,
+        require_realtime_validation: bool = False,
+        triggers: Optional[List[Any]] = None,
+        accepts_webhook: Optional[Any] = None,
+    ) -> Callable[[Callable[P, Awaitable[T]]], Callable[P, Awaitable[T]]]: ...
+
+    def reasoner(
+        self,
+        path: Any = None,
         name: Optional[str] = None,
         tags: Optional[List[str]] = None,
         *,
@@ -1769,41 +1863,18 @@ class Agent(FastAPI):
             accepts_webhook (bool | "warn" | None, optional): 3-state UI guardrail flag.
         """
 
-        direct_registration: Optional[Callable] = None
-        decorator_path = path
+        direct_registration, decorator_path = split_direct_registration_arg(path)
         decorator_name = name
         decorator_tags = tags
         kwarg_triggers = list(triggers) if triggers else None
         kwarg_accepts_webhook = accepts_webhook
 
-        if decorator_path and (
-            inspect.isfunction(decorator_path) or inspect.ismethod(decorator_path)
-        ):
-            direct_registration = decorator_path
-            decorator_path = None
-
         def decorator(func: Callable) -> Callable:
-            # Merge any sugar-staged triggers (from @on_event / @on_schedule)
-            # with the explicit `triggers=[...]` kwarg passed to @app.reasoner.
-            # Mirrors the module-level @reasoner contract so the same syntax
-            # works under either decorator entry point.
-            staged = getattr(func, "_pending_triggers", None) or []
-            merged_triggers = list(kwarg_triggers or []) + list(staged)
-            if staged:
-                try:
-                    delattr(func, "_pending_triggers")
-                except AttributeError:
-                    pass
-            if merged_triggers:
-                setattr(func, "_reasoner_triggers", merged_triggers)
-                # Auto-set accepts_webhook=True when the dev declared triggers,
-                # unless they explicitly passed something else.
-                if kwarg_accepts_webhook is None:
-                    setattr(func, "_accepts_webhook", True)
-                else:
-                    setattr(func, "_accepts_webhook", kwarg_accepts_webhook)
-            elif kwarg_accepts_webhook is not None:
-                setattr(func, "_accepts_webhook", kwarg_accepts_webhook)
+            merged_triggers, resolved_accepts_webhook = resolve_reasoner_metadata(
+                func,
+                triggers=kwarg_triggers,
+                accepts_webhook=kwarg_accepts_webhook,
+            )
 
             # Extract function metadata
             func_name = func.__name__
@@ -1846,6 +1917,15 @@ class Agent(FastAPI):
 
             # Store input_fields for runtime validation (captured by closure)
             handler_input_fields = input_fields
+
+            # Capture the merged trigger bindings for the runtime invocation path.
+            # These are threaded through _execute_reasoner_endpoint (rather than
+            # stamped onto `func` via setattr) so an EventTrigger's declared
+            # transform is applied at dispatch time. Stamping the handler is
+            # unsafe: bound methods reject setattr, and the same function object
+            # registered on two agents would leak triggers across them (see
+            # resolve_reasoner_metadata, which reads _reasoner_triggers back).
+            handler_trigger_bindings = list(merged_triggers or [])
 
             # Create FastAPI endpoint with generic dict input (runtime validation)
             @self.post(endpoint_path)
@@ -1895,6 +1975,7 @@ class Agent(FastAPI):
                         signature=sig,
                         input_data=validated_input,
                         request=request,
+                        trigger_bindings=handler_trigger_bindings,
                     )
 
                 execution_id_header = request.headers.get("X-Execution-ID")
@@ -2003,13 +2084,6 @@ class Agent(FastAPI):
             vc_setting = self._effective_component_vc_setting(
                 reasoner_id, self._reasoner_vc_overrides
             )
-            decorator_triggers = getattr(original_func, "_reasoner_triggers", None)
-            if not decorator_triggers:
-                decorator_triggers = getattr(tracked_func, "_reasoner_triggers", None)
-            # Resolve accepts_webhook from the decorator
-            decorator_accepts_webhook = getattr(original_func, "_accepts_webhook", "warn")
-            if not decorator_accepts_webhook:
-                decorator_accepts_webhook = getattr(tracked_func, "_accepts_webhook", "warn")
             
             self._reasoner_registry[reasoner_id] = ReasonerEntry(
                 id=reasoner_id,
@@ -2018,8 +2092,8 @@ class Agent(FastAPI):
                 output_type=return_type,
                 tags=resolved_tags,
                 vc_enabled=vc_setting,
-                triggers=list(decorator_triggers or []),
-                accepts_webhook=decorator_accepts_webhook,
+                triggers=list(merged_triggers or []),
+                accepts_webhook=resolved_accepts_webhook,
             )
 
             # NOTE: Legacy storage removed - reasoners property generates list on-demand
@@ -2039,8 +2113,6 @@ class Agent(FastAPI):
             # consider a different pattern (e.g., a wrapper class or a global registry).
             return tracked_func
 
-        if direct_registration:
-            return decorator(direct_registration)
         if direct_registration:
             return decorator(direct_registration)
 
@@ -2155,6 +2227,7 @@ class Agent(FastAPI):
         signature: inspect.Signature,
         input_data: Dict[str, Any],
         request: Request,
+        trigger_bindings: Optional[list] = None,
     ) -> Any:
         import asyncio
         import time
@@ -2200,8 +2273,12 @@ class Agent(FastAPI):
             )
 
         try:
-            # Phase 5: Apply trigger transform if applicable
-            trigger_bindings = getattr(func, "_reasoner_triggers", [])
+            # Phase 5: Apply trigger transform if applicable.
+            # Prefer the bindings the registration decorator threaded in
+            # (agent-local, no cross-agent leakage); fall back to the function
+            # attr for any legacy caller that doesn't pass them.
+            if trigger_bindings is None:
+                trigger_bindings = getattr(func, "_reasoner_triggers", [])
             if execution_context.trigger and trigger_bindings:
                 payload_dict = self._apply_trigger_transform(
                     execution_context.trigger,
@@ -2483,6 +2560,14 @@ class Agent(FastAPI):
                 "execution_id": execution_id,
                 "reasoner": reasoner_name,
             }
+            # A reasoner that ran, determined its own work failed, and wants its
+            # structured outcome preserved raises ReasonerFailed(result=...).
+            # Carry that result onto the failed-status payload so the control
+            # plane records status=failed WITHOUT discarding the rich result
+            # (it stores the result payload regardless of terminal status).
+            from .exceptions import ReasonerFailed
+            if isinstance(exc, ReasonerFailed) and exc.result is not None:
+                payload["result"] = jsonable_encoder(exc.result)
             log_error(f"Execution {execution_id} failed asynchronously: {exc}")
         finally:
             # If we landed here without the reasoner finishing (e.g. our own
@@ -2551,7 +2636,7 @@ class Agent(FastAPI):
             + f"/api/v1/executions/{execution_id}/status"
         )
 
-    def on_change(self, pattern: Union[str, List[str]]):
+    def on_change(self, pattern: Union[str, List[str]]) -> Callable[[Callable[P, Awaitable[T]]], Callable[P, Awaitable[T]]]:
         """
         Decorator to mark a function as a memory event listener.
 
@@ -2618,9 +2703,31 @@ class Agent(FastAPI):
 
         return decorator
 
+    @overload
+    def skill(
+        self,
+        tags: Callable[P, T],
+        path: Optional[str] = None,
+        name: Optional[str] = None,
+        *,
+        vc_enabled: Optional[bool] = None,
+        require_realtime_validation: bool = False,
+    ) -> Callable[P, T]: ...
+
+    @overload
     def skill(
         self,
         tags: Optional[List[str]] = None,
+        path: Optional[str] = None,
+        name: Optional[str] = None,
+        *,
+        vc_enabled: Optional[bool] = None,
+        require_realtime_validation: bool = False,
+    ) -> Callable[[Callable[P, T]], Callable[P, T]]: ...
+
+    def skill(
+        self,
+        tags: Any = None,
         path: Optional[str] = None,
         name: Optional[str] = None,
         *,
@@ -2723,16 +2830,9 @@ class Agent(FastAPI):
             - Use skills for reliable, repeatable operations
         """
 
-        direct_registration: Optional[Callable] = None
-        decorator_tags = tags
+        direct_registration, decorator_tags = split_direct_registration_arg(tags)
         decorator_path = path
         decorator_name = name
-
-        if decorator_tags and (
-            inspect.isfunction(decorator_tags) or inspect.ismethod(decorator_tags)
-        ):
-            direct_registration = decorator_tags
-            decorator_tags = None
 
         def decorator(func: Callable) -> Callable:
             # Extract function metadata
@@ -3383,6 +3483,8 @@ class Agent(FastAPI):
         system_prompt: Optional[str] = None,
         env: Optional[Dict[str, str]] = None,
         cwd: Optional[str] = None,
+        project_dir: Optional[str] = None,
+        schema_mode: Optional[str] = None,
         **kwargs,
     ) -> "HarnessResult":
         """
@@ -3402,7 +3504,21 @@ class Agent(FastAPI):
             permission_mode: Permission mode ("plan", "auto", None).
             system_prompt: System prompt for the agent.
             env: Environment variables for the agent.
-            cwd: Working directory for the agent.
+            cwd: Working directory for the agent process. When ``project_dir`` is
+                not set, this is also the agent's root and where the schema output
+                file is placed.
+            project_dir: Root directory the agent may read and write (maps to the
+                provider's project-root flag, e.g. opencode ``--dir``, codex
+                ``-C``, or the process cwd for gemini/claude). Set this when the
+                agent must read files across a shared repo while ``cwd`` points at
+                a nested task directory. The schema output file is then placed in
+                an isolated temp dir *under* ``project_dir`` so the provider never
+                rejects it as an external-directory write.
+            schema_mode: How schema output is produced. "single" (default) asks
+                for one Write of the whole object. "incremental" builds it one
+                top-level field at a time and recovers by patching only the
+                failing fields — more robust for large or deeply nested schemas.
+                "auto" uses incremental only when the schema is large.
             **kwargs: Additional provider-specific options.
 
         Returns:
@@ -3420,6 +3536,8 @@ class Agent(FastAPI):
             system_prompt=system_prompt,
             env=env,
             cwd=cwd,
+            project_dir=project_dir,
+            schema_mode=schema_mode,
             **kwargs,
         )
 
@@ -3825,7 +3943,12 @@ class Agent(FastAPI):
                 if node_id == self.node_id and hasattr(self, function_name):
                     try:
                         func = getattr(self, function_name)
-                        sig = inspect.signature(func)
+                        # Unwrap tracked wrappers (e.g. _run_async_skill,
+                        # tracked_func) to recover the original function's
+                        # typed signature instead of the generic (*args, **kwargs)
+                        # that the wrapper carries.
+                        raw_func = getattr(func, "_original_func", func)
+                        sig = inspect.signature(raw_func)
                         param_names = [
                             name
                             for name, param in sig.parameters.items()
@@ -3858,8 +3981,32 @@ class Agent(FastAPI):
                 for i, arg in enumerate(args):
                     final_kwargs[f"arg_{i}"] = arg
 
-        # Get current execution context
-        current_context = self._get_current_execution_context()
+        # Resolve the parent execution for this call from the TASK-LOCAL
+        # context ONLY — not via _get_current_execution_context(), which falls
+        # back to the process-global self._current_execution_context.
+        #
+        # That shared attribute holds whichever reasoner was most recently
+        # dispatched in this process. When a call originates OUTSIDE any
+        # execution — e.g. a webhook handler's fire-and-forget asyncio task,
+        # which has no task-local context of its own — the fallback would
+        # attribute this independent call to whatever unrelated reasoner
+        # happens to be in flight (possibly paused on a human-in-the-loop
+        # approval for hours). That chains unrelated runs into one bogus
+        # workflow DAG and cross-wires the pause-clock / budget cascades that
+        # key off parent_execution_id.
+        #
+        # The contextvar is the only concurrency-safe source: asyncio.create_task
+        # copies it, so genuine sub-calls made from within a reasoner still
+        # nest correctly. When it is absent we mint a fresh root so the call
+        # starts its own workflow (matching cold-process behavior).
+        from agentfield.execution_context import get_current_context
+
+        current_context = get_current_context()
+        if current_context is None:
+            current_context = ExecutionContext.create_new(
+                agent_node_id=self.node_id,
+                workflow_name=f"{self.node_id}_workflow",
+            )
 
         # 🔧 DEBUG: Validate context before creating child
         if self.dev_mode:
@@ -4289,31 +4436,26 @@ class Agent(FastAPI):
                     "agent_node_id": self.node_id,
                 }
 
-                # Make async HTTP request to backend - use UI API endpoint to match frontend
                 try:
                     import aiohttp
 
                     timeout = aiohttp.ClientTimeout(total=5.0)  # 5 second timeout
-                    # Use UI API base URL to match where frontend fetches notes from
-                    # Replace the last occurrence of /api/v1 with /api/ui/v1
-                    ui_api_base = self.client.api_base.replace("/api/v1", "/api/ui/v1")
 
                     if self.dev_mode:
                         from agentfield.logger import log_debug
 
                         log_debug(
-                            f"NOTE DEBUG: Original api_base: {self.client.api_base}"
+                            f"NOTE DEBUG: api_base: {self.client.api_base}"
                         )
-                        log_debug(f"NOTE DEBUG: UI api_base: {ui_api_base}")
                         log_debug(
-                            f"NOTE DEBUG: Full URL: {ui_api_base}/executions/note"
+                            f"NOTE DEBUG: Full URL: {self.client.api_base}/executions/note"
                         )
                         log_debug(f"NOTE DEBUG: Payload: {payload}")
                         log_debug(f"NOTE DEBUG: Headers: {headers}")
 
                     async with aiohttp.ClientSession(timeout=timeout) as session:
                         async with session.post(
-                            f"{ui_api_base}/executions/note",
+                            f"{self.client.api_base}/executions/note",
                             json=payload,
                             headers=headers,
                         ) as response:
@@ -4327,7 +4469,7 @@ class Agent(FastAPI):
                                 log_debug(f"NOTE DEBUG: Response text: {response_text}")
                                 if response.status == 200:
                                     log_debug(
-                                        f"✅ Note successfully sent to {ui_api_base}/executions/note"
+                                        f"✅ Note successfully sent to {self.client.api_base}/executions/note"
                                     )
                                 else:
                                     log_debug(
@@ -4338,26 +4480,18 @@ class Agent(FastAPI):
                     import requests
 
                     try:
-                        # Use UI API base URL to match where frontend fetches notes from
-                        ui_api_base = self.client.api_base.replace(
-                            "/api/v1", "/api/ui/v1"
-                        )
-
                         if self.dev_mode:
                             from agentfield.logger import log_debug
 
                             log_debug(
-                                f"NOTE DEBUG (requests): Original api_base: {self.client.api_base}"
+                                f"NOTE DEBUG (requests): api_base: {self.client.api_base}"
                             )
                             log_debug(
-                                f"NOTE DEBUG (requests): UI api_base: {ui_api_base}"
-                            )
-                            log_debug(
-                                f"NOTE DEBUG (requests): Full URL: {ui_api_base}/executions/note"
+                                f"NOTE DEBUG (requests): Full URL: {self.client.api_base}/executions/note"
                             )
 
                         response = requests.post(
-                            f"{ui_api_base}/executions/note",
+                            f"{self.client.api_base}/executions/note",
                             json=payload,
                             headers=headers,
                             timeout=5.0,
@@ -4373,7 +4507,7 @@ class Agent(FastAPI):
                             )
                             if response.status_code == 200:
                                 log_debug(
-                                    f"✅ Note successfully sent to {ui_api_base}/executions/note"
+                                    f"✅ Note successfully sent to {self.client.api_base}/executions/note"
                                 )
                             else:
                                 log_debug(

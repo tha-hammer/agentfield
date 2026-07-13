@@ -20,11 +20,21 @@ def test_strip_ansi_removes_colors():
     assert strip_ansi("\x1b[31mError\x1b[0m") == "Error"
 
 
+def _stream_reader(chunks: list[bytes]) -> MagicMock:
+    """Build a fake asyncio StreamReader yielding ``chunks`` then EOF (b"")."""
+    queued = list(chunks) + [b""]
+    reader = MagicMock()
+    reader.read = AsyncMock(side_effect=queued)
+    return reader
+
+
 @pytest.mark.asyncio
 async def test_run_cli_success():
     process = MagicMock()
-    process.communicate = AsyncMock(return_value=(b"OK", b""))
+    process.stdout = _stream_reader([b"OK"])
+    process.stderr = _stream_reader([])
     process.returncode = 0
+    process.wait = AsyncMock(return_value=0)
 
     create_process = AsyncMock(return_value=process)
 
@@ -43,34 +53,31 @@ async def test_run_cli_success():
     _, kwargs = create_process.call_args
     assert kwargs["env"]["AGENTFIELD_TEST"] == "1"
     assert kwargs["cwd"] == "."
+    assert kwargs["stdin"] is asyncio.subprocess.DEVNULL
     assert kwargs["stdout"] is asyncio.subprocess.PIPE
     assert kwargs["stderr"] is asyncio.subprocess.PIPE
 
 
 @pytest.mark.asyncio
 async def test_run_cli_timeout():
-    class HangingProcess:
-        returncode = None
+    async def never_ready(_n):
+        # Streams that never reach EOF: the watchdog must abort the run.
+        await asyncio.sleep(10)
+        return b""
 
-        def __init__(self) -> None:
-            self.killed = False
-            self.wait = AsyncMock(return_value=None)
-
-        async def communicate(self):
-            await asyncio.sleep(1)
-            return b"", b""
-
-        def kill(self):
-            self.killed = True
-
-    process = HangingProcess()
+    process = MagicMock()
+    process.pid = 2147483647  # nonexistent pid: killpg falls back to kill()
+    process.returncode = None
+    process.stdout = MagicMock(read=AsyncMock(side_effect=never_ready))
+    process.stderr = MagicMock(read=AsyncMock(side_effect=never_ready))
+    process.kill = MagicMock()
+    process.wait = AsyncMock(return_value=None)
 
     with patch("asyncio.create_subprocess_exec", AsyncMock(return_value=process)):
         with pytest.raises(TimeoutError, match="CLI command timed out"):
-            await run_cli(["agentfield", "hang"], timeout=0.01)
+            await run_cli(["agentfield", "hang"], timeout=0.01, idle_seconds=0)
 
-    assert process.killed is True
-    process.wait.assert_awaited_once()
+    process.wait.assert_awaited()
 
 
 class _FakeStream:
@@ -99,6 +106,7 @@ class _FakeProc:
         self._killed = asyncio.Event()
         self._rc_final = returncode
         self.returncode = None
+        self.pid = 2147483647  # nonexistent pid: killpg falls back to kill()
         self.stdout = _FakeStream(stdout_script, self._killed)
         self.stderr = _FakeStream(stderr_script, self._killed)
         self.killed = False
@@ -122,8 +130,8 @@ async def test_run_cli_idle_timeout_kills_silent_process():
         stderr_script=[(100, b"")],
     )
     with patch("asyncio.create_subprocess_exec", AsyncMock(return_value=proc)):
-        with pytest.raises(TimeoutError, match="idle stall"):
-            await run_cli(["opencode", "run"], timeout=30, idle_timeout=0.3)
+        with pytest.raises(TimeoutError, match="made no progress"):
+            await run_cli(["opencode", "run"], timeout=30, idle_seconds=0.3)
     assert proc.killed is True
 
 
@@ -135,7 +143,7 @@ async def test_run_cli_idle_timeout_allows_steady_stream():
     proc = _FakeProc(stdout_script=chunks, stderr_script=[(0.8, b"")], returncode=0)
     with patch("asyncio.create_subprocess_exec", AsyncMock(return_value=proc)):
         stdout, stderr, returncode = await run_cli(
-            ["opencode", "run"], timeout=30, idle_timeout=0.5
+            ["opencode", "run"], timeout=30, idle_seconds=0.5
         )
     assert proc.killed is False
     assert returncode == 0
@@ -148,8 +156,8 @@ async def test_run_cli_idle_path_total_timeout_still_enforced():
     chunks = [(0.05, f"x{i}\n".encode()) for i in range(40)]
     proc = _FakeProc(stdout_script=chunks, stderr_script=[(5, b"")])
     with patch("asyncio.create_subprocess_exec", AsyncMock(return_value=proc)):
-        with pytest.raises(TimeoutError, match="total timeout"):
-            await run_cli(["opencode", "run"], timeout=0.3, idle_timeout=5)
+        with pytest.raises(TimeoutError, match="timed out after"):
+            await run_cli(["opencode", "run"], timeout=0.3, idle_seconds=5)
     assert proc.killed is True
 
 

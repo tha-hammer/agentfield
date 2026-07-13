@@ -165,6 +165,7 @@ func (s *AgentFieldServer) registerUIAPI() {
 			executions.POST("/:execution_id/cancel", handlers.CancelExecutionHandler(s.storage))
 			executions.POST("/:execution_id/pause", handlers.PauseExecutionHandler(s.storage))
 			executions.POST("/:execution_id/resume", handlers.ResumeExecutionHandler(s.storage))
+			executions.POST("/:execution_id/restart", handlers.RestartExecutionHandler(s.storage, s.payloadStore, s.webhookDispatcher, s.config.AgentField.ExecutionQueue.AgentCallTimeout, s.config.Features.DID.Authorization.InternalToken))
 
 			// Execution notes endpoints for UI
 			executions.POST("/note", handlers.AddExecutionNoteHandler(s.storage, s.noteOwnershipEnforced()))
@@ -191,10 +192,24 @@ func (s *AgentFieldServer) registerUIAPI() {
 		uiAPI.GET("/llm/health", llmHandler.GetLLMHealthHandler)
 		uiAPI.GET("/queue/status", llmHandler.GetExecutionQueueStatusHandler)
 
+		// ARD discovery publishing, external search, imports, and callable bindings.
+		ardHandler := s.newARDHandler()
+		ardAPI := uiAPI.Group("/ard")
+		{
+			ardAPI.GET("", ardHandler.GetDashboard)
+			ardAPI.PUT("/settings", ardHandler.UpdateSettings)
+			ardAPI.PUT("/publications", ardHandler.SavePublication)
+			ardAPI.POST("/external/search", ardHandler.SearchExternal)
+			ardAPI.POST("/imports", ardHandler.ImportExternal)
+			ardAPI.PUT("/imports/:entryID/binding", ardHandler.SaveExternalBinding)
+			ardAPI.PUT("/registries", ardHandler.SaveRegistries)
+		}
+
 		// Workflows management group
 		workflows := uiAPI.Group("/workflows")
 		{
 			workflows.GET("/:workflowId/dag", handlers.GetWorkflowDAGHandler(s.storage))
+			workflows.GET("/:workflowId/share", handlers.GetWorkflowShareHandler(s.storage, s.payloadStore))
 			workflows.POST("/:workflowId/cancel-tree", handlers.CancelWorkflowTreeHandler(s.storage))
 			workflows.DELETE("/:workflowId/cleanup", handlers.CleanupWorkflowHandler(s.storage))
 			didHandler := ui.NewDIDHandler(s.storage, s.didService, s.vcService, s.didWebService)
@@ -248,10 +263,6 @@ func (s *AgentFieldServer) registerUIAPI() {
 			vc.POST("/verify", didHandler.VerifyVCHandler)
 		}
 
-		// Identity & Trust endpoints (DID Explorer and Credentials)
-		identityHandler := ui.NewIdentityHandlers(s.storage, s.didWebService)
-		identityHandler.RegisterRoutes(uiAPI)
-
 		// Authorization UI endpoints
 		authorization := uiAPI.Group("/authorization")
 		{
@@ -265,6 +276,7 @@ func (s *AgentFieldServer) registerUIAPI() {
 		workflowRunsHandler := ui.NewWorkflowRunHandler(s.storage)
 		uiAPIV2.GET("/workflow-runs", workflowRunsHandler.ListWorkflowRunsHandler)
 		uiAPIV2.GET("/workflow-runs/:run_id", workflowRunsHandler.GetWorkflowRunDetailHandler)
+		uiAPIV2.POST("/workflow-runs/:run_id/golden", workflowRunsHandler.SaveGoldenRunHandler)
 	}
 }
 
