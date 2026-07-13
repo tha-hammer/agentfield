@@ -6,6 +6,44 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.108-rc.3] - 2026-07-13
+
+
+### Added
+
+- Feat(control-plane): reel.completed durable outbox via builder-select by AgentNodeID (MW Phase 3 B4 pt2, Option B)
+
+Generalize completeExecution's terminal-write outbox hook to select the builder
+by exec.AgentNodeID (events.BuildCompletedOutboxRecord — a tiny ordered builder
+registry), and add BuildReelCompletedOutboxRecord mirroring the research one. A
+reel-af completion now appends com.silmari.reel.completed.v1 IN THE SAME terminal
+state-write tx as the execution result — identical durability path (C-Outbox /
+C-AtLeastOnce) to research.completed. No new lossy mechanism.
+
+DTO {run_id, status, reel_ref, source_execution_id, duration_s, beat_count};
+video/narration body never leaks (C-Notification). Subject = execution_id
+(C-Correlation). Emits for succeeded only.
+
+research.completed unchanged — its builder is untouched and first in the registry;
+its event + wiring tests stay green. New closure tests mirror research's:
+in-tx append for reel node, no append for unrelated agents.
+
+go test ./internal/events/ ./internal/handlers/ : ok / ok.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com> (38d4c28)
+
+- Feat(handoff): register frozen com.silmari.reel.completed.v1 contract (MW Phase 3 B4 pt1)
+
+Add the frozen JSON-Schema for the reel.completed handoff DTO
+{run_id, status, reel_ref, source_execution_id, duration_s, beat_count},
+auto-registered by presence exactly like research.completed. This is the
+PREREQUISITE for announce() validation.
+
+New registry/validation/freeze tests mirror research.completed's.
+research.completed registry tests stay green (53 passed total).
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com> (439d357)
+
 ## [0.1.108-rc.2] - 2026-07-13
 
 
