@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.108-rc.2] - 2026-07-13
+
+
+### Added
+
+- Feat(sdk-python): handoff producer/consumer + research_completed emit
+
+Adds the handoff module (producer, consumer, registry, control-plane
+source, JSON-schema contract validation for
+com.silmari.research.completed/v1) plus its middleware/registry test
+coverage, and updated research_completed event wiring.
+
+Rebuilt on top of the upstream/main + PR #6 sync (was stashed through
+that work to avoid disturbing it): added jsonschema>=4.17 as a new
+dependency alongside upstream's own joserfc>=1.0 addition in
+pyproject.toml/uv.lock.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com> (668b7aa)
+
 ## [0.1.108-rc.1] - 2026-07-13
 
 
