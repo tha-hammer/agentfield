@@ -1239,24 +1239,61 @@ func (ls *LocalStorage) MarkStaleWorkflowExecutions(ctx context.Context, staleAf
 	return updated, nil
 }
 
-// MarkAgentExecutionsOrphaned fails every still-running execution and workflow
-// execution owned by the given agent_node_id. This is invoked when an agent
-// re-registers with a new instance_id — the previous OS process is gone, and
-// any cross-agent `Agent.call` that was in its `wait_for_execution_result`
-// loop has lost its in-memory state with that process. Leaving those rows in
-// `running` strands the parent reasoner indefinitely (this is exactly the
-// run_1778004368903_9345a88f case observed in production), so we fail them
-// up-front the moment we detect the restart.
+// orphanReapUpdateWorkflowExecutions / orphanReapUpdateExecutions flip every
+// non-terminal row owned by an agent_node_id to the recoverable `pending`
+// status. They are kept as literal statements (not a concatenated table name)
+// so the SQL stays static and injection-free; the shared binding/rows-affected
+// logic lives in updateOrphanedRows.
+const orphanReapUpdateWorkflowExecutions = `
+	UPDATE workflow_executions
+	SET status = ?, status_reason = ?, error_message = ?, updated_at = ?
+	WHERE agent_node_id = ?
+	  AND status IN ('running', 'pending', 'queued', 'waiting')`
+
+const orphanReapUpdateExecutions = `
+	UPDATE executions
+	SET status = ?, status_reason = ?, error_message = ?, updated_at = ?
+	WHERE agent_node_id = ?
+	  AND status IN ('running', 'pending', 'queued', 'waiting')`
+
+// updateOrphanedRows executes one recoverable-orphan UPDATE inside the reap
+// transaction and returns the number of rows it flipped to `pending`. It
+// deliberately does NOT touch completed_at (a recoverable orphan is not
+// completed — the column stays NULL) or started_at (preserved so a future
+// re-dispatch can resume the original attempt).
+func updateOrphanedRows(ctx context.Context, tx *sqlTx, query, reasonMessage string, now time.Time, agentNodeID string) (int64, error) {
+	res, err := tx.ExecContext(ctx, query,
+		types.ExecutionStatusPending, reasonMessage, reasonMessage, now, agentNodeID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	affected, _ := res.RowsAffected()
+	return affected, nil
+}
+
+// MarkAgentExecutionsOrphaned resets every still-running execution and workflow
+// execution owned by the given agent_node_id to a recoverable `pending` status.
+// This is invoked when an agent re-registers with a new instance_id — the
+// previous OS process is gone, and any cross-agent `Agent.call` that was in its
+// `wait_for_execution_result` loop has lost its in-memory state with that
+// process. Leaving those rows in `running` strands the parent reasoner
+// indefinitely (the run_1778004368903_9345a88f case observed in production),
+// while flipping them to terminal `failed` (the previous behavior) permanently
+// killed an otherwise-healthy multi-step run on a single restart. Instead we
+// mark them `pending` — the established retryable status (see
+// RetryStaleWorkflowExecutions) — so the run is recoverable, not dead. Actually
+// re-running the work is the next slice (re-dispatch); this reap only lays the
+// seam.
 //
-// reasonMessage is written to error_message AND status_reason. The terminal
-// status used is "failed" (the agent restarted mid-execution; the work was
-// not completed and was not a deadline timeout).
+// reasonMessage is written to error_message AND status_reason. completed_at is
+// left NULL (recoverable rows are not completed) and started_at is preserved so
+// a re-dispatch can compute or resume the original attempt.
 //
-// Two single bulk UPDATEs — workflow_executions is the source of truth for
-// the DAG UI; the legacy `executions` table is mirrored best-effort so any
-// older code path reading it sees a consistent picture. We deliberately do
-// not write duration_ms here: the row's started_at is preserved, so consumers
-// that need the runtime can compute completed_at - started_at directly.
+// Both tables are updated in a single transaction: workflow_executions is the
+// source of truth for the DAG UI and the legacy `executions` table mirrors it.
+// The write is atomic — both commit or neither does — so a restart can never
+// leave a split state where the source of truth flips but the mirror lags.
 func (ls *LocalStorage) MarkAgentExecutionsOrphaned(ctx context.Context, agentNodeID string, reasonMessage string) (int, error) {
 	if strings.TrimSpace(agentNodeID) == "" {
 		return 0, fmt.Errorf("agent_node_id is required")
@@ -1268,29 +1305,27 @@ func (ls *LocalStorage) MarkAgentExecutionsOrphaned(ctx context.Context, agentNo
 	db := ls.requireSQLDB()
 	now := time.Now().UTC()
 
-	res, err := db.ExecContext(ctx, `
-		UPDATE workflow_executions
-		SET status = ?, status_reason = ?, error_message = ?, completed_at = ?, updated_at = ?
-		WHERE agent_node_id = ?
-		  AND status IN ('running', 'pending', 'queued', 'waiting')`,
-		types.ExecutionStatusFailed, reasonMessage, reasonMessage, now, now, agentNodeID,
-	)
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, fmt.Errorf("begin orphan reap transaction: %w", err)
+	}
+	defer rollbackTx(tx, "MarkAgentExecutionsOrphaned")
+
+	// workflow_executions — source of truth for the DAG UI.
+	affected, err := updateOrphanedRows(ctx, tx, orphanReapUpdateWorkflowExecutions, reasonMessage, now, agentNodeID)
 	if err != nil {
 		return 0, fmt.Errorf("update orphaned workflow executions: %w", err)
 	}
-	affected, _ := res.RowsAffected()
 
-	// Best-effort sync to the legacy `executions` table. Errors are
-	// intentionally swallowed: workflow_executions is the source of truth,
-	// and the legacy mirror is allowed to lag without blocking restart
-	// recovery.
-	_, _ = db.ExecContext(ctx, `
-		UPDATE executions
-		SET status = ?, status_reason = ?, error_message = ?, completed_at = ?, updated_at = ?
-		WHERE agent_node_id = ?
-		  AND status IN ('running', 'pending', 'queued', 'waiting')`,
-		types.ExecutionStatusFailed, reasonMessage, reasonMessage, now, now, agentNodeID,
-	)
+	// Legacy `executions` mirror — updated atomically in the same tx so the two
+	// tables can never diverge on restart recovery.
+	if _, err := updateOrphanedRows(ctx, tx, orphanReapUpdateExecutions, reasonMessage, now, agentNodeID); err != nil {
+		return 0, fmt.Errorf("update orphaned executions mirror: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return 0, fmt.Errorf("commit orphan reap transaction: %w", err)
+	}
 
 	return int(affected), nil
 }
