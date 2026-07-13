@@ -36,7 +36,8 @@ dependencies = [
     "websockets",
     "fal-client>=0.5.0",
     "cryptography>=41.0",
-    "joserfc>=1.0"
+    "joserfc>=1.0",
+    "jsonschema>=4.17"
 ]
 keywords = ["silmari", "agentfield", "sdk", "agents"]
 

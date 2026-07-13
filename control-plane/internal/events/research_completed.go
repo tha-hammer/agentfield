@@ -16,7 +16,8 @@ import (
 
 const (
 	// ResearchCompletedEventType is the CloudEvents "type" for the completion announcement.
-	ResearchCompletedEventType = "research.completed"
+	// Version lives in the type string per cross-app-handoff.pattern.md Decision 2.
+	ResearchCompletedEventType = "com.silmari.research.completed.v1"
 	// ResearchCompletedSource is the CloudEvents "source" — the producing app.
 	ResearchCompletedSource = "silmari-af-deep-research"
 	// ResearchAgentNodeID is the AgentField node_id that owns research.completed (C-Own).

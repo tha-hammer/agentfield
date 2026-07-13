@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "com.silmari.research.completed.v1",
+  "title": "research.completed v1 DTO",
+  "description": "Frozen contract for the research.completed handoff event data. C-Notification: ids + primitives + small snapshot only, never the mutable body.",
+  "type": "object",
+  "properties": {
+    "run_id": { "type": "string" },
+    "status": { "type": "string", "enum": ["succeeded", "failed"] },
+    "title": { "type": ["string", "null"] },
+    "result_ref": { "type": "string" },
+    "research_prompt": { "type": ["string", "null"] },
+    "research_document_id": { "type": "string" }
+  },
+  "required": ["run_id", "status", "title", "result_ref", "research_prompt", "research_document_id"],
+  "additionalProperties": false
+}

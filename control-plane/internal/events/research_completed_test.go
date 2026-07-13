@@ -197,7 +197,7 @@ func TestBuildResearchCompletedOutboxRecord_EmitsForResearchNodeSucceeded(t *tes
 	require.Equal(t, events.ResearchCompletedEventType, rec.EventType)
 	require.Equal(t, "exec_abc123", rec.ExecutionID)
 	require.Equal(t, "meta_deep_research", rec.AgentNodeID)
-	require.Contains(t, rec.Payload, `"type":"research.completed"`)
+	require.Contains(t, rec.Payload, `"type":"com.silmari.research.completed.v1"`)
 	require.NotContains(t, rec.Payload, "research_package")
 }
 
