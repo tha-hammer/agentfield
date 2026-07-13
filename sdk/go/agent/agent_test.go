@@ -71,7 +71,7 @@ func TestNew(t *testing.T) {
 			},
 		},
 		{
-			name: "CallTimeout defaults to 15s when unset",
+			name: "CallTimeout defaults to 10m when unset",
 			cfg: Config{
 				NodeID:        "node-1",
 				Version:       "1.0.0",
@@ -79,8 +79,8 @@ func TestNew(t *testing.T) {
 			},
 			wantErr: false,
 			check: func(t *testing.T, a *Agent) {
-				assert.Equal(t, 15*time.Second, a.cfg.CallTimeout)
-				assert.Equal(t, 15*time.Second, a.httpClient.Timeout)
+				assert.Equal(t, 10*time.Minute, a.cfg.CallTimeout)
+				assert.Equal(t, 10*time.Minute, a.httpClient.Timeout)
 			},
 		},
 		{

@@ -267,7 +267,9 @@ async def test_opencode_project_dir_takes_precedence_over_cwd(
     """
     captured_cmd: list[str] | None = None
 
-    async def capture_cmd(cmd: list[str], *, env=None, cwd=None, timeout=None):
+    async def capture_cmd(
+        cmd: list[str], *, env=None, cwd=None, timeout=None, idle_seconds=None
+    ):
         nonlocal captured_cmd
         captured_cmd = cmd
         return "result", "", 0

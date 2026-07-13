@@ -367,9 +367,11 @@ type Config struct {
 
 	// CallTimeout bounds every outbound HTTP call this agent makes as a
 	// client - cross-agent Call()s, memory backend requests, etc.
-	// Optional. Default: 15s. A reasoning-model-backed reasoner chained
-	// behind Call() (search + a large max_tokens reasoning response) can
-	// easily exceed the old hardcoded 15s, so raise this for such workloads.
+	// Optional. Default: 10m. Cross-node calls to a reasoning-model-backed
+	// reasoner can legitimately run for minutes; a short default aborts
+	// them mid-flight (this broke the SWE-AF Go node with the old 15s
+	// default). Settable per-agent here, or centrally via the control
+	// plane's agent_call_timeout config (ExecutionQueueConfig).
 	CallTimeout time.Duration
 
 	// DisableLeaseLoop disables automatic periodic lease refreshes.
