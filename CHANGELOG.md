@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.108-rc.4] - 2026-07-14
+
+
+### Testing
+
+- Test(handoff): work reel.completed.v1 through the conformance gate (MW Phase 4 B2)
+
+Phase 3 B4 registered com.silmari.reel.completed.v1 in the frozen registry.
+Phase 4 B1 verified it resolves/validates/freezes (test_handoff_registry_reel.py,
+already green). This adds the missing B2 coverage: the shipped conformance surface
+now has a worked SECOND contract, proving a reel-producing app (reel-af) onboards
+with zero per-pair code —
+
+  * run_provenance_conformance certifies a reel node (R1-R4 + the six pattern
+    contracts: C-Own/C-Notification/C-Idempotent proved, C-Outbox/C-AtLeastOnce
+    delegated, C-Correlation precondition), and
+  * the frozen registry validates reel.completed.v1 pinned to the frozen version
+    and rejects off-contract events (extra field / bad enum) fail-closed.
+
+Test-only; no production code change (the kit already generalizes). 7 passed.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com> (1b7c675)
+
 ## [0.1.108-rc.3] - 2026-07-13
 
 

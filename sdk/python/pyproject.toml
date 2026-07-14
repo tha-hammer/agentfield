@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agentfield"
-version = "0.1.108-rc.3"
+version = "0.1.108-rc.4"
 description = "Silmari Python SDK for agent orchestration and control plane integration"
 readme = "README.md"
 license = {text = "Apache-2.0"}
