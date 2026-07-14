@@ -6,6 +6,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.108-rc.6] - 2026-07-14
+
+
+### Fixed
+
+- Fix(sdk-python): skip TestB3_GoldenFixtureDrift when sibling repos absent
+
+This class checks that a fixture file in this repo stays byte-identical
+to copies in the deep-research and reels-af sibling repos, via hardcoded
+absolute paths (/home/maceo/ntm_Dev/.../silmari-af-deep-research/...,
+/home/maceo/ntm_Dev/carousel-impl/...). Those only exist in the local
+multi-repo dev layout — CI checks out just this repo, so all 6 tests in
+the class failed there with FileNotFoundError/missing-fixture assertions
+on every PR built off main (this is what broke #9, unrelated to its
+actual diff).
+
+Passed locally because the sibling repos happen to exist on this
+machine at those exact paths; reproduced CI's exact environment (fresh
+pip install .[dev] unpinned by uv.lock, Python 3.10, the actual
+./scripts/run_pytest.sh) before concluding it wasn't flakiness.
+
+Skip the whole class when the sibling repos aren't present, same idiom
+already used by tests/integration/conftest.py's
+"not available in this checkout" guard — this is an environment
+mismatch, not a real drift signal, when the sibling repo itself isn't
+checked out.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com> (a3c37c9)
+
 ## [0.1.108-rc.5] - 2026-07-14
 
 
