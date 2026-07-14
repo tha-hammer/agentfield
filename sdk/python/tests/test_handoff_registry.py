@@ -197,7 +197,18 @@ class TestB2_Validation:
 PRODUCER_FIXTURE = Path("/home/maceo/ntm_Dev/silmari-agentfield-system/silmari-af-deep-research/tests/producer/fixtures/research_completed.cloudevent.json")
 CONSUMER_FIXTURE = Path("/home/maceo/ntm_Dev/carousel-impl/tests/web/fixtures/research_completed.cloudevent.json")
 
+# Cross-repo consistency check: requires the deep-research and reels-af
+# sibling repos checked out side-by-side (the local multi-repo dev layout).
+# CI checks out only this repo, so the sibling paths never exist there —
+# skip rather than fail, same idiom as tests/integration/conftest.py's
+# "not available in this checkout" guard.
+_siblings_available = PRODUCER_FIXTURE.parent.exists() and CONSUMER_FIXTURE.parent.exists()
 
+
+@pytest.mark.skipif(
+    not _siblings_available,
+    reason="deep-research/reels-af sibling repos not available in this checkout",
+)
 class TestB3_GoldenFixtureDrift:
     def test_producer_fixture_exists(self):
         assert PRODUCER_FIXTURE.exists(), f"producer fixture missing: {PRODUCER_FIXTURE}"
