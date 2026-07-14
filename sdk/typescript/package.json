@@ -1,6 +1,6 @@
 {
   "name": "@agentfield/sdk",
-  "version": "0.1.108-rc.4",
+  "version": "0.1.108-rc.5",
   "description": "Silmari TypeScript SDK",
   "type": "module",
   "main": "dist/index.js",

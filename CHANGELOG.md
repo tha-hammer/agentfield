@@ -6,6 +6,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.108-rc.5] - 2026-07-14
+
+
+### Fixed
+
+- Fix(sdk-python): ruff F401/F811 errors in handoff module + resync uv.lock
+
+12 unused-import/redefinition errors from the handoff commit (668b7aaa),
+breaking CI (ruff check . lints the whole tree, so this failed every PR
+built off main, including #9 unrelated to handoff).
+
+10 were genuinely dead imports, fixed via `ruff check --fix`. 2 needed a
+real fix, not the auto-fix: TestImportSurface's test_registry_importable
+and test_validate_importable exist specifically to assert ContractEntry/
+ValidationError are part of agentfield.handoff's public import surface —
+ruff's auto-fix would have silently stripped the import ruff flagged as
+"unused," defeating what the test name claims to check. Kept the imports,
+added real assertions (is_dataclass(ContractEntry), issubclass(ValidationError,
+Exception)) so they're both used and still verify importability.
+
+uv.lock's own version field was also stale (0.1.108-rc.1) against several
+release-please bumps since (pyproject.toml now 0.1.108-rc.4) — resynced.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com> (e2b00ff)
+
 ## [0.1.108-rc.4] - 2026-07-14
 
 
