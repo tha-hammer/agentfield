@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import Any, Mapping
 
 from agentfield.handoff._registry import ContractRegistry
-from agentfield.handoff._validate import ValidationError, validate
+from agentfield.handoff._validate import validate
 from agentfield.provenance_handoff import build_envelope
 
 

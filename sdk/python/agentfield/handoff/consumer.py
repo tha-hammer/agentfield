@@ -23,7 +23,6 @@ from agentfield.handoff._registry import ContractRegistry
 from agentfield.handoff._validate import ValidationError, validate
 from agentfield.handoff.control_plane_source import ControlPlaneSource
 from agentfield.handoff.types import CursorStore, ExecutionRecord, HandoffDTO
-from agentfield.provenance_handoff import MalformedEnvelopeError
 
 logger = logging.getLogger(__name__)
 

@@ -7,9 +7,7 @@ TDD: each behavior has a red-green-refactor cycle.
 from __future__ import annotations
 
 import json
-import threading
 import time
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
@@ -25,8 +23,6 @@ from agentfield.handoff import (
     registry,
 )
 from agentfield.handoff.consumer import ConsumerHandle
-from agentfield.handoff.control_plane_source import ControlPlaneSource
-from agentfield.handoff.types import CursorStore, ExecutionRecord
 
 
 # ─────────────── test helpers ───────────────

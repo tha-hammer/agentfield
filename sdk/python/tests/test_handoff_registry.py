@@ -7,7 +7,7 @@ D7 (directory convention).
 """
 
 import json
-import copy
+from dataclasses import is_dataclass
 from pathlib import Path
 
 import pytest
@@ -310,7 +310,9 @@ class TestImportSurface:
     def test_registry_importable(self):
         from agentfield.handoff import ContractEntry, ContractRegistry, registry
         assert isinstance(registry, ContractRegistry)
+        assert is_dataclass(ContractEntry)
 
     def test_validate_importable(self):
         from agentfield.handoff import ValidationError, validate
         assert callable(validate)
+        assert issubclass(ValidationError, Exception)
