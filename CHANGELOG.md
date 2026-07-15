@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.108-rc.7] - 2026-07-15
+
+
+### Added
+
+- Feat(sdk): idle/heartbeat watchdog instead of total active-time cap
+
+The async reasoner watchdog cancelled long-but-progressing reasoners at the fixed active-time budget (e.g. a 6h build advancing steadily). Make it an IDLE cap: measure the budget from the last progress signal, so a reasoner that keeps progressing runs as long as it does, while a genuinely stalled one is still cancelled at the budget.
+
+- _execute_async_with_callback tracks a per-execution progress marker; the watchdog cancels on idle_active > budget (no progress) rather than total active time.
+- New Agent.heartbeat(execution_id) resets the marker. Reasoners that never heartbeat keep byte-for-byte the old behavior.
+- Timeout message: '... timed out after Ns with no progress'.
+- Tests: idle-cancel, heartbeat-resets-deadline (3x budget survives), no-heartbeat equivalence, unknown-id no-op.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (e7391b3)
+
 ## [0.1.108-rc.6] - 2026-07-14
 
 
